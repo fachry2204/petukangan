@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -H 0.0.0.0",
     "build": "node ./node_modules/next/dist/bin/next build",
-    "postbuild": "xcopy .next\\static public\\_next\\static /E /I /Y",
     "start": "node server.js",
     "lint": "eslint"
   },
