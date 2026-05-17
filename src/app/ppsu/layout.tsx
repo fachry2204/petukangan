@@ -90,7 +90,7 @@ export default function PpsuLayout({
         
         {/* Horizontal Traditional Ornament gigi balang */}
         <div 
-          className="w-full h-6 bg-repeat-x bg-contain pointer-events-none mix-blend-multiply dark:mix-blend-screen dark:invert" 
+          className="absolute left-0 right-0 top-full w-full h-6 bg-repeat-x bg-contain pointer-events-none" 
           style={{ backgroundImage: "url('/gambar/ornamen.png')" }} 
         />
       </header>
