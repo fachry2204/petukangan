@@ -39,6 +39,7 @@ const express = __importStar(require("express"));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors();
+    app.setGlobalPrefix('api');
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
     await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
