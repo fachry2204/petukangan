@@ -6,15 +6,17 @@ const path = require('path');
 const httpProxy = require('http-proxy');
 
 // Environment Configuration
-const dev = process.env.NODE_ENV !== 'production';
+const dev = false; // ALWAYS force production mode in Plesk to prevent Webpack build hangs
 const port = process.env.PORT || 3000;
 const nestPort = process.env.NEST_PORT || 3001;
 
 // 1. Start NestJS Backend in the background
 const backendProcess = spawn('node', [path.join(__dirname, 'backend', 'dist', 'main.js')], {
   env: { ...process.env, PORT: nestPort },
-  stdio: 'inherit'
+  stdio: 'ignore',
+  detached: true
 });
+backendProcess.unref();
 
 // 2. Setup HTTP Proxy for API and WebSockets
 const proxy = httpProxy.createProxyServer({
@@ -31,7 +33,7 @@ proxy.on('error', (err, req, res) => {
 });
 
 // 3. Start Next.js Frontend
-const app = next({ dev, hostname: 'localhost', port });
+const app = next({ dev });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
