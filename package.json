@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -H 0.0.0.0",
     "build": "node ./node_modules/next/dist/bin/next build",
+    "install-backend": "cd backend && npm install",
     "start": "node server.js",
     "lint": "eslint"
   },

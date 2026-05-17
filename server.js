@@ -10,10 +10,15 @@ const dev = false; // ALWAYS force production mode in Plesk to prevent Webpack b
 const port = process.env.PORT || 3000;
 const nestPort = process.env.NEST_PORT || 3001;
 
+const fs = require('fs');
+const out = fs.openSync(path.join(__dirname, 'backend-out.log'), 'a');
+const err = fs.openSync(path.join(__dirname, 'backend-err.log'), 'a');
+
 // 1. Start NestJS Backend in the background
 const backendProcess = spawn('node', [path.join(__dirname, 'backend', 'dist', 'main.js')], {
+  cwd: path.join(__dirname, 'backend'),
   env: { ...process.env, PORT: nestPort },
-  stdio: 'ignore',
+  stdio: ['ignore', out, err],
   detached: true
 });
 backendProcess.unref();
