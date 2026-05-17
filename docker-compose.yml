@@ -1,0 +1,34 @@
+services:
+  mysql:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_DATABASE: ppsu_monitoring
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "80:3000"
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.local
+
+volumes:
+  mysql_data:

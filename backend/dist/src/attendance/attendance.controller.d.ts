@@ -1,0 +1,63 @@
+import { AttendanceService } from './attendance.service';
+export declare class AttendanceController {
+    private attendanceService;
+    constructor(attendanceService: AttendanceService);
+    getAdminAllAttendance(): Promise<({
+        id: number;
+        user: import("../users/user.entity").User;
+        type: string;
+        timestamp: Date;
+        lat: number;
+        lng: number;
+        address: string;
+        photoUrl: null;
+        reason: string;
+        deviceInfo: null;
+        isMock: boolean;
+        status: string;
+        isOutsideSchedule: boolean;
+        rejectionReason: string;
+        isRequestTable: boolean;
+    } | {
+        isLembur: boolean;
+        id: number;
+        user: import("../users/user.entity").User;
+        type: string;
+        timestamp: Date;
+        lat: number;
+        lng: number;
+        address: string;
+        photoUrl: string;
+        reason: string;
+        deviceInfo: any;
+        isMock: boolean;
+        status: string;
+        isOutsideSchedule: boolean;
+        rejectionReason: string;
+    })[]>;
+    updateStatus(id: string, body: any): Promise<any>;
+    getTodayAttendance(req: any): Promise<any>;
+    checkIn(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    startBreak(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    endBreak(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    checkOut(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    submitPermit(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    submitEarlyOut(req: any, body: any): Promise<import("./attendance.entity").Attendance | import("./attendance-request.entity").AttendanceRequest | import("./lembur.entity").Lembur>;
+    getAllAttendance(req: any): Promise<{
+        isLembur: boolean;
+        id: number;
+        user: import("../users/user.entity").User;
+        type: string;
+        timestamp: Date;
+        lat: number;
+        lng: number;
+        address: string;
+        photoUrl: string;
+        reason: string;
+        deviceInfo: any;
+        isMock: boolean;
+        status: string;
+        isOutsideSchedule: boolean;
+        rejectionReason: string;
+    }[]>;
+}
