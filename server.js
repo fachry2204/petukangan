@@ -70,6 +70,9 @@ app.prepare().then(() => {
     console.log(`> - Next.js (Frontend) handled internally`);
     console.log(`> - NestJS (Backend) running on internal port ${nestPort}`);
   });
+}).catch((err) => {
+  console.error('Fatal Error during Next.js app.prepare():', err);
+  process.exit(1); // Exit immediately to prevent Passenger from hanging
 });
 
 // Ensure backend is killed when the server shuts down
