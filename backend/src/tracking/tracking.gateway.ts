@@ -45,4 +45,18 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
   handleJoinAdmin(client: Socket) {
     client.join('admin-room');
   }
+
+  @SubscribeMessage('emergencySignal')
+  handleEmergencySignal(client: Socket, payload: any) {
+    // Broadcast SOS signal to all connected admins immediately
+    this.server.emit('emergencySignal', {
+      userId: payload.userId,
+      fullName: payload.fullName,
+      photoUrl: payload.photoUrl,
+      phone: payload.phone,
+      lat: payload.lat,
+      lng: payload.lng,
+      timestamp: payload.timestamp || new Date().getTime(),
+    });
+  }
 }

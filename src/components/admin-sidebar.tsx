@@ -20,9 +20,12 @@ import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useSettingsStore } from '@/store/settings-store';
 
+import { Siren } from 'lucide-react'; // Ensure Siren is imported if missing
+
 const generalMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard' },
   { label: 'Live Monitoring', icon: MapIcon, href: '/admin/monitoring' },
+  { label: 'SOS (Emergency)', icon: Siren, href: '/admin/sos' },
   { label: 'Riwayat GPS', icon: History, href: '/admin/history' },
 ];
 

@@ -17,7 +17,7 @@ const navItems = [
   },
   { 
     label: 'SOS', 
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/8643/8643324.png', 
+    iconUrl: '/icon/sos.png', 
     href: '/ppsu/sos' 
   },
   { 
@@ -44,22 +44,68 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={async (e) => {
+                if (item.label === 'SOS') {
+                  // Memancarkan sinyal darurat via Socket.io saat diklik
+                  try {
+                    const { useAuthStore } = await import('@/store/auth-store');
+                    const { token, user } = useAuthStore.getState();
+                    
+                    if (token && user) {
+                      const { io } = await import('socket.io-client');
+                      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                      const socket = io(socketUrl, { auth: { token } });
+                      
+                      // Mengambil lokasi pasti saat menekan tombol
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          socket.emit('emergencySignal', {
+                            userId: user.id,
+                            fullName: user.fullName,
+                            photoUrl: user.photoUrl,
+                            phone: user.phone,
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            timestamp: Date.now()
+                          });
+                          
+                          // Disconnect after sending to prevent memory leaks
+                          setTimeout(() => socket.disconnect(), 2000);
+                        },
+                        (err) => console.error('GPS SOS Error', err),
+                        { enableHighAccuracy: true, timeout: 5000 }
+                      );
+                    }
+                  } catch (err) {
+                    console.error('Failed to send SOS', err);
+                  }
+                }
+              }}
               className={cn(
-                'flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1 active:scale-90',
-                isActive ? 'text-orange-600 font-black' : 'text-zinc-400 font-semibold'
+                'flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1',
+                isActive ? 'text-orange-600 font-black' : 'text-zinc-400 font-semibold',
+                item.label === 'SOS' ? '-mt-6' : 'active:scale-90' // Make SOS button float slightly
               )}
             >
-              <img 
-                src={item.iconUrl} 
-                alt={item.label}
-                className={cn(
-                  'w-8 h-8 object-contain transition-all duration-300', 
-                  isActive ? 'scale-110 opacity-100' : 'opacity-40 grayscale hover:opacity-70',
-                  item.label === 'SOS' ? 'grayscale-0 opacity-100 drop-shadow-md' : ''
-                )} 
-              />
-              <span className="text-[11px] tracking-tight">{item.label}</span>
-              {isActive && (
+              <div className={cn(
+                "flex items-center justify-center transition-all duration-300",
+                item.label === 'SOS' ? "bg-red-500 rounded-full w-14 h-14 p-2.5 shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-4 border-white dark:border-zinc-900 animate-pulse active:scale-95" : ""
+              )}>
+                <img 
+                  src={item.iconUrl} 
+                  alt={item.label}
+                  className={cn(
+                    'object-contain transition-all duration-300', 
+                    item.label === 'SOS' ? 'w-full h-full grayscale-0 opacity-100 drop-shadow-md brightness-0 invert' : 'w-8 h-8',
+                    isActive && item.label !== 'SOS' ? 'scale-110 opacity-100' : (item.label !== 'SOS' ? 'opacity-40 grayscale hover:opacity-70' : '')
+                  )} 
+                />
+              </div>
+              <span className={cn(
+                "text-[11px] tracking-tight",
+                item.label === 'SOS' ? "text-red-500 font-black drop-shadow-sm mt-0.5" : ""
+              )}>{item.label}</span>
+              {isActive && item.label !== 'SOS' && (
                 <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-0.5" />
               )}
             </Link>
