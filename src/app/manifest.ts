@@ -6,8 +6,15 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let logoUrl = '/logodki.png';
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
     // Ambil data pengaturan dari database
-    const res = await fetch('http://localhost:3001/settings', { next: { revalidate: 60 } });
+    const res = await fetch('http://localhost:3001/settings', { 
+      next: { revalidate: 60 },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const settings = await res.json();
       systemName = settings.systemName || systemName;

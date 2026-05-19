@@ -25,9 +25,18 @@ const plusJakarta = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
     // Attempt to fetch settings directly from the backend server
     // Using revalidate (ISR) instead of no-store to avoid DYNAMIC_SERVER_USAGE build errors
-    const res = await fetch('http://localhost:3001/settings', { next: { revalidate: 60 } });
+    const res = await fetch('http://localhost:3001/settings', { 
+      next: { revalidate: 60 },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const settings = await res.json();
       const title = settings.systemName || "PPSU Smart Monitoring";
