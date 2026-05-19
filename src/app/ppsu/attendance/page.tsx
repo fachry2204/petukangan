@@ -43,7 +43,7 @@ export default function PpsuAttendancePage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { token } = useAuthStore();
+  const { user, token } = useAuthStore();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -295,13 +295,20 @@ export default function PpsuAttendancePage() {
     }
   };
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
-    if (!token) {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (!token || !user) {
       router.push('/login');
       return;
     }
     fetchTodayStatus(true);
-  }, [token]);
+  }, [token, user, isHydrated]);
 
   // Draw photo canvas with professional timestamp + GPS watermark
   const drawWatermark = (canvas: HTMLCanvasElement, timestamp: string, coordsStr: string, addrStr: string) => {
