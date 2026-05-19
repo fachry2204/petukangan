@@ -33,14 +33,36 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @SubscribeMessage('updateLocation')
   async handleLocationUpdate(client: Socket, payload: any) {
-    // Save to DB and broadcast to admins
-    await this.trackingService.saveLocation(payload.userId, payload);
-    this.server.emit('locationUpdated', {
-      userId: payload.userId,
-      lat: payload.lat,
-      lng: payload.lng,
-      timestamp: new Date(),
-    });
+    try {
+      // 1. Safe Native Database Save (Silently fail if history table is missing)
+      try {
+        const conn = await mysql.createConnection({
+          host: process.env.DB_HOST || 'localhost',
+          user: process.env.DB_USER || 'root',
+          password: process.env.DB_PASSWORD || '',
+          database: process.env.DB_NAME || 'ppsu_monitoring'
+        });
+        await conn.query(
+          'INSERT INTO gps_tracking (user_id, lat, lng) VALUES (?, ?, ?)',
+          [payload.userId, payload.lat, payload.lng]
+        );
+        await conn.end();
+      } catch (dbErr) {
+        // Ignore db save errors so live tracking still works
+      }
+
+      // 2. Broadcast to admins WITH full details (Name & Photo)
+      this.server.emit('locationUpdated', {
+        userId: payload.userId,
+        fullName: payload.fullName,
+        photoUrl: payload.photoUrl,
+        lat: payload.lat,
+        lng: payload.lng,
+        timestamp: payload.timestamp || Date.now(),
+      });
+    } catch (error) {
+      console.error('Error handling location update:', error);
+    }
   }
 
   @SubscribeMessage('joinAdminRoom')
@@ -59,9 +81,17 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         database: process.env.DB_NAME || 'ppsu_monitoring'
       });
       
+      const dateObj = new Date(payload.timestamp || Date.now());
+      // Adjust to GMT+7 (WIB) manually for local time extraction if server is UTC
+      const gmt7Date = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000));
+      const dateSos = gmt7Date.toISOString().split('T')[0];
+      const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
+      
+      const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
+
       await conn.query(
-        'INSERT INTO sos_signals (user_id, lat, lng, address) VALUES (?, ?, ?, ?)',
-        [payload.userId, payload.lat, payload.lng, payload.address || 'Address not provided']
+        'INSERT INTO sos_signals (user_id, full_name, date_sos, time_sos, lat, lng, address, map_link, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [payload.userId, payload.fullName, dateSos, timeSos, payload.lat, payload.lng, payload.address || 'Alamat gagal diambil', mapLink, 'DARURAT']
       );
       await conn.end();
       
@@ -74,7 +104,11 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         lat: payload.lat,
         lng: payload.lng,
         address: payload.address,
-        timestamp: payload.timestamp || new Date().getTime(),
+        dateSos,
+        timeSos,
+        mapLink,
+        status: 'DARURAT',
+        timestamp: payload.timestamp || Date.now(),
       });
     } catch (err) {
       console.error('Failed to save emergency signal:', err);

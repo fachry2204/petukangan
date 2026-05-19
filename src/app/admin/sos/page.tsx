@@ -1,58 +1,83 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, MapPin, Clock, Phone, Loader2, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, MapPin, Clock, Phone, Loader2, CheckCircle2, Navigation, CalendarDays } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 interface EmergencySignal {
-  userId: string;
+  id?: number;
+  userId: string | number;
   fullName: string;
-  photoUrl: string;
-  phone: string;
+  photoUrl?: string;
+  phone?: string;
   lat: number;
   lng: number;
+  address: string;
+  mapLink: string;
+  dateSos: string;
+  timeSos: string;
   timestamp: number;
-  resolved: boolean;
+  status: 'DARURAT' | 'PETUGAS MELUNCUR' | 'SELESAI';
 }
 
 export default function AdminSosPage() {
   const [signals, setSignals] = useState<EmergencySignal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuthStore();
 
   useEffect(() => {
-    // Hubungkan ke socket server
+    // 1. Fetch existing SOS History from Database
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch('/api/sos');
+        if (res.ok) {
+          const data = await res.json();
+          // Transform timestamp string from DB to milliseconds for date-fns
+          const parsedData = data.map((d: any) => ({
+            ...d,
+            timestamp: new Date(d.timestamp).getTime()
+          }));
+          setSignals(parsedData);
+        }
+      } catch (err) {
+        console.error('Failed to load SOS history', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchHistory();
+
+    // 2. Connect to socket server for real-time SOS
     const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const socket = io(socketUrl, {
       auth: { token }
     });
 
     socket.on('connect', () => {
-      console.log('Connected to SOS Tracking System');
       socket.emit('joinAdminRoom');
     });
 
-    // Menangkap sinyal darurat langsung dari petugas
     socket.on('emergencySignal', (data: EmergencySignal) => {
-      // Mainkan suara sirine/alert
       try {
-        const audio = new Audio('/ting.mp3'); // Fallback sound if needed
+        const audio = new Audio('/ting.mp3'); 
         audio.play().catch(e => console.log('Audio autoplay blocked', e));
       } catch (err) {}
 
       setSignals(prev => {
-        // Cek apakah user ini sudah mengirim sinyal sebelumnya untuk menghindari duplikasi spam
-        const exists = prev.findIndex(s => s.userId === data.userId && !s.resolved);
+        // Update existing if already in list
+        const exists = prev.findIndex(s => s.userId === data.userId && s.status !== 'SELESAI');
         if (exists > -1) {
           const updated = [...prev];
           updated[exists] = { ...updated[exists], ...data };
           return updated;
         }
-        return [{ ...data, resolved: false }, ...prev];
+        return [{ ...data }, ...prev];
       });
     });
 
@@ -61,10 +86,40 @@ export default function AdminSosPage() {
     };
   }, [token]);
 
-  const resolveSignal = (userId: string) => {
+  const updateStatus = async (userId: string | number, newStatus: EmergencySignal['status']) => {
+    // 1. Update on screen immediately for fast feedback
     setSignals(prev => 
-      prev.map(s => s.userId === userId ? { ...s, resolved: true } : s)
+      prev.map(s => s.userId === userId ? { ...s, status: newStatus } : s)
     );
+
+    // 2. Update to Database
+    try {
+      await fetch('/api/sos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status: newStatus })
+      });
+    } catch (error) {
+      console.error('Failed to sync status to database:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'DARURAT': return 'bg-red-500 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+      case 'PETUGAS MELUNCUR': return 'bg-orange-500 border-orange-500';
+      case 'SELESAI': return 'bg-zinc-300 border-zinc-300';
+      default: return 'bg-red-500';
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case 'DARURAT': return 'text-red-700';
+      case 'PETUGAS MELUNCUR': return 'text-orange-700';
+      case 'SELESAI': return 'text-zinc-600';
+      default: return 'text-red-700';
+    }
   };
 
   return (
@@ -74,10 +129,10 @@ export default function AdminSosPage() {
         <div>
           <h2 className="text-2xl font-black text-red-600 dark:text-red-500 flex items-center gap-2">
             <AlertTriangle className="w-7 h-7 animate-pulse" />
-            SOS Emergency Dashboard
+            Pusat Komando SOS
           </h2>
           <p className="text-sm text-zinc-500 font-medium mt-1">
-            Pantauan langsung panggilan darurat dari Petugas PPSU di lapangan
+            Riwayat dan Pantauan langsung panggilan darurat dari Petugas PPSU
           </p>
         </div>
         
@@ -89,98 +144,112 @@ export default function AdminSosPage() {
 
       {/* Daftar Sinyal Darurat */}
       <div className="grid gap-4">
-        {signals.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+          </div>
+        ) : signals.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
             <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="w-8 h-8 text-green-500" />
             </div>
             <h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300">Situasi Aman Terkendali</h3>
-            <p className="text-sm text-zinc-500 mt-1">Belum ada satupun sinyal darurat (SOS) yang diterima saat ini.</p>
+            <p className="text-sm text-zinc-500 mt-1">Belum ada satupun sinyal darurat (SOS) yang tercatat di database.</p>
           </div>
         ) : (
           signals.map((signal, idx) => (
             <Card 
-              key={`${signal.userId}-${signal.timestamp}`}
+              key={signal.id || `${signal.userId}-${signal.timestamp}`}
               className={`overflow-hidden transition-all duration-500 ${
-                signal.resolved 
+                signal.status === 'SELESAI' 
                   ? 'opacity-60 grayscale bg-zinc-50 border-zinc-200' 
+                  : signal.status === 'PETUGAS MELUNCUR'
+                  ? 'bg-orange-50 border-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
                   : 'bg-red-50 border-red-200 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in slide-in-from-top-4'
               }`}
             >
-              <div className={`h-1.5 w-full ${signal.resolved ? 'bg-zinc-300' : 'bg-red-500 animate-pulse'}`} />
+              <div className={`h-1.5 w-full ${getStatusColor(signal.status)}`} />
               <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row items-center gap-6 p-6">
+                <div className="flex flex-col xl:flex-row items-center gap-6 p-6">
                   
                   {/* Info Petugas */}
-                  <div className="flex items-center gap-4 w-full md:w-auto">
+                  <div className="flex items-center gap-4 w-full xl:w-auto">
                     <div className="relative">
-                      <div className={`w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-white ${signal.resolved ? 'border-zinc-300' : 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
+                      <div className={`w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-white ${getStatusColor(signal.status)}`}>
                         {signal.photoUrl ? (
                           <img src={signal.photoUrl} alt="Profil" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-xl font-bold text-zinc-400">ID</span>
                         )}
                       </div>
-                      {!signal.resolved && (
-                        <div className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase border border-white">
-                          Darurat
+                      {signal.status !== 'SELESAI' && (
+                        <div className="absolute -bottom-1 -right-4 bg-zinc-900 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase border border-white">
+                          {signal.status}
                         </div>
                       )}
                     </div>
                     <div>
-                      <h3 className={`text-xl font-black ${signal.resolved ? 'text-zinc-600' : 'text-red-700'}`}>
+                      <h3 className={`text-xl font-black ${getStatusTextColor(signal.status)}`}>
                         {signal.fullName || `Petugas ${signal.userId}`}
                       </h3>
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">ID: {signal.userId}</p>
+                      <p className="text-xs font-bold text-zinc-500 tracking-wider">
+                        {signal.phone ? `+${signal.phone}` : `User ID: ${signal.userId}`}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Info Detail */}
-                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-4 border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800 pt-4 md:pt-0 md:pl-6">
-                    <div className="flex items-center gap-2">
-                      <Clock className={`w-5 h-5 ${signal.resolved ? 'text-zinc-400' : 'text-red-400'}`} />
+                  {/* Info Detail Database */}
+                  <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 border-t xl:border-t-0 xl:border-l border-zinc-200 dark:border-zinc-800 pt-4 xl:pt-0 xl:pl-6">
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className={`w-5 h-5 mt-0.5 ${signal.status === 'SELESAI' ? 'text-zinc-400' : 'text-red-400'}`} />
                       <div>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase">Waktu Kejadian</p>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase">Tanggal & Waktu (WIB)</p>
                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                          {formatDistanceToNow(new Date(signal.timestamp), { addSuffix: true, locale: id })}
+                          {signal.dateSos} • {signal.timeSos}
+                        </p>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {formatDistanceToNow(signal.timestamp, { addSuffix: true, locale: id })}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <MapPin className={`w-5 h-5 ${signal.resolved ? 'text-zinc-400' : 'text-red-400'}`} />
+                    <div className="flex items-start gap-2">
+                      <MapPin className={`w-5 h-5 mt-0.5 ${signal.status === 'SELESAI' ? 'text-zinc-400' : 'text-red-400'}`} />
                       <div>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase">Titik Lokasi (GPS)</p>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase">Titik Lokasi</p>
+                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-snug">
+                          {signal.address}
+                        </p>
                         <a 
-                          href={`https://www.google.com/maps/search/?api=1&query=${signal.lat},${signal.lng}`} 
+                          href={signal.mapLink || `https://www.google.com/maps/search/?api=1&query=${signal.lat},${signal.lng}`} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="text-sm font-bold text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                          className="text-xs font-bold text-blue-600 hover:text-blue-800 underline mt-1 block"
                         >
-                          Lihat di Peta
+                          Lihat Google Maps (Lat: {signal.lat.toFixed(4)}, Lng: {signal.lng.toFixed(4)})
                         </a>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Phone className={`w-5 h-5 ${signal.resolved ? 'text-zinc-400' : 'text-red-400'}`} />
-                      <div>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase">Kontak</p>
-                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                          {signal.phone ? `+${signal.phone}` : 'Tidak Tersedia'}
-                        </p>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Actions */}
-                  {!signal.resolved && (
-                    <div className="w-full md:w-auto shrink-0 flex items-center justify-end">
+                  {/* Actions / Status Controls */}
+                  {signal.status !== 'SELESAI' && (
+                    <div className="w-full xl:w-auto shrink-0 flex flex-col sm:flex-row items-center gap-2 border-t xl:border-t-0 border-zinc-200 pt-4 xl:pt-0">
+                      {signal.status === 'DARURAT' && (
+                        <button 
+                          onClick={() => updateStatus(signal.userId, 'PETUGAS MELUNCUR')}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-[0_4px_14px_rgba(249,115,22,0.4)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                        >
+                          <Navigation className="w-4 h-4" />
+                          Kirim Bantuan
+                        </button>
+                      )}
+                      
                       <button 
-                        onClick={() => resolveSignal(signal.userId)}
-                        className="w-full md:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-[0_4px_14px_rgba(239,68,68,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
+                        onClick={() => updateStatus(signal.userId, 'SELESAI')}
+                        className="w-full sm:w-auto px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-[0_4px_14px_rgba(22,163,74,0.4)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
                       >
-                        <CheckCircle2 className="w-5 h-5" />
+                        <CheckCircle2 className="w-4 h-4" />
                         Tandai Selesai
                       </button>
                     </div>
