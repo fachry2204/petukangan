@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { cn } from '@/lib/utils';
 
+import { GlobalSOSAlert } from '@/components/global-sos-alert';
+
 export default function AdminLayout({
   children,
 }: {
@@ -50,6 +52,7 @@ export default function AdminLayout({
           </div>
         </header>
         <main className="p-8">
+          <GlobalSOSAlert />
           {children}
         </main>
       </div>

@@ -1,117 +1,178 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
-  { 
-    label: 'Home', 
-    iconUrl: '/gambar/icon/home.png', 
-    href: '/ppsu/home' 
-  },
-  { 
-    label: 'Tugas', 
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png', 
-    href: '/ppsu/tasks' 
-  },
-  { 
-    label: 'SOS', 
-    iconUrl: '/icon/sos.png', 
-    href: '/ppsu/sos' 
-  },
-  { 
-    label: 'Lapor', 
-    iconUrl: '/gambar/icon/lapor.png', 
-    href: '/ppsu/reports' 
-  },
-  { 
-    label: 'Profile', 
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', 
-    href: '/ppsu/profile' 
-  },
+  { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/ppsu/home' },
+  { label: 'Tugas', iconUrl: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png', href: '/ppsu/tasks' },
+  { label: 'SOS', iconUrl: '/icon/sos.png', href: '#' }, // Prevents accidental navigation
+  { label: 'Lapor', iconUrl: '/gambar/icon/lapor.png', href: '/ppsu/reports' },
+  { label: 'Profile', iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', href: '/ppsu/profile' },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [showSOSModal, setShowSOSModal] = useState(false);
+  const [isSendingSOS, setIsSendingSOS] = useState(false);
+
+  const confirmAndSendSOS = async () => {
+    setIsSendingSOS(true);
+    try {
+      const { useAuthStore } = await import('@/store/auth-store');
+      const { token, user } = useAuthStore.getState();
+      
+      if (!token || !user) throw new Error('Not authenticated');
+
+      const { io } = await import('socket.io-client');
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const socket = io(socketUrl, { auth: { token } });
+      
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          let address = 'Mengambil alamat...';
+
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+              headers: { 'Accept-Language': 'id' }
+            });
+            const data = await response.json();
+            address = data.display_name;
+          } catch (e) {
+            console.error('Failed to reverse geocode SOS location:', e);
+          }
+
+          // Emit the complete data
+          socket.emit('emergencySignal', {
+            userId: user.id,
+            fullName: user.fullName,
+            photoUrl: user.photoUrl,
+            phone: user.phone,
+            lat,
+            lng,
+            address,
+            timestamp: Date.now()
+          });
+          
+          setTimeout(() => socket.disconnect(), 3000);
+          setShowSOSModal(false);
+          setIsSendingSOS(false);
+          router.push('/ppsu/sos');
+        },
+        (err) => {
+          console.error('GPS SOS Error', err);
+          setIsSendingSOS(false);
+          alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif!');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } catch (err) {
+      console.error('Failed to send SOS', err);
+      setIsSendingSOS(false);
+    }
+  };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-100 dark:border-zinc-800 pb-safe z-50 shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
-      <div className="flex justify-around items-center h-[72px] w-full max-w-lg md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto px-2 sm:px-6 md:px-8">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={async (e) => {
-                if (item.label === 'SOS') {
-                  // Memancarkan sinyal darurat via Socket.io saat diklik
-                  try {
-                    const { useAuthStore } = await import('@/store/auth-store');
-                    const { token, user } = useAuthStore.getState();
-                    
-                    if (token && user) {
-                      const { io } = await import('socket.io-client');
-                      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                      const socket = io(socketUrl, { auth: { token } });
-                      
-                      // Mengambil lokasi pasti saat menekan tombol
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          socket.emit('emergencySignal', {
-                            userId: user.id,
-                            fullName: user.fullName,
-                            photoUrl: user.photoUrl,
-                            phone: user.phone,
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude,
-                            timestamp: Date.now()
-                          });
-                          
-                          // Disconnect after sending to prevent memory leaks
-                          setTimeout(() => socket.disconnect(), 2000);
-                        },
-                        (err) => console.error('GPS SOS Error', err),
-                        { enableHighAccuracy: true, timeout: 5000 }
-                      );
-                    }
-                  } catch (err) {
-                    console.error('Failed to send SOS', err);
-                  }
-                }
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1',
-                isActive ? 'text-orange-600 font-black' : 'text-zinc-400 font-semibold',
-                item.label === 'SOS' ? '-mt-6' : 'active:scale-90' // Make SOS button float slightly
-              )}
-            >
-              <div className={cn(
-                "flex items-center justify-center transition-all duration-300",
-                item.label === 'SOS' ? "bg-red-500 rounded-full w-14 h-14 p-2.5 shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-4 border-white dark:border-zinc-900 animate-pulse active:scale-95" : ""
-              )}>
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-100 dark:border-zinc-800 pb-safe z-40 shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
+        <div className="flex justify-around items-center h-[72px] w-full max-w-lg md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto px-2 sm:px-6 md:px-8">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href && item.label !== 'SOS';
+            
+            // Replaces Link completely for SOS to handle the Modal logic instead
+            if (item.label === 'SOS') {
+              return (
+                <button
+                  key="sos-btn"
+                  onClick={() => setShowSOSModal(true)}
+                  className="flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1 -mt-6"
+                >
+                  <div className="flex items-center justify-center transition-all duration-300 bg-red-500 rounded-full w-14 h-14 p-2.5 shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-4 border-white dark:border-zinc-900 animate-pulse active:scale-95">
+                    <img 
+                      src={item.iconUrl} 
+                      alt={item.label}
+                      className="w-full h-full object-contain grayscale-0 opacity-100 drop-shadow-md brightness-0 invert" 
+                    />
+                  </div>
+                  <span className="text-[11px] tracking-tight text-red-500 font-black drop-shadow-sm mt-0.5">SOS</span>
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1 active:scale-90',
+                  isActive ? 'text-orange-600 font-black' : 'text-zinc-400 font-semibold'
+                )}
+              >
                 <img 
                   src={item.iconUrl} 
                   alt={item.label}
                   className={cn(
-                    'object-contain transition-all duration-300', 
-                    item.label === 'SOS' ? 'w-full h-full grayscale-0 opacity-100 drop-shadow-md brightness-0 invert' : 'w-8 h-8',
-                    isActive && item.label !== 'SOS' ? 'scale-110 opacity-100' : (item.label !== 'SOS' ? 'opacity-40 grayscale hover:opacity-70' : '')
+                    'w-8 h-8 object-contain transition-all duration-300', 
+                    isActive ? 'scale-110 opacity-100' : 'opacity-40 grayscale hover:opacity-70'
                   )} 
                 />
-              </div>
-              <span className={cn(
-                "text-[11px] tracking-tight",
-                item.label === 'SOS' ? "text-red-500 font-black drop-shadow-sm mt-0.5" : ""
-              )}>{item.label}</span>
-              {isActive && item.label !== 'SOS' && (
-                <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-0.5" />
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+                <span className="text-[11px] tracking-tight">{item.label}</span>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-0.5" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* SOS Confirmation Modal */}
+      {showSOSModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-red-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-red-500 rounded-3xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-in zoom-in-95 duration-155 text-center">
+            
+            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 relative">
+              <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
+              <AlertTriangle className="w-10 h-10" />
+            </div>
+
+            <h3 className="text-xl font-black text-red-600 uppercase tracking-tight mb-2">
+              Keadaan Darurat?
+            </h3>
+            <p className="text-sm font-bold text-zinc-600 dark:text-zinc-300 mb-6 leading-relaxed">
+              Apakah Anda yakin dalam keadaan bahaya dan sangat membutuhkan bantuan?
+              <br /><span className="text-xs font-medium text-zinc-400 font-normal mt-2 block">(Lokasi & alamat Anda saat ini akan segera dikirim ke Pusat)</span>
+            </p>
+            
+            <div className="flex gap-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                disabled={isSendingSOS}
+                onClick={() => setShowSOSModal(false)}
+                className="flex-1 h-14 rounded-2xl font-bold"
+              >
+                TIDAK, BATAL
+              </Button>
+              <Button 
+                type="button" 
+                disabled={isSendingSOS}
+                onClick={confirmAndSendSOS}
+                className="flex-1 h-14 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl shadow-lg shadow-red-600/30 text-lg uppercase tracking-wider relative overflow-hidden"
+              >
+                {isSendingSOS ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : 'YA, TOLONG!'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
