@@ -22,7 +22,8 @@ export default function AdminMonitoringPage() {
 
   useEffect(() => {
     // 1. Setup Socket.io
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const socket = io(socketUrl, {
       auth: { token }
     });
 
@@ -53,12 +54,13 @@ export default function AdminMonitoringPage() {
     id: `officer-${o.userId}`,
     lat: o.lat,
     lng: o.lng,
-    name: `Petugas ID: ${o.userId}`,
-    status: 'Online'
+    name: o.fullName || `Petugas ID: ${o.userId}`,
+    status: 'Online (Live)',
+    photoUrl: o.photoUrl
   }));
 
   const filteredOfficers = officers.filter(o => 
-    `Petugas ${o.userId}`.toLowerCase().includes(searchQuery.toLowerCase())
+    (o.fullName || `Petugas ${o.userId}`).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

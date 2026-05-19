@@ -13,8 +13,51 @@ export default function PpsuLayout({
   children: React.ReactNode;
 }) {
   const settings = useSettingsStore();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   
+  useEffect(() => {
+    if (!token || !user || typeof window === 'undefined') return;
+
+    let watchId: number;
+    let socket: any;
+
+    const setupTracking = async () => {
+      const ioModule = await import('socket.io-client');
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      socket = ioModule.io(socketUrl, { auth: { token } });
+      
+      socket.on('connect', () => {
+        if (navigator.geolocation) {
+          watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              socket.emit('updateLocation', {
+                userId: user.id,
+                fullName: user.fullName,
+                photoUrl: user.photoUrl,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                timestamp: Date.now()
+              });
+            },
+            (err) => console.warn('Background tracking GPS error:', err),
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+          );
+        }
+      });
+    };
+
+    setupTracking();
+
+    return () => {
+      if (watchId !== undefined && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [token, user]);
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 pb-20">
       <header className="sticky top-0 z-[999] w-full bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800">

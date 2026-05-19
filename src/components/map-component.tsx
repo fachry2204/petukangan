@@ -91,19 +91,35 @@ export default function MapComponent({
         const key = point.id || point.name || `${point.lat},${point.lng}`;
         currentKeys.add(key);
 
+        const getCustomIcon = (p: any) => {
+          if (p.photoUrl) {
+            const html = `
+              <div style="width: 44px; height: 44px; border-radius: 50%; background-color: #38bdf8; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(56,189,248,0.7); border: 2.5px solid white; overflow: hidden; position: relative;">
+                <img src="${p.photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" />
+                <div style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background-color: #22c55e; border-radius: 50%; border: 1.5px solid white;"></div>
+              </div>
+            `;
+            return L.divIcon({
+              className: 'custom-photo-icon',
+              html,
+              iconSize: [44, 44],
+              iconAnchor: [22, 22],
+              popupAnchor: [0, -22]
+            });
+          }
+          return new L.Icon.Default();
+        };
+
         const existingMarker = markersRef.current[key];
 
         if (existingMarker) {
-          // Smoothly update position of existing marker
           existingMarker.setLatLng([point.lat, point.lng]);
           
-          // Optionally update popup content if needed
           if (showPopup && existingMarker.getPopup()) {
              existingMarker.getPopup().setContent(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:#888">${point.status || ''}</span></div>`);
           }
         } else {
-          // Create new marker
-          const marker = L.marker([point.lat, point.lng]).addTo(map);
+          const marker = L.marker([point.lat, point.lng], { icon: getCustomIcon(point) }).addTo(map);
           if (showPopup && (point.name || point.status)) {
             marker.bindPopup(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:#888">${point.status || ''}</span></div>`);
           }
