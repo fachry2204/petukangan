@@ -26,7 +26,8 @@ const plusJakarta = localFont({
 export async function generateMetadata(): Promise<Metadata> {
   try {
     // Attempt to fetch settings directly from the backend server
-    const res = await fetch('http://localhost:3001/settings', { cache: 'no-store' });
+    // Using revalidate (ISR) instead of no-store to avoid DYNAMIC_SERVER_USAGE build errors
+    const res = await fetch('http://localhost:3001/settings', { next: { revalidate: 60 } });
     if (res.ok) {
       const settings = await res.json();
       const title = settings.systemName || "PPSU Smart Monitoring";
