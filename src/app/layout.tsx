@@ -57,8 +57,12 @@ export async function generateMetadata(): Promise<Metadata> {
         }
       };
     }
-  } catch (error) {
-    console.error("Dynamic metadata fetch failed, using fallback:", error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn("⚠️ Dynamic metadata fetch aborted (backend not ready during build), using fallback.");
+    } else {
+      console.error("Dynamic metadata fetch failed, using fallback:", error.message || error);
+    }
   }
 
   // Fallback metadata if database is unreachable

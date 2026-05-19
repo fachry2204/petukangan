@@ -21,8 +21,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       description = settings.systemDescription || description;
       logoUrl = settings.logoUrl || logoUrl;
     }
-  } catch (error) {
-    console.error('Failed to fetch settings for manifest:', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('⚠️ Manifest fetch aborted (backend not ready during build), using fallback.');
+    } else {
+      console.error('Failed to fetch settings for manifest:', error.message || error);
+    }
   }
 
   return {
