@@ -23,7 +23,7 @@ const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: 
 
 export default function PpsuCreateTaskPage() {
   const router = useRouter();
-  const { token } = useAuthStore();
+  const { user, token } = useAuthStore();
   const { toast } = useToast();
 
   const [title, setTitle] = useState('');
@@ -123,8 +123,15 @@ export default function PpsuCreateTaskPage() {
     );
   };
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
-    if (!token) {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (!token || !user) {
       router.push('/login');
       return;
     }

@@ -51,13 +51,20 @@ export default function PpsuSchedulePage() {
     }
   };
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
     if (!token || !user) {
       router.push('/login');
       return;
     }
     fetchAllSchedules();
-  }, [token, user]);
+  }, [token, user, isHydrated]);
 
   const getIndonesianDayAndDate = (dateStr: string) => {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];

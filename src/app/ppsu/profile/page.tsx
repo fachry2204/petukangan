@@ -55,14 +55,21 @@ export default function PpsuProfilePage() {
     }
   };
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
     if (!token || !user) {
       router.push('/login');
-    } else {
-      setNewPhone(user.phone || '');
-      refreshUserSession();
+      return;
     }
-  }, [token]);
+    setNewPhone(user.phone || '');
+    refreshUserSession();
+  }, [token, user, isHydrated]);
 
   const handleLogout = () => {
     logout();
