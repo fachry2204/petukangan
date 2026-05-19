@@ -90,9 +90,9 @@ export default function LoginPage() {
       setTimeout(() => {
         const roleName = response.data.user.role?.name || response.data.user.role;
         if (roleName === 'PPSU') {
-          window.location.href = '/ppsu/home';
+          router.push('/ppsu/home');
         } else {
-          window.location.href = '/admin/dashboard';
+          router.push('/admin/dashboard');
         }
       }, 1500);
     } catch (error: any) {
@@ -263,9 +263,9 @@ export default function LoginPage() {
                     : state.user?.role?.name;
                   
                   if (roleName === 'PPSU') {
-                    window.location.href = '/ppsu/home';
+                    router.push('/ppsu/home');
                   } else if (state.user) {
-                    window.location.href = '/admin/dashboard';
+                    router.push('/admin/dashboard');
                   }
                 }
               }}

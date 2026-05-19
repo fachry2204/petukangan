@@ -383,20 +383,30 @@ export default function PpsuHomePage() {
     }
   };
 
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIsHydrated(true);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) return; // Tunggu sinkronisasi localStorage selesai
-    if (!token || !user) {
-      router.push('/login');
-      return;
-    }
-    fetchData();
-  }, [token, user, isHydrated]);
+    if (!mounted) return;
+
+    // Tunggu sedikit agar zustand-persist di mobile selesai membaca memori
+    const checkAuthAndFetch = async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const currentState = useAuthStore.getState();
+      if (!currentState.token || !currentState.user) {
+        router.push('/login');
+      } else {
+        fetchData();
+      }
+    };
+
+    checkAuthAndFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
 
   // Generate Current Week's Schedules (Monday to Sunday)
   const getWeekSchedules = () => {
