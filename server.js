@@ -15,7 +15,7 @@ const out = fs.openSync(path.join(__dirname, 'backend-out.log'), 'a');
 const err = fs.openSync(path.join(__dirname, 'backend-err.log'), 'a');
 
 // 1. Start NestJS Backend in the background
-const backendProcess = spawn('node', [path.join(__dirname, 'backend', 'dist', 'main.js')], {
+const backendProcess = spawn('node', [path.join(__dirname, 'backend', 'dist', 'src', 'main.js')], {
   cwd: path.join(__dirname, 'backend'),
   env: { ...process.env, PORT: nestPort },
   stdio: ['ignore', out, err],

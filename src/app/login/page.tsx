@@ -90,9 +90,9 @@ export default function LoginPage() {
       setTimeout(() => {
         const roleName = response.data.user.role?.name || response.data.user.role;
         if (roleName === 'PPSU') {
-          router.push('/ppsu/home');
+          window.location.href = '/ppsu/home';
         } else {
-          router.push('/admin/dashboard');
+          window.location.href = '/admin/dashboard';
         }
       }, 1500);
     } catch (error: any) {
@@ -256,6 +256,18 @@ export default function LoginPage() {
             <button
               onClick={() => {
                 setModalState(prev => ({ ...prev, isOpen: false }));
+                if (modalState.type === 'success') {
+                  const state = useAuthStore.getState();
+                  const roleName = typeof state.user?.role === 'string' 
+                    ? state.user?.role 
+                    : state.user?.role?.name;
+                  
+                  if (roleName === 'PPSU') {
+                    window.location.href = '/ppsu/home';
+                  } else if (state.user) {
+                    window.location.href = '/admin/dashboard';
+                  }
+                }
               }}
               className={`w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 shadow-md ${
                 modalState.type === 'success' 

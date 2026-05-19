@@ -5,29 +5,9 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { usePathname } from 'next/navigation';
 import axios from 'axios';
-import Head from 'next/head';
 
 // Dynamic Axios request interceptor to automatically adapt to localhost or local Wi-Fi IP address
 if (typeof window !== 'undefined') {
-  // Gracefully handle DOM mutations by translation extensions to prevent React unmount crashes
-  if (typeof Node === 'function' && Node.prototype) {
-    const originalRemoveChild = Node.prototype.removeChild;
-    Node.prototype.removeChild = function <T extends Node>(child: T): T {
-      if (child.parentNode !== this) {
-        return child;
-      }
-      return originalRemoveChild.apply(this, arguments as any) as any;
-    };
-
-    const originalInsertBefore = Node.prototype.insertBefore;
-    Node.prototype.insertBefore = function <T extends Node>(newNode: T, referenceNode: Node | null): T {
-      if (referenceNode && referenceNode.parentNode !== this) {
-        return newNode;
-      }
-      return originalInsertBefore.apply(this, arguments as any) as any;
-    };
-  }
-
   axios.interceptors.request.use((config) => {
     if (config.url) {
       const currentHost = window.location.hostname;
@@ -60,35 +40,34 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     fetchSettings();
   }, []);
 
-  // Handle Favicon Dynamic Injection
+  // Handle Favicon Dynamic Injection — safely update ONLY our custom favicon link
+  // Never remove React-managed head nodes (causes null.removeChild crash in React 19)
   useEffect(() => {
     if (!settings.logoUrl) return;
 
-    // 1. Remove all existing favicon/icon links to avoid conflicts
-    const existingLinks = document.querySelectorAll(
-      "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon'], link[rel~='icon']"
-    );
-    existingLinks.forEach(el => el.remove());
+    // Find or create our OWN custom favicon link, identified by a unique ID.
+    // We NEVER touch any other link elements in the head.
+    let customFavicon = document.getElementById('app-custom-favicon') as HTMLLinkElement | null;
 
-    // 2. Create a brand new link element for the favicon
-    const newLink = document.createElement('link');
-    newLink.rel = 'icon';
-    newLink.href = settings.logoUrl;
-    
-    // Support image types dynamically
-    if (settings.logoUrl.endsWith('.png')) {
-      newLink.type = 'image/png';
-    } else if (settings.logoUrl.endsWith('.jpg') || settings.logoUrl.endsWith('.jpeg')) {
-      newLink.type = 'image/jpeg';
-    } else if (settings.logoUrl.endsWith('.svg')) {
-      newLink.type = 'image/svg+xml';
-    } else {
-      newLink.type = 'image/x-icon';
+    if (!customFavicon) {
+      customFavicon = document.createElement('link');
+      customFavicon.id = 'app-custom-favicon';
+      customFavicon.rel = 'icon';
+      document.head.appendChild(customFavicon);
     }
-    
-    document.head.appendChild(newLink);
 
-    // Also update document title
+    customFavicon.href = settings.logoUrl;
+    if (settings.logoUrl.endsWith('.png')) {
+      customFavicon.type = 'image/png';
+    } else if (settings.logoUrl.endsWith('.jpg') || settings.logoUrl.endsWith('.jpeg')) {
+      customFavicon.type = 'image/jpeg';
+    } else if (settings.logoUrl.endsWith('.svg')) {
+      customFavicon.type = 'image/svg+xml';
+    } else {
+      customFavicon.type = 'image/x-icon';
+    }
+
+    // Update document title (safe — React 19 doesn't manage this imperatively)
     if (settings.systemName) {
       document.title = settings.systemName;
     }

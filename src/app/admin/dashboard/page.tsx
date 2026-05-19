@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   Users, 
   MapPin, 
@@ -10,18 +9,11 @@ import {
   AlertTriangle, 
   TrendingUp,
   ArrowUpRight,
-  ArrowDownRight,
   Loader2,
-  Activity
 } from 'lucide-react';
 
-import dynamic from 'next/dynamic';
-import { io } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
-
-// Dynamic import for Leaflet (No SSR)
-const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
 export default function AdminDashboardPage() {
   const { token } = useAuthStore();
@@ -33,9 +25,7 @@ export default function AdminDashboardPage() {
     laporanPending: 0
   });
   const [activities, setActivities] = useState<any[]>([]);
-  const [officers, setOfficers] = useState<any[]>([]);
 
-  // 1. Fetch Stats from DB
   const fetchStats = async () => {
     if (!token) return;
     try {
@@ -63,10 +53,8 @@ export default function AdminDashboardPage() {
         laporanPending: pendingReports.length
       });
 
-      // Populate dynamic activities
       const recentActivities: any[] = [];
       
-      // Tasks activities
       tasksRes.data.slice(0, 3).forEach((task: any) => {
         let title = '';
         if (task.status === 'WORKING') {
@@ -83,7 +71,6 @@ export default function AdminDashboardPage() {
         });
       });
 
-      // Online users
       ppsuUsers.filter((u: any) => u.lastSeen).slice(0, 2).forEach((u: any) => {
         recentActivities.push({
           title: `Petugas Online: ${u.fullName}`,
@@ -92,7 +79,6 @@ export default function AdminDashboardPage() {
         });
       });
 
-      // Fallback activities if none
       if (recentActivities.length === 0) {
         recentActivities.push({
           title: 'Sistem Siap',
@@ -112,40 +98,9 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (token) {
       fetchStats();
-
-      // 2. Setup Realtime Map Tracking Socket
-      const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
-        auth: { token }
-      });
-
-      socket.on('connect', () => {
-        socket.emit('joinAdminRoom');
-      });
-
-      socket.on('locationUpdated', (data) => {
-        setOfficers(prev => {
-          const existing = prev.findIndex(o => o.userId === data.userId);
-          if (existing > -1) {
-            const updated = [...prev];
-            updated[existing] = { ...updated[existing], ...data };
-            return updated;
-          }
-          return [...prev, data];
-        });
-      });
-
-      return () => {
-        socket.disconnect();
-      };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  const mapPoints = officers.map(o => ({
-    lat: o.lat,
-    lng: o.lng,
-    name: `Petugas ID: ${o.userId}`,
-    status: 'Online'
-  }));
 
   if (loading) {
     return (
@@ -192,23 +147,7 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Realtime Tracking Monitor */}
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl overflow-hidden min-h-[450px] flex flex-col bg-white dark:bg-zinc-900">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-100 dark:border-zinc-800 p-6 shrink-0">
-            <div>
-              <CardTitle className="text-lg font-bold">Live GPS Map Monitoring</CardTitle>
-              <p className="text-xs text-zinc-400 mt-0.5">Lokasi real-time petugas lapangan PPSU</p>
-            </div>
-            <Badge className="bg-green-500 hover:bg-green-600 text-white border-none font-bold px-3 py-1 text-xs flex items-center gap-1 shrink-0">
-              <Activity className="w-3 h-3 animate-pulse" /> LIVE
-            </Badge>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 relative min-h-[300px]">
-            <MapComponent points={mapPoints} />
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-8">
         {/* Activity Feed */}
         <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 flex flex-col">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800 p-6">

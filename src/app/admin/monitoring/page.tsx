@@ -48,8 +48,9 @@ export default function AdminMonitoringPage() {
     };
   }, [token]);
 
-  // Convert officers to map points
+  // Convert officers to map points with a unique ID for smooth tracking updates
   const mapPoints = officers.map(o => ({
+    id: `officer-${o.userId}`,
     lat: o.lat,
     lng: o.lng,
     name: `Petugas ID: ${o.userId}`,

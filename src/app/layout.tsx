@@ -37,12 +37,14 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${plusJakarta.variable} h-full antialiased`}
+      lang="id"
+      translate="no"
+      className={`${plusJakarta.variable} h-full antialiased notranslate`}
       suppressHydrationWarning={true}
     >
 
       <head>
+        <meta name="google" content="notranslate" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#FF8C00" />
       </head>

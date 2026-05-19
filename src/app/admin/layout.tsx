@@ -27,7 +27,7 @@ export default function AdminLayout({
       <div className={cn("flex-1 flex flex-col transition-all duration-300", isCollapsed ? "ml-20" : "ml-64")}>
         <header className="h-20 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 px-8 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-white/70">
           <div>
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Jakarta Smart City Monitoring</h2>
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">System Monitoring PPSU Kelurahan</h2>
             <p className="text-lg font-bold text-zinc-900 dark:text-white">Main Dashboard</p>
           </div>
           <div className="flex items-center gap-6">
