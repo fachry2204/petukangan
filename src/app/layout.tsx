@@ -84,7 +84,6 @@ export default function RootLayout({
 
       <head>
         <meta name="google" content="notranslate" />
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#FF8C00" />
       </head>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning={true}>
