@@ -383,13 +383,20 @@ export default function PpsuHomePage() {
     }
   };
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return; // Tunggu sinkronisasi localStorage selesai
     if (!token || !user) {
       router.push('/login');
       return;
     }
     fetchData();
-  }, [token]);
+  }, [token, user, isHydrated]);
 
   // Generate Current Week's Schedules (Monday to Sunday)
   const getWeekSchedules = () => {
