@@ -23,10 +23,48 @@ const plusJakarta = localFont({
   variable: "--font-plus-jakarta",
 });
 
-export const metadata: Metadata = {
-  title: "PPSU Smart Monitoring",
-  description: "Jakarta Smart City Monitoring System",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    // Attempt to fetch settings directly from the backend server
+    const res = await fetch('http://localhost:3001/settings', { cache: 'no-store' });
+    if (res.ok) {
+      const settings = await res.json();
+      const title = settings.systemName || "PPSU Smart Monitoring";
+      const logo = settings.logoUrl || "/logodki.png";
+      
+      return {
+        title: title,
+        description: settings.systemDescription || "Jakarta Smart City Monitoring System",
+        icons: {
+          icon: logo,
+          shortcut: logo,
+          apple: logo, // Generates <link rel="apple-touch-icon"> for iOS Home Screen
+        },
+        appleWebApp: {
+          title: title, // Sets the name under the icon on iOS Home Screen
+          statusBarStyle: "default",
+          capable: true,
+        }
+      };
+    }
+  } catch (error) {
+    console.error("Dynamic metadata fetch failed, using fallback:", error);
+  }
+
+  // Fallback metadata if database is unreachable
+  return {
+    title: "PPSU Smart Monitoring",
+    description: "Jakarta Smart City Monitoring System",
+    icons: {
+      icon: '/logodki.png',
+      apple: '/logodki.png',
+    },
+    appleWebApp: {
+      title: "PPSU Smart",
+      capable: true,
+    }
+  };
+}
 
 import SettingsProvider from '@/components/SettingsProvider';
 
