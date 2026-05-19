@@ -55,6 +55,35 @@ export default function PpsuProfilePage() {
     }
   };
 
+  const [stats, setStats] = useState({ absenMasuk: 0, totalTugas: 0 });
+
+  const fetchStats = async () => {
+    try {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+      // Fetch Absensi
+      const resAtt = await axios.get(`${apiUrl}/attendance`, { headers: { Authorization: `Bearer ${token}` } });
+      const thisMonthAttendance = resAtt.data.filter((a: any) => {
+        const d = new Date(a.timestamp);
+        return d >= firstDayOfMonth && d <= lastDayOfMonth;
+      });
+      const hadirCount = thisMonthAttendance.filter((a: any) => a.type === 'IN').length;
+
+      // Fetch Tugas
+      const resTasks = await axios.get(`${apiUrl}/tasks`, { headers: { Authorization: `Bearer ${token}` } });
+      const thisMonthTasks = (resTasks.data || []).filter((t: any) => {
+        const d = new Date(t.createdAt);
+        return d >= firstDayOfMonth && d <= lastDayOfMonth;
+      });
+
+      setStats({ absenMasuk: hadirCount, totalTugas: thisMonthTasks.length });
+    } catch (err) {
+      console.error('Failed to fetch performance stats:', err);
+    }
+  };
+
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -69,6 +98,7 @@ export default function PpsuProfilePage() {
     }
     setNewPhone(user.phone || '');
     refreshUserSession();
+    fetchStats();
   }, [token, user, isHydrated]);
 
   const handleLogout = () => {
@@ -229,6 +259,40 @@ export default function PpsuProfilePage() {
               <Badge className="bg-orange-50 dark:bg-orange-950/20 text-orange-600 hover:bg-orange-50 border-none font-bold capitalize">
                 {user.role?.name || 'Petugas PPSU'}
               </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Laporan Kinerja (Performance Stats) Card */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900 overflow-hidden">
+        <CardHeader className="pb-2 border-b border-zinc-50 dark:border-zinc-800">
+          <CardTitle className="text-sm font-black text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-orange-600" />
+            Laporan Kinerja Bulan Ini
+          </CardTitle>
+          <CardDescription className="text-[10px] uppercase font-bold text-zinc-400">
+            Rangkuman Absensi dan Tugas Anda
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Absensi */}
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1">
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 mb-1">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{stats.absenMasuk}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider">Total Kehadiran</p>
+            </div>
+
+            {/* Tugas */}
+            <div className="bg-amber-50 dark:bg-amber-950/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-600 mb-1">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <p className="text-2xl font-black text-amber-700 dark:text-amber-400">{stats.totalTugas}</p>
+              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">Tugas Selesai</p>
             </div>
           </div>
         </CardContent>

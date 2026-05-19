@@ -40,6 +40,7 @@ export default function PpsuAttendancePage() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [permissionError, setPermissionError] = useState<string>('');
+  const [successModalData, setSuccessModalData] = useState<{isOpen: boolean, title: string, desc: string}>({isOpen: false, title: '', desc: ''});
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -257,9 +258,10 @@ export default function PpsuAttendancePage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast({ 
-        title: `${actionLabel} Berhasil 🎉`, 
-        description: `Waktu ${actionLabel.toLowerCase()} Anda telah dicatat di database MySQL` 
+      setSuccessModalData({
+        isOpen: true,
+        title: `${actionLabel} Berhasil 🎉`,
+        desc: `Data anda sudah tercatat di system`
       });
       fetchTodayStatus(false);
     } catch (error: any) {
@@ -454,9 +456,10 @@ export default function PpsuAttendancePage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast({ 
-        title: isCheckOut ? 'Absen Pulang Berhasil 🎉' : 'Absen Masuk Berhasil 🎉', 
-        description: isCheckOut ? 'Absensi keluar Anda telah dicatat di database MySQL' : 'Kehadiran Anda telah dicatat di database MySQL' 
+      setSuccessModalData({
+        isOpen: true,
+        title: isCheckOut ? 'Absen Pulang Berhasil 🎉' : 'Absen Masuk Berhasil 🎉',
+        desc: `Data anda sudah tercatat di system`
       });
       setPhoto(null);
       fetchTodayStatus(false);
@@ -880,6 +883,32 @@ export default function PpsuAttendancePage() {
                 Muat Ulang
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Success Modal */}
+      {successModalData.isOpen && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform scale-100 transition-all duration-300 animate-in zoom-in-95">
+            <div className="mx-auto mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20">
+              <CheckCircle2 className="w-10 h-10 text-green-500" />
+            </div>
+            <h3 className="text-xl font-extrabold text-zinc-900 dark:text-white mb-2">
+              {successModalData.title}
+            </h3>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6 leading-relaxed">
+              {successModalData.desc}
+            </p>
+            <button
+              onClick={() => {
+                setSuccessModalData({ isOpen: false, title: '', desc: '' });
+                router.push('/ppsu/home');
+              }}
+              className="w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 shadow-md bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-green-500/20"
+            >
+              Melanjutkan ke Beranda
+            </button>
           </div>
         </div>
       )}
