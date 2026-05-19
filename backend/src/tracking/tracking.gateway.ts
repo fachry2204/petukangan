@@ -72,6 +72,12 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @SubscribeMessage('emergencySignal')
   async handleEmergencySignal(client: Socket, payload: any) {
+    const dateObj = new Date(payload.timestamp || Date.now());
+    const gmt7Date = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000));
+    const dateSos = gmt7Date.toISOString().split('T')[0];
+    const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
+
     try {
       // 1. Save to Database natively
       const conn = await mysql.createConnection({
@@ -81,21 +87,27 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         database: process.env.DB_NAME || 'ppsu_monitoring'
       });
       
-      const dateObj = new Date(payload.timestamp || Date.now());
-      // Adjust to GMT+7 (WIB) manually for local time extraction if server is UTC
-      const gmt7Date = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000));
-      const dateSos = gmt7Date.toISOString().split('T')[0];
-      const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
-      
-      const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
-
       await conn.query(
         'INSERT INTO sos_signals (user_id, full_name, date_sos, time_sos, lat, lng, address, map_link, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [payload.userId, payload.fullName, dateSos, timeSos, payload.lat, payload.lng, payload.address || 'Alamat gagal diambil', mapLink, 'DARURAT']
+        [
+          payload.userId || 0, 
+          payload.fullName || 'Petugas Anonim', 
+          dateSos, 
+          timeSos, 
+          payload.lat || 0, 
+          payload.lng || 0, 
+          payload.address || 'Alamat gagal diambil', 
+          mapLink, 
+          'DARURAT'
+        ]
       );
       await conn.end();
+    } catch (dbErr) {
+      console.error('Failed to save emergency signal to DB:', dbErr);
+    }
       
-      // 2. Broadcast SOS signal to all connected admins immediately
+    // 2. Broadcast SOS signal to all connected admins immediately (GUARANTEED)
+    try {
       this.server.emit('emergencySignal', {
         userId: payload.userId,
         fullName: payload.fullName,
@@ -111,7 +123,7 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         timestamp: payload.timestamp || Date.now(),
       });
     } catch (err) {
-      console.error('Failed to save emergency signal:', err);
+      console.error('Failed to broadcast emergency signal:', err);
     }
   }
 }

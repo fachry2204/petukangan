@@ -49,8 +49,7 @@ export function BottomNav() {
             console.error('Failed to reverse geocode SOS location:', e);
           }
 
-          // Emit the complete data
-          socket.emit('emergencySignal', {
+          const payload = {
             userId: user.id,
             fullName: user.fullName,
             photoUrl: user.photoUrl,
@@ -59,12 +58,28 @@ export function BottomNav() {
             lng,
             address,
             timestamp: Date.now()
-          });
-          
-          setTimeout(() => socket.disconnect(), 3000);
-          setShowSOSModal(false);
-          setIsSendingSOS(false);
-          router.push('/ppsu/sos');
+          };
+
+          const executeSOS = () => {
+            socket.emit('emergencySignal', payload);
+            // Beri waktu 1 detik agar sinyal benar-benar terbang sebelum pindah halaman
+            setTimeout(() => {
+              socket.disconnect();
+              setShowSOSModal(false);
+              setIsSendingSOS(false);
+              router.push('/ppsu/sos');
+            }, 1000);
+          };
+
+          if (socket.connected) {
+            executeSOS();
+          } else {
+            socket.on('connect', executeSOS);
+            // Fallback jika connect gagal/lama
+            setTimeout(() => {
+              if (isSendingSOS) executeSOS();
+            }, 3000);
+          }
         },
         (err) => {
           console.error('GPS SOS Error', err);
