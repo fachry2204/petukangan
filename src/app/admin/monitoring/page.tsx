@@ -44,6 +44,19 @@ export default function AdminMonitoringPage() {
       });
     });
 
+    socket.on('emergencySignal', (data) => {
+      setOfficers(prev => {
+        const existing = prev.findIndex(o => o.userId === data.userId);
+        const newData = { ...data, status: 'DARURAT', isSOS: true };
+        if (existing > -1) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], ...newData };
+          return updated;
+        }
+        return [...prev, newData];
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -55,8 +68,10 @@ export default function AdminMonitoringPage() {
     lat: o.lat,
     lng: o.lng,
     name: o.fullName || `Petugas ID: ${o.userId}`,
-    status: 'Online (Live)',
-    photoUrl: o.photoUrl
+    status: o.status || 'Online (Live)',
+    photoUrl: o.photoUrl,
+    isSOS: o.isSOS,
+    address: o.address
   }));
 
   const filteredOfficers = officers.filter(o => 

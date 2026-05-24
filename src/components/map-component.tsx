@@ -53,7 +53,8 @@ export default function MapComponent({
         if (point.lat == null || point.lng == null) return;
         const marker = L.marker([point.lat, point.lng]).addTo(map);
         if (showPopup && (point.name || point.status)) {
-          marker.bindPopup(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:#888">${point.status || ''}</span></div>`);
+          let addressHtml = point.address ? `<div style="font-size: 10px; margin-top: 4px; color: #ef4444; font-weight: bold; max-width: 150px">${point.address}</div>` : '';
+          marker.bindPopup(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:${point.isSOS ? '#ef4444' : '#888'}; font-weight: ${point.isSOS ? 'bold' : 'normal'}">${point.status || ''}</span>${addressHtml}</div>`);
         }
       });
 
@@ -92,6 +93,23 @@ export default function MapComponent({
         currentKeys.add(key);
 
         const getCustomIcon = (p: any) => {
+          if (p.isSOS) {
+            const html = `
+              <div class="flex items-center justify-center relative" style="width: 60px; height: 60px;">
+                <div class="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
+                <div class="relative w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.8)] z-10">
+                  <span class="text-white font-black text-[10px]">SOS</span>
+                </div>
+              </div>
+            `;
+            return L.divIcon({
+              className: 'custom-sos-icon',
+              html,
+              iconSize: [60, 60],
+              iconAnchor: [30, 30],
+              popupAnchor: [0, -30]
+            });
+          }
           if (p.photoUrl) {
             const html = `
               <div style="width: 44px; height: 44px; border-radius: 50%; background-color: #38bdf8; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(56,189,248,0.7); border: 2.5px solid white; overflow: hidden; position: relative;">
@@ -116,12 +134,14 @@ export default function MapComponent({
           existingMarker.setLatLng([point.lat, point.lng]);
           
           if (showPopup && existingMarker.getPopup()) {
-             existingMarker.getPopup().setContent(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:#888">${point.status || ''}</span></div>`);
+             let addressHtml = point.address ? `<div style="font-size: 10px; margin-top: 4px; color: #ef4444; font-weight: bold; max-width: 150px">${point.address}</div>` : '';
+             existingMarker.getPopup().setContent(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:${point.isSOS ? '#ef4444' : '#888'}; font-weight: ${point.isSOS ? 'bold' : 'normal'}">${point.status || ''}</span>${addressHtml}</div>`);
           }
         } else {
           const marker = L.marker([point.lat, point.lng], { icon: getCustomIcon(point) }).addTo(map);
           if (showPopup && (point.name || point.status)) {
-            marker.bindPopup(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:#888">${point.status || ''}</span></div>`);
+            let addressHtml = point.address ? `<div style="font-size: 10px; margin-top: 4px; color: #ef4444; font-weight: bold; max-width: 150px">${point.address}</div>` : '';
+            marker.bindPopup(`<div style="min-width:120px"><b>${point.name || ''}</b><br/><span style="color:${point.isSOS ? '#ef4444' : '#888'}; font-weight: ${point.isSOS ? 'bold' : 'normal'}">${point.status || ''}</span>${addressHtml}</div>`);
           }
           markersRef.current[key] = marker;
         }
