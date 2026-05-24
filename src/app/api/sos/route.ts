@@ -67,3 +67,42 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const payload = await req.json();
+    const dateObj = new Date(payload.timestamp || Date.now());
+    const gmt7Date = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000));
+    const dateSos = gmt7Date.toISOString().split('T')[0];
+    const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
+
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'ppsu_monitoring'
+    });
+    
+    await conn.query(
+      'INSERT INTO sos_signals (user_id, full_name, date_sos, time_sos, lat, lng, address, map_link, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        payload.userId || 0, 
+        payload.fullName || 'Petugas Anonim', 
+        dateSos, 
+        timeSos, 
+        payload.lat || 0, 
+        payload.lng || 0, 
+        payload.address || 'Alamat gagal diambil', 
+        mapLink, 
+        'DARURAT'
+      ]
+    );
+    await conn.end();
+
+    return NextResponse.json({ success: true, message: 'SOS signal saved successfully' });
+  } catch (error) {
+    console.error('Failed to save emergency signal to DB:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

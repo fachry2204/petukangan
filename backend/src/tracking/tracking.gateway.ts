@@ -78,34 +78,8 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
     const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
     const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
 
-    try {
-      // 1. Save to Database natively
-      const conn = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'ppsu_monitoring'
-      });
-      
-      await conn.query(
-        'INSERT INTO sos_signals (user_id, full_name, date_sos, time_sos, lat, lng, address, map_link, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          payload.userId || 0, 
-          payload.fullName || 'Petugas Anonim', 
-          dateSos, 
-          timeSos, 
-          payload.lat || 0, 
-          payload.lng || 0, 
-          payload.address || 'Alamat gagal diambil', 
-          mapLink, 
-          'DARURAT'
-        ]
-      );
-      await conn.end();
-    } catch (dbErr) {
-      console.error('Failed to save emergency signal to DB:', dbErr);
-    }
-      
+    // Note: Database insert is now handled via Next.js POST /api/sos API
+    // before emitting this socket event, ensuring guaranteed persistence.
     // 2. Broadcast SOS signal to all connected admins immediately (GUARANTEED)
     try {
       this.server.emit('emergencySignal', {

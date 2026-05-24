@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import axios from 'axios';
 
 const navItems = [
   { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/ppsu/home' },
@@ -84,9 +85,16 @@ export function BottomNav() {
       };
 
       let hasExecuted = false;
-      const executeSOS = () => {
+      const executeSOS = async () => {
         if (hasExecuted) return;
         hasExecuted = true;
+        
+        try {
+          await axios.post('/api/sos', payload);
+        } catch (e) {
+          console.error('Failed to save SOS via API', e);
+        }
+
         socket.emit('emergencySignal', payload);
         // Tunggu sebentar lalu redirect
         setTimeout(() => {

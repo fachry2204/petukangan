@@ -6,9 +6,10 @@ import { Attendance } from './attendance.entity';
 import { Schedule } from '../schedules/schedule.entity';
 import { AttendanceRequest } from './attendance-request.entity';
 import { Lembur } from './lembur.entity';
+import { TrackingModule } from '../tracking/tracking.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Attendance, Schedule, AttendanceRequest, Lembur])],
+  imports: [TypeOrmModule.forFeature([Attendance, Schedule, AttendanceRequest, Lembur]), TrackingModule],
   controllers: [AttendanceController],
   providers: [AttendanceService],
   exports: [AttendanceService],

@@ -7,6 +7,6 @@ import { GPSTracking } from './gps-tracking.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([GPSTracking])],
   providers: [TrackingGateway, TrackingService],
-  exports: [TrackingService],
+  exports: [TrackingService, TrackingGateway],
 })
 export class TrackingModule {}
