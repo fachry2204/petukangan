@@ -60,49 +60,24 @@ let SettingsService = class SettingsService {
     async onModuleInit() {
         const count = await this.settingsRepo.count();
         if (count === 0) {
-            const defaultSettings = this.settingsRepo.create({
-                shifts: [
-                    { name: 'Shift Pagi', startTime: '08:00' },
-                    { name: 'Shift Siang', startTime: '14:00' },
-                    { name: 'Shift Malam', startTime: '22:00' }
-                ],
-                zones: ['Zona A', 'Zona B', 'Zona C', 'Zona D']
+            const initial = this.settingsRepo.create({
+                shifts: [],
+                zones: [],
             });
-            await this.settingsRepo.save(defaultSettings);
-            console.log('Seeded default system settings in database.');
+            await this.settingsRepo.save(initial);
+            console.log('[Settings] Inisialisasi record settings kosong di database. Silakan konfigurasi via halaman Settings.');
         }
     }
     async getSettings() {
         let settings = await this.settingsRepo.findOne({ where: {} });
         if (!settings) {
-            settings = this.settingsRepo.create({
-                shifts: [
-                    { name: 'Shift Pagi', startTime: '08:00' },
-                    { name: 'Shift Siang', startTime: '14:00' },
-                    { name: 'Shift Malam', startTime: '22:00' }
-                ],
-                zones: ['Zona A', 'Zona B', 'Zona C', 'Zona D']
-            });
+            settings = this.settingsRepo.create({ shifts: [], zones: [] });
             await this.settingsRepo.save(settings);
         }
-        else {
-            let updated = false;
-            if (!settings.shifts || settings.shifts.length === 0 || typeof settings.shifts[0] === 'string') {
-                settings.shifts = [
-                    { name: 'Shift Pagi', startTime: '08:00' },
-                    { name: 'Shift Siang', startTime: '14:00' },
-                    { name: 'Shift Malam', startTime: '22:00' }
-                ];
-                updated = true;
-            }
-            if (!settings.zones) {
-                settings.zones = ['Zona A', 'Zona B', 'Zona C', 'Zona D'];
-                updated = true;
-            }
-            if (updated) {
-                await this.settingsRepo.save(settings);
-            }
-        }
+        if (!settings.shifts)
+            settings.shifts = [];
+        if (!settings.zones)
+            settings.zones = [];
         return settings;
     }
     async updateSettings(data) {
@@ -114,17 +89,16 @@ let SettingsService = class SettingsService {
                     const absolutePath = path.join('d:', 'xampp', 'htdocs', 'petukangan', 'public', targetBgImage.replace(/\//g, path.sep));
                     if (fs.existsSync(absolutePath)) {
                         fs.unlinkSync(absolutePath);
-                        console.log(`Deleted background image file to save storage: ${absolutePath}`);
+                        console.log(`[Settings] Deleted old background image: ${absolutePath}`);
                     }
                 }
                 catch (error) {
-                    console.error(`Failed to delete background image file: ${error.message}`);
+                    console.error(`[Settings] Failed to delete background image: ${error.message}`);
                 }
             }
             settings.bgImage = '';
-            if (data.bgImage !== undefined) {
+            if (data.bgImage !== undefined)
                 data.bgImage = '';
-            }
         }
         Object.assign(settings, data);
         return this.settingsRepo.save(settings);

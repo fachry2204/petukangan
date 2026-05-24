@@ -19,7 +19,7 @@ exports.TrackingModule = TrackingModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([gps_tracking_entity_1.GPSTracking])],
         providers: [tracking_gateway_1.TrackingGateway, tracking_service_1.TrackingService],
-        exports: [tracking_service_1.TrackingService],
+        exports: [tracking_service_1.TrackingService, tracking_gateway_1.TrackingGateway],
     })
 ], TrackingModule);
 //# sourceMappingURL=tracking.module.js.map

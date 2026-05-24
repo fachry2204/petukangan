@@ -12,19 +12,21 @@ export async function GET() {
 
     const [rows] = await conn.query(`
       SELECT 
-        id, 
-        user_id as userId, 
-        full_name as fullName, 
-        date_sos as dateSos, 
-        time_sos as timeSos, 
-        lat, 
-        lng, 
-        address, 
-        map_link as mapLink, 
-        status, 
-        created_at as timestamp 
-      FROM sos_signals 
-      ORDER BY created_at DESC 
+        s.id, 
+        s.user_id as userId, 
+        s.full_name as fullName, 
+        s.date_sos as dateSos, 
+        s.time_sos as timeSos, 
+        s.lat, 
+        s.lng, 
+        s.address, 
+        s.map_link as mapLink, 
+        s.status, 
+        s.created_at as timestamp,
+        u.photoUrl as photoUrl
+      FROM sos_signals s
+      LEFT JOIN users u ON s.user_id = u.id
+      ORDER BY s.created_at DESC 
       LIMIT 100
     `);
     await conn.end();

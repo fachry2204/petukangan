@@ -299,7 +299,8 @@ export default function AdminSettingsPage() {
                       settings.shifts.map((shift: any, idx) => {
                         const isObject = typeof shift === 'object' && shift !== null;
                         const shiftName = isObject ? shift.name : shift;
-                        const shiftTime = isObject ? shift.startTime : null;
+                        const shiftStartTime = isObject ? shift.startTime : null;
+                        const shiftEndTime = isObject ? shift.endTime : null;
                         return (
                           <Badge 
                             key={idx} 
@@ -308,9 +309,9 @@ export default function AdminSettingsPage() {
                           >
                             <span className="flex items-center gap-1">
                               <span className="font-bold">{shiftName}</span>
-                              {shiftTime && (
-                                <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 px-1.5 py-0.5 rounded-md font-bold">
-                                  {shiftTime}
+                              {(shiftStartTime || shiftEndTime) && (
+                                <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+                                  {shiftStartTime || '--:--'} <span className="opacity-50">-</span> {shiftEndTime || '--:--'}
                                 </span>
                               )}
                             </span>
@@ -343,9 +344,11 @@ export default function AdminSettingsPage() {
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           const nameInput = e.currentTarget;
-                          const timeInput = document.getElementById('new-shift-time-input') as HTMLInputElement;
+                          const startTimeInput = document.getElementById('new-shift-time-input') as HTMLInputElement;
+                          const endTimeInput = document.getElementById('new-shift-endtime-input') as HTMLInputElement;
                           const nameVal = nameInput.value.trim();
-                          const timeVal = timeInput?.value.trim() || '08:00';
+                          const startTimeVal = startTimeInput?.value.trim() || '08:00';
+                          const endTimeVal = endTimeInput?.value.trim() || '16:00';
                           if (nameVal) {
                             const exists = settings.shifts?.some((s: any) => 
                               (typeof s === 'object' && s !== null ? s.name.toLowerCase() : s.toLowerCase()) === nameVal.toLowerCase()
@@ -354,7 +357,7 @@ export default function AdminSettingsPage() {
                               alert('Nama Shift sudah ada!');
                               return;
                             }
-                            const newShift = { name: nameVal, startTime: timeVal };
+                            const newShift = { name: nameVal, startTime: startTimeVal, endTime: endTimeVal };
                             settings.setSettings({ shifts: [...(settings.shifts || []), newShift] });
                             nameInput.value = '';
                           } else {
@@ -364,19 +367,31 @@ export default function AdminSettingsPage() {
                       }}
                     />
                     <div className="flex gap-2">
-                      <Input 
-                        type="time" 
-                        id="new-shift-time-input"
-                        defaultValue="08:00"
-                        className="rounded-xl border-zinc-200 dark:border-zinc-800 w-28 text-center"
-                      />
+                      <div className="flex items-center gap-1 bg-white border border-zinc-200 dark:border-zinc-800 rounded-xl px-2">
+                        <span className="text-[10px] font-bold text-zinc-400">Mulai</span>
+                        <Input 
+                          type="time" 
+                          id="new-shift-time-input"
+                          defaultValue="08:00"
+                          className="border-none w-20 text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                        />
+                        <span className="text-[10px] font-bold text-zinc-400 border-l pl-1">Selesai</span>
+                        <Input 
+                          type="time" 
+                          id="new-shift-endtime-input"
+                          defaultValue="16:00"
+                          className="border-none w-20 text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                        />
+                      </div>
                       <Button
                         type="button"
                         onClick={() => {
                           const nameInput = document.getElementById('new-shift-name-input') as HTMLInputElement;
-                          const timeInput = document.getElementById('new-shift-time-input') as HTMLInputElement;
+                          const startTimeInput = document.getElementById('new-shift-time-input') as HTMLInputElement;
+                          const endTimeInput = document.getElementById('new-shift-endtime-input') as HTMLInputElement;
                           const nameVal = nameInput?.value.trim();
-                          const timeVal = timeInput?.value.trim() || '08:00';
+                          const startTimeVal = startTimeInput?.value.trim() || '08:00';
+                          const endTimeVal = endTimeInput?.value.trim() || '16:00';
                           if (nameVal) {
                             const exists = settings.shifts?.some((s: any) => 
                               (typeof s === 'object' && s !== null ? s.name.toLowerCase() : s.toLowerCase()) === nameVal.toLowerCase()
@@ -385,7 +400,7 @@ export default function AdminSettingsPage() {
                               alert('Nama Shift sudah ada!');
                               return;
                             }
-                            const newShift = { name: nameVal, startTime: timeVal };
+                            const newShift = { name: nameVal, startTime: startTimeVal, endTime: endTimeVal };
                             settings.setSettings({ shifts: [...(settings.shifts || []), newShift] });
                             nameInput.value = '';
                           } else {

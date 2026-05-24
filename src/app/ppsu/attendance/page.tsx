@@ -870,15 +870,14 @@ export default function PpsuAttendancePage() {
 
             <div className="flex gap-3">
               <Button
-                variant="outline"
                 onClick={() => setHasPermission(null)}
-                className="flex-1 py-6 rounded-2xl font-bold"
+                className="flex-1 py-6 rounded-2xl font-bold bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20 transition-all active:scale-95"
               >
                 Kembali
               </Button>
               <Button
                 onClick={() => window.location.reload()}
-                className="flex-1 bg-red-650 hover:bg-red-700 text-white font-bold py-6 rounded-2xl shadow-lg transition-all active:scale-95"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-2xl shadow-lg shadow-blue-500/20 transition-all active:scale-95"
               >
                 Muat Ulang
               </Button>

@@ -15,12 +15,13 @@ const attendance_entity_1 = require("./attendance.entity");
 const schedule_entity_1 = require("../schedules/schedule.entity");
 const attendance_request_entity_1 = require("./attendance-request.entity");
 const lembur_entity_1 = require("./lembur.entity");
+const tracking_module_1 = require("../tracking/tracking.module");
 let AttendanceModule = class AttendanceModule {
 };
 exports.AttendanceModule = AttendanceModule;
 exports.AttendanceModule = AttendanceModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([attendance_entity_1.Attendance, schedule_entity_1.Schedule, attendance_request_entity_1.AttendanceRequest, lembur_entity_1.Lembur])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([attendance_entity_1.Attendance, schedule_entity_1.Schedule, attendance_request_entity_1.AttendanceRequest, lembur_entity_1.Lembur]), tracking_module_1.TrackingModule],
         controllers: [attendance_controller_1.AttendanceController],
         providers: [attendance_service_1.AttendanceService],
         exports: [attendance_service_1.AttendanceService],

@@ -38,7 +38,7 @@ export default function PpsuSosPage() {
           Sinyal Darurat Terkirim!
         </h2>
         <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
-          Koordinat GPS dan identitas Anda telah diteruskan secara aktual (Real-Time) ke Puskodal Kelurahan Petukangan.
+          Koordinat GPS dan identitas Anda telah diteruskan secara aktual (Real-Time) ke Kelurahan Petukangan.
         </p>
       </div>
 

@@ -21,6 +21,7 @@ export function BottomNav() {
   const router = useRouter();
   const [showSOSModal, setShowSOSModal] = useState(false);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   const confirmAndSendSOS = async () => {
     setIsSendingSOS(true);
@@ -31,46 +32,55 @@ export function BottomNav() {
       if (!token || !user) throw new Error('Not authenticated');
 
       const { io } = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
       const socket = io(socketUrl, { auth: { token } });
 
-      let finalLat = -6.2349; // Default Petukangan Utara
-      let finalLng = 106.7454;
-      let finalAddress = 'Lokasi GPS tidak terlacak';
+      // Validasi GPS tersedia — wajib ada lokasi nyata
+      if (!navigator.geolocation) {
+        setGpsError('Perangkat tidak mendukung GPS. Tidak bisa mengirim SOS.');
+        setIsSendingSOS(false);
+        return;
+      }
 
-      // Promise wrapper for fast GPS resolution
+      // Promise wrapper untuk mendapatkan GPS dengan timeout
       const getGPS = () => new Promise<GeolocationPosition>((resolve, reject) => {
-        if (!navigator.geolocation) return reject('No Geolocation');
         navigator.geolocation.getCurrentPosition(resolve, reject, { 
-          enableHighAccuracy: false, // Gunakan false agar lebih cepat di desktop
-          timeout: 4000, 
-          maximumAge: 10000 
+          enableHighAccuracy: true,
+          timeout: 10000, 
+          maximumAge: 5000
         });
       });
+
+      let finalLat: number;
+      let finalLng: number;
+      let finalAddress = 'Alamat sedang diverifikasi';
 
       try {
         const pos = await getGPS();
         finalLat = pos.coords.latitude;
         finalLng = pos.coords.longitude;
+        setGpsError(null);
 
-        // Fast fetch for reverse geocoding with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLng}&zoom=18&addressdetails=1`, {
-            headers: { 'Accept-Language': 'id' },
-            signal: controller.signal
-          });
-          const data = await response.json();
-          finalAddress = data.display_name || finalAddress;
-        } catch (e) {
-          console.warn('Geocoding timeout/failed');
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      } catch (gpsErr) {
-        console.warn('GPS Failed, sending SOS with fallback location', gpsErr);
+        // Geocoding otomatis (tidak blokir pengiriman SOS)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLng}&zoom=18&addressdetails=1`, {
+          headers: { 'Accept-Language': 'id' },
+          signal: AbortSignal.timeout(3000)
+        })
+          .then(r => r.json())
+          .then(data => { finalAddress = data.display_name || finalAddress; })
+          .catch(() => {});
+
+      } catch (gpsErr: any) {
+        // GPS gagal — tampilkan pesan error, JANGAN kirim SOS dengan koordinat palsu
+        console.warn('GPS error:', gpsErr);
+        const msg = gpsErr?.code === 1
+          ? 'Akses lokasi DITOLAK. Buka pengaturan browser dan izinkan lokasi, lalu coba lagi.'
+          : gpsErr?.code === 2
+          ? 'GPS tidak tersedia saat ini. Pastikan berada di area terbuka dan coba lagi.'
+          : 'Gagal mendapatkan lokasi GPS. Pastikan GPS diaktifkan dan coba lagi.';
+        setGpsError(msg);
+        setIsSendingSOS(false);
+        return;
       }
 
       const payload = {
@@ -177,7 +187,7 @@ export function BottomNav() {
       {/* SOS Confirmation Modal */}
       {showSOSModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-red-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-red-500 rounded-3xl p-6 max-w-sm w-full shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-in zoom-in-95 duration-155 text-center">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-red-500 rounded-3xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-in zoom-in-95 duration-150 text-center">
             
             <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 relative">
               <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
@@ -191,13 +201,21 @@ export function BottomNav() {
               Apakah Anda yakin dalam keadaan bahaya dan sangat membutuhkan bantuan?
               <br /><span className="text-xs font-medium text-zinc-400 font-normal mt-2 block">(Lokasi & alamat Anda saat ini akan segera dikirim ke Pusat)</span>
             </p>
+
+            {/* GPS Error Message */}
+            {gpsError && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-xl text-left">
+                <p className="text-xs font-black text-amber-700 uppercase tracking-wider mb-1">⚠ Lokasi Tidak Tersedia</p>
+                <p className="text-xs font-medium text-amber-800 leading-relaxed">{gpsError}</p>
+              </div>
+            )}
             
             <div className="flex gap-3">
               <Button 
                 type="button" 
                 variant="outline" 
                 disabled={isSendingSOS}
-                onClick={() => setShowSOSModal(false)}
+                onClick={() => { setShowSOSModal(false); setGpsError(null); }}
                 className="flex-1 h-14 rounded-2xl font-bold"
               >
                 TIDAK, BATAL

@@ -101,6 +101,16 @@ export default function AdminSchedulesPage() {
     if (token) {
       fetchSchedules();
       fetchStaff();
+      // Jika settings.zones masih kosong (belum di-load oleh SettingsProvider),
+      // fetch langsung dari backend agar dropdown zona tersedia
+      if (!settings.zones || settings.zones.length === 0) {
+        axios.get(`${apiUrl}/settings`)
+          .then(res => {
+            if (res.data.zones) settings.setSettings({ zones: res.data.zones });
+            if (res.data.shifts) settings.setSettings({ shifts: res.data.shifts });
+          })
+          .catch(err => console.error('Failed to load settings for schedules page:', err));
+      }
     }
   }, [token]);
 
@@ -291,7 +301,8 @@ export default function AdminSchedulesPage() {
       const isObj = typeof shiftObj === 'object' && shiftObj !== null;
       const shiftName = isObj ? shiftObj.name : shiftObj;
       const startTime = isObj ? shiftObj.startTime : '08:00';
-      const timeRange = getShiftTimeRange(startTime);
+      const endTime = isObj && shiftObj.endTime ? shiftObj.endTime : getShiftTimeRange(startTime).split(' - ')[1];
+      const timeRange = `${startTime} - ${endTime}`;
 
       // Determine status based on selected date and shift time range
       let status = 'Mendatang';
@@ -749,10 +760,11 @@ export default function AdminSchedulesPage() {
                       {settings.shifts?.map((shift: any, idx) => {
                         const isObject = typeof shift === 'object' && shift !== null;
                         const shiftName = isObject ? shift.name : shift;
-                        const shiftTime = isObject ? shift.startTime : '08:00';
+                        const shiftStartTime = isObject ? shift.startTime : '08:00';
+                        const shiftEndTime = isObject && shift.endTime ? shift.endTime : '--:--';
                         return (
                           <option key={idx} value={idx}>
-                            {shiftName} ({shiftTime})
+                            {shiftName} ({shiftStartTime} - {shiftEndTime})
                           </option>
                         );
                       })}

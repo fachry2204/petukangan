@@ -357,63 +357,78 @@ export default function PpsuCreateTaskPage() {
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Foto Sebelum Melakukan Tugas *</label>
-            {isCapturing && (
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={toggleCameraFacing}
-                className="h-8 px-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border-zinc-200 hover:bg-zinc-100"
-              >
-                <SwitchCamera className="w-3.5 h-3.5" />
-                {facingMode === 'user' ? 'Kamera Belakang' : 'Kamera Depan'}
-              </Button>
-            )}
           </div>
 
-          <div className="relative aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner">
+          <div 
+            className="relative aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer"
+            onClick={() => { if (!photo && !isCapturing) startCamera(facingMode); }}
+          >
             {photo ? (
               <img src={photo} alt="Task Capture" className="w-full h-full object-cover" />
-            ) : isCapturing ? (
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50">
+              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                 <img src="/gambar/icon/camera.png" alt="Kamera" className="w-10 h-10 object-contain opacity-40" />
-                <p className="text-xs text-zinc-500 font-bold">Foto Sebelum Melakukan Tugas</p>
+                <p className="text-xs text-zinc-500 font-bold">Klik untuk Aktifkan Kamera</p>
               </div>
             )}
             <canvas ref={canvasRef} className="hidden" />
           </div>
 
           <div className="flex gap-3">
-            {isCapturing ? (
-              <Button 
-                type="button" 
-                onClick={capturePhoto} 
-                className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold shadow-md shadow-orange-500/10"
-              >
-                Ambil Gambar
-              </Button>
-            ) : photo ? (
+            {photo && (
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleRetake} 
-                className="w-full py-6 rounded-2xl font-bold"
+                className="w-full py-6 rounded-2xl font-bold border-zinc-300"
               >
                 Ambil Ulang Foto
-              </Button>
-            ) : (
-              <Button 
-                type="button" 
-                onClick={() => startCamera(facingMode)} 
-                className="w-full py-6 bg-zinc-900 text-white hover:bg-zinc-855 rounded-2xl font-bold flex items-center justify-center gap-2"
-              >
-                <img src="/gambar/icon/camera.png" alt="Kamera" className="w-5 h-5 object-contain" />
-                Aktifkan Kamera
               </Button>
             )}
           </div>
         </div>
+
+        {/* Fullscreen Camera Overlay */}
+        {isCapturing && (
+          <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+            {/* Header controls */}
+            <div className="p-4 flex items-center justify-between absolute top-0 left-0 right-0 z-[101] bg-gradient-to-b from-black/80 to-transparent pt-8">
+              <Button 
+                type="button"
+                variant="ghost" 
+                onClick={stopCamera}
+                className="text-white hover:bg-white/20 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+              <Button 
+                type="button"
+                variant="ghost"
+                onClick={toggleCameraFacing}
+                className="text-white hover:bg-white/20 rounded-full h-10 px-4 font-bold flex items-center gap-2"
+              >
+                <SwitchCamera className="w-5 h-5" />
+                Putar
+              </Button>
+            </div>
+            
+            {/* Video Viewfinder */}
+            <div className="flex-1 relative flex items-center justify-center">
+              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="p-8 pb-12 flex items-center justify-center absolute bottom-0 left-0 right-0 z-[101] bg-gradient-to-t from-black/80 to-transparent">
+              <button 
+                type="button" 
+                onClick={capturePhoto} 
+                className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border-4 border-white backdrop-blur-sm active:scale-95 transition-transform"
+              >
+                <div className="w-16 h-16 bg-white rounded-full" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* GPS location section */}
         <div className="space-y-3">

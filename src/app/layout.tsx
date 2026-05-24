@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -28,33 +28,32 @@ export async function generateMetadata(): Promise<Metadata> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1500);
 
-    // Attempt to fetch settings directly from the backend server
-    // Using revalidate (ISR) instead of no-store to avoid DYNAMIC_SERVER_USAGE build errors
-    const res = await fetch('http://localhost:3001/settings', { 
+    const res = await fetch('http://localhost:3001/settings', {
       next: { revalidate: 60 },
-      signal: controller.signal
+      signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
 
     if (res.ok) {
       const settings = await res.json();
       const title = settings.systemName || "PPSU Smart Monitoring";
       const logo = settings.logoUrl || "/logodki.png";
-      
+
       return {
-        title: title,
+        title,
+        applicationName: title,
         description: settings.systemDescription || "Jakarta Smart City Monitoring System",
         icons: {
           icon: logo,
           shortcut: logo,
-          apple: logo, // Generates <link rel="apple-touch-icon"> for iOS Home Screen
+          apple: logo,
         },
         appleWebApp: {
-          title: title, // Sets the name under the icon on iOS Home Screen
+          title,
           statusBarStyle: "default",
           capable: true,
-        }
+        },
       };
     }
   } catch (error: any) {
@@ -65,9 +64,10 @@ export async function generateMetadata(): Promise<Metadata> {
     }
   }
 
-  // Fallback metadata if database is unreachable
+  // Fallback metadata
   return {
     title: "PPSU Smart Monitoring",
+    applicationName: "PPSU Smart Monitoring",
     description: "Jakarta Smart City Monitoring System",
     icons: {
       icon: '/logodki.png',
@@ -76,11 +76,18 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {
       title: "PPSU Smart",
       capable: true,
-    }
+    },
   };
 }
 
+
+
+
 import SettingsProvider from '@/components/SettingsProvider';
+
+export const viewport: Viewport = {
+  themeColor: "#FF8C00",
+};
 
 export default function RootLayout({
   children,
@@ -94,18 +101,14 @@ export default function RootLayout({
       className={`${plusJakarta.variable} h-full antialiased notranslate`}
       suppressHydrationWarning={true}
     >
-
       <head>
         <meta name="google" content="notranslate" />
-        <meta name="theme-color" content="#FF8C00" />
       </head>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning={true}>
         <SettingsProvider>
           {children}
         </SettingsProvider>
       </body>
-
     </html>
   );
 }
-

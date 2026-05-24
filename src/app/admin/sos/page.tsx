@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, MapPin, Clock, Phone, Loader2, CheckCircle2, Navigation, CalendarDays } from 'lucide-react';
+import { AlertTriangle, MapPin, Clock, Phone, Loader2, CheckCircle2, Navigation, CalendarDays, Copy } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -29,6 +30,7 @@ export default function AdminSosPage() {
   const [signals, setSignals] = useState<EmergencySignal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuthStore();
+  const router = useRouter();
 
   useEffect(() => {
     // 1. Fetch existing SOS History from Database
@@ -54,7 +56,7 @@ export default function AdminSosPage() {
     fetchHistory();
 
     // 2. Connect to socket server for real-time SOS
-    const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
     const socket = io(socketUrl, {
       auth: { token }
     });
@@ -220,14 +222,34 @@ export default function AdminSosPage() {
                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-snug">
                           {signal.address}
                         </p>
-                        <a 
-                          href={signal.mapLink || `https://www.google.com/maps/search/?api=1&query=${signal.lat},${signal.lng}`} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-xs font-bold text-blue-600 hover:text-blue-800 underline mt-1 block"
-                        >
-                          Lihat Google Maps (Lat: {signal.lat.toFixed(4)}, Lng: {signal.lng.toFixed(4)})
-                        </a>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <button 
+                            onClick={() => router.push(`/admin/monitoring?focus=${signal.userId}`)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[11px] font-bold rounded-lg transition-colors"
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                            Live Monitoring
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const mapsLink = signal.mapLink || `https://www.google.com/maps/search/?api=1&query=${signal.lat},${signal.lng}`;
+                              navigator.clipboard.writeText(mapsLink);
+                              alert('Link Google Maps berhasil disalin ke clipboard!');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-[11px] font-bold rounded-lg transition-colors"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            Salin Lokasi
+                          </button>
+                          <a 
+                            href={signal.mapLink || `https://www.google.com/maps/search/?api=1&query=${signal.lat},${signal.lng}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[11px] font-bold rounded-lg transition-colors"
+                          >
+                            Buka Google Maps
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>

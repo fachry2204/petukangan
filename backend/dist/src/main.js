@@ -36,8 +36,40 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const express = __importStar(require("express"));
+const mysql = __importStar(require("mysql2/promise"));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    try {
+        const conn = await mysql.createConnection({
+            host: process.env.DB_HOST || 'localhost',
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_NAME || 'ppsu_monitoring'
+        });
+        await conn.query(`
+      CREATE TABLE IF NOT EXISTS sos_signals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        full_name VARCHAR(100),
+        date_sos DATE,
+        time_sos TIME,
+        lat DECIMAL(10, 8),
+        lng DECIMAL(11, 8),
+        address TEXT,
+        map_link TEXT,
+        status ENUM('DARURAT', 'PETUGAS MELUNCUR', 'SELESAI') DEFAULT 'DARURAT',
+        resolved_by INT,
+        resolved_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+        console.log('✅ Auto-migration success: Tabel sos_signals siap!');
+        await conn.end();
+    }
+    catch (err) {
+        console.error('⚠️ Auto-migration skipped/failed (abaikan jika tabel sudah ada):', err.message);
+    }
     app.enableCors();
     app.setGlobalPrefix('api');
     app.use(express.json({ limit: '50mb' }));

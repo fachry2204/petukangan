@@ -21,45 +21,87 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
   @WebSocketServer()
   server: Server;
 
+  // In-memory cache to sync active officers for newly connected admins
+  private activeLocations: Map<number, any> = new Map();
+  private socketToUserId: Map<string, number | null> = new Map();
+
   constructor(private trackingService: TrackingService) {}
 
   async handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
-  }
+    console.log(`[Socket] Client connected: ${client.id}`);
+    const auth = client.handshake.auth || {};
+    const userInfo: any = {
+      userId: auth.userId ?? null,
+      fullName: auth.fullName || auth.username || 'Unknown',
+      photoUrl: auth.photoUrl || null,
+      lat: null,
+      lng: null,
+      gpsStatus: false,
+      timestamp: Date.now(),
+      ipAddress: client.handshake.headers['x-forwarded-for'] || client.handshake.address || 'Unknown',
+      device: client.handshake.headers['user-agent'] || 'Unknown',
+    };
+    if (userInfo.userId !== null && userInfo.userId !== undefined) {
+      this.activeLocations.set(userInfo.userId as number, userInfo);
+      this.socketToUserId.set(client.id, userInfo.userId);
+      this.server.emit('userOnline', userInfo);
+    } else {
+      // Do not store entries without a valid userId; just map socket to null for cleanup
+      this.socketToUserId.set(client.id, null);
+    }  }
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    const userId = this.socketToUserId.get(client.id);
+    if (userId) {
+      this.activeLocations.delete(userId);
+      this.socketToUserId.delete(client.id);
+      this.server.emit('userOffline', { userId });
+    }
   }
 
   @SubscribeMessage('updateLocation')
   async handleLocationUpdate(client: Socket, payload: any) {
+    console.log(`[Socket] Received updateLocation from user:`, payload?.userId, 'coords:', payload?.lat, payload?.lng);
     try {
       // 1. Safe Native Database Save (Silently fail if history table is missing)
-      try {
-        const conn = await mysql.createConnection({
-          host: process.env.DB_HOST || 'localhost',
-          user: process.env.DB_USER || 'root',
-          password: process.env.DB_PASSWORD || '',
-          database: process.env.DB_NAME || 'ppsu_monitoring'
-        });
-        await conn.query(
-          'INSERT INTO gps_tracking (user_id, lat, lng) VALUES (?, ?, ?)',
-          [payload.userId, payload.lat, payload.lng]
-        );
-        await conn.end();
-      } catch (dbErr) {
-        // Ignore db save errors so live tracking still works
+      if (payload.lat != null && payload.lng != null) {
+        try {
+          const conn = await mysql.createConnection({
+            host: process.env.DB_HOST || 'localhost',
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_NAME || 'ppsu_monitoring'
+          });
+          await conn.query(
+            'INSERT INTO gps_tracking (userId, lat, lng) VALUES (?, ?, ?)',
+            [payload.userId, payload.lat, payload.lng]
+          );
+          await conn.end();
+        } catch (dbErr) {
+          // Ignore db save errors so live tracking still works
+        }
       }
 
-      // 2. Broadcast to admins WITH full details (Name & Photo)
-      this.server.emit('locationUpdated', {
+      // Update memory state
+      const locationData = {
         userId: payload.userId,
         fullName: payload.fullName,
         photoUrl: payload.photoUrl,
+        status: payload.status || 'Online',
         lat: payload.lat,
         lng: payload.lng,
+        gpsStatus: payload.gpsStatus || false,
         timestamp: payload.timestamp || Date.now(),
-      });
+        ipAddress: client.handshake.headers['x-forwarded-for'] || client.handshake.address || 'Unknown',
+        device: client.handshake.headers['user-agent'] || 'Unknown',
+      };
+      
+      this.activeLocations.set(payload.userId, locationData);
+      this.socketToUserId.set(client.id, payload.userId);
+
+      // 2. Broadcast to admins WITH full details (Name & Photo)
+      this.server.emit('locationUpdated', locationData);
     } catch (error) {
       console.error('Error handling location update:', error);
     }
@@ -67,7 +109,12 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @SubscribeMessage('joinAdminRoom')
   handleJoinAdmin(client: Socket) {
+    console.log(`[Socket] Admin joined room: ${client.id}`);
     client.join('admin-room');
+    
+    // Sync all currently active officers immediately
+    const activeList = Array.from(this.activeLocations.values());
+    client.emit('activeLocationsSync', activeList);
   }
 
   @SubscribeMessage('emergencySignal')
@@ -98,6 +145,30 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       });
     } catch (err) {
       console.error('Failed to broadcast emergency signal:', err);
+    }
+  }
+
+  @SubscribeMessage('forceLogoutUser')
+  handleForceLogoutUser(client: Socket, payload: { userId: number }) {
+    // Find the socket id for this user and disconnect them
+    let targetSocketId: string | null = null;
+    for (const [socketId, userId] of this.socketToUserId.entries()) {
+      if (userId === payload.userId) {
+        targetSocketId = socketId;
+        break;
+      }
+    }
+    
+    if (targetSocketId) {
+      // Get the actual socket instance and send a specific logout event before disconnecting
+      const targetSocket = this.server.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        targetSocket.emit('forceLogout');
+        targetSocket.disconnect();
+      }
+      this.activeLocations.delete(payload.userId);
+      this.socketToUserId.delete(targetSocketId);
+      this.server.emit('userOffline', { userId: payload.userId });
     }
   }
 }
