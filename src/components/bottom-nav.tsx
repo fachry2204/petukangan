@@ -83,7 +83,10 @@ export function BottomNav() {
         timestamp: Date.now()
       };
 
+      let hasExecuted = false;
       const executeSOS = () => {
+        if (hasExecuted) return;
+        hasExecuted = true;
         socket.emit('emergencySignal', payload);
         // Tunggu sebentar lalu redirect
         setTimeout(() => {
@@ -99,7 +102,7 @@ export function BottomNav() {
       } else {
         socket.on('connect', executeSOS);
         setTimeout(() => {
-          if (isSendingSOS) executeSOS();
+          executeSOS();
         }, 3000);
       }
     } catch (err) {

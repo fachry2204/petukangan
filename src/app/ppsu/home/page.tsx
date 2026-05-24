@@ -705,7 +705,7 @@ export default function PpsuHomePage() {
                     {attendanceStatus === 'Belum Absen' ? (
                       <Button 
                         onClick={() => handleOpenIzinModal('PERMIT')}
-                        className="flex-[1] bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-2xl font-black py-5 text-sm transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1"
+                        className="flex-[1] bg-yellow-500 hover:bg-yellow-600 border border-yellow-400 text-white rounded-2xl font-black py-5 text-sm transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1"
                       >
                         Izin
                       </Button>

@@ -69,7 +69,7 @@ export default function PpsuLayout({
                 {settings.systemName || 'PPSU SMART'}
               </h1>
               {settings.systemDescription && (
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider hidden sm:inline-block">
+                <span className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none hidden sm:inline-block">
                   — {settings.systemDescription}
                 </span>
               )}
