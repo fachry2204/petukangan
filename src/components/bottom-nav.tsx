@@ -32,65 +32,80 @@ export function BottomNav() {
       const { io } = await import('socket.io-client');
       const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const socket = io(socketUrl, { auth: { token } });
-      
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          let address = 'Mengambil alamat...';
 
-          try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-              headers: { 'Accept-Language': 'id' }
-            });
-            const data = await response.json();
-            address = data.display_name;
-          } catch (e) {
-            console.error('Failed to reverse geocode SOS location:', e);
-          }
+      let finalLat = -6.2349; // Default Petukangan Utara
+      let finalLng = 106.7454;
+      let finalAddress = 'Lokasi GPS tidak terlacak';
 
-          const payload = {
-            userId: user.id,
-            fullName: user.fullName,
-            photoUrl: user.photoUrl,
-            phone: user.phone,
-            lat,
-            lng,
-            address,
-            timestamp: Date.now()
-          };
+      // Promise wrapper for fast GPS resolution
+      const getGPS = () => new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) return reject('No Geolocation');
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          enableHighAccuracy: false, // Gunakan false agar lebih cepat di desktop
+          timeout: 4000, 
+          maximumAge: 10000 
+        });
+      });
 
-          const executeSOS = () => {
-            socket.emit('emergencySignal', payload);
-            // Beri waktu 1 detik agar sinyal benar-benar terbang sebelum pindah halaman
-            setTimeout(() => {
-              socket.disconnect();
-              setShowSOSModal(false);
-              setIsSendingSOS(false);
-              router.push('/ppsu/sos');
-            }, 1000);
-          };
+      try {
+        const pos = await getGPS();
+        finalLat = pos.coords.latitude;
+        finalLng = pos.coords.longitude;
 
-          if (socket.connected) {
-            executeSOS();
-          } else {
-            socket.on('connect', executeSOS);
-            // Fallback jika connect gagal/lama
-            setTimeout(() => {
-              if (isSendingSOS) executeSOS();
-            }, 3000);
-          }
-        },
-        (err) => {
-          console.error('GPS SOS Error', err);
+        // Fast fetch for reverse geocoding with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'id' },
+            signal: controller.signal
+          });
+          const data = await response.json();
+          finalAddress = data.display_name || finalAddress;
+        } catch (e) {
+          console.warn('Geocoding timeout/failed');
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      } catch (gpsErr) {
+        console.warn('GPS Failed, sending SOS with fallback location', gpsErr);
+      }
+
+      const payload = {
+        userId: user.id,
+        fullName: user.fullName,
+        photoUrl: user.photoUrl,
+        phone: user.phone,
+        lat: finalLat,
+        lng: finalLng,
+        address: finalAddress,
+        timestamp: Date.now()
+      };
+
+      const executeSOS = () => {
+        socket.emit('emergencySignal', payload);
+        // Tunggu sebentar lalu redirect
+        setTimeout(() => {
+          socket.disconnect();
+          setShowSOSModal(false);
           setIsSendingSOS(false);
-          alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif!');
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+          router.push('/ppsu/sos');
+        }, 1000);
+      };
+
+      if (socket.connected) {
+        executeSOS();
+      } else {
+        socket.on('connect', executeSOS);
+        setTimeout(() => {
+          if (isSendingSOS) executeSOS();
+        }, 3000);
+      }
     } catch (err) {
       console.error('Failed to send SOS', err);
       setIsSendingSOS(false);
+      alert('Gagal mengirim SOS. Coba lagi!');
     }
   };
 

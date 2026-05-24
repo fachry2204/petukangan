@@ -40,7 +40,7 @@ export default function PpsuLayout({
               });
             },
             (err) => console.warn('Background tracking GPS error:', err),
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+            { enableHighAccuracy: false, maximumAge: 10000, timeout: 5000 }
           );
         }
       });
