@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, MapPin, AlertTriangle, Activity, Search, Eye, EyeOff } from 'lucide-react';
@@ -15,7 +15,7 @@ import { useSearchParams } from 'next/navigation';
 // Dynamic import for Leaflet (No SSR)
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
-export default function AdminMonitoringPage() {
+function AdminMonitoringContent() {
   const [officers, setOfficers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isPanelVisible, setIsPanelVisible] = useState(true);
@@ -351,5 +351,13 @@ export default function AdminMonitoringPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminMonitoringPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-zinc-500">Memuat monitoring...</div>}>
+      <AdminMonitoringContent />
+    </Suspense>
   );
 }
