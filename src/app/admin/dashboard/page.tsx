@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Users, 
-  MapPin, 
-  ClipboardCheck, 
-  AlertTriangle, 
+import {
+  Users,
+  MapPin,
+  ClipboardCheck,
+  AlertTriangle,
   TrendingUp,
   ArrowUpRight,
   Loader2,
+  UserCheck,
+  UserX,
+  UserMinus,
+  FileText,
+  MessageSquare,
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
@@ -21,8 +26,12 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     totalPetugas: 0,
     petugasAktif: 0,
-    tugasSelesai: 0,
-    laporanPending: 0
+    lakiLaki: 0,
+    perempuan: 0,
+    tidakAktif: 0,
+    dikeluarkan: 0,
+    tugasDikerjakan: 0,
+    totalLaporan: 0,
   });
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -43,14 +52,22 @@ export default function AdminDashboardPage() {
 
       const ppsuUsers = usersRes.data.filter((u: any) => (u.role?.name || u.roleName) === 'PPSU');
       const activePpsu = ppsuUsers.filter((u: any) => u.status === 'ACTIVE');
-      const completedTasks = tasksRes.data.filter((t: any) => t.status === 'DONE' || t.status === 'SELESAI');
-      const pendingReports = reportsRes.data.filter((r: any) => r.status === 'PENDING');
+      const lakiLaki = ppsuUsers.filter((u: any) => u.gender === 'LAKI-LAKI' || u.gender === 'Laki-Laki' || u.gender === 'Male');
+      const perempuan = ppsuUsers.filter((u: any) => u.gender === 'PEREMPUAN' || u.gender === 'Perempuan' || u.gender === 'Female');
+      const tidakAktif = ppsuUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
+      const dikeluarkan = ppsuUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
+      const tugasDikerjakan = tasksRes.data.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
+      const totalLaporan = reportsRes.data.length;
 
       setStats({
         totalPetugas: ppsuUsers.length,
         petugasAktif: activePpsu.length,
-        tugasSelesai: completedTasks.length,
-        laporanPending: pendingReports.length
+        lakiLaki: lakiLaki.length,
+        perempuan: perempuan.length,
+        tidakAktif: tidakAktif.length,
+        dikeluarkan: dikeluarkan.length,
+        tugasDikerjakan: tugasDikerjakan.length,
+        totalLaporan: totalLaporan,
       });
 
       const recentActivities: any[] = [];
@@ -113,18 +130,48 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Overview - Petugas */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Petugas', value: stats.totalPetugas, icon: Users, color: 'orange', trend: '+10%', up: true },
-          { label: 'Petugas Aktif', value: stats.petugasAktif, icon: MapPin, color: 'green', trend: '+5%', up: true },
-          { label: 'Tugas Selesai', value: stats.tugasSelesai, icon: ClipboardCheck, color: 'blue', trend: '+15%', up: true },
-          { label: 'Laporan Pending', value: stats.laporanPending, icon: AlertTriangle, color: 'red', trend: '0%', up: false },
+          { label: 'Total Petugas', value: stats.totalPetugas, icon: Users, color: 'orange' },
+          { label: 'Petugas Aktif', value: stats.petugasAktif, icon: UserCheck, color: 'green' },
+          { label: 'Laki-Laki', value: stats.lakiLaki, icon: Users, color: 'blue' },
+          { label: 'Perempuan', value: stats.perempuan, icon: Users, color: 'pink' },
+          { label: 'Tidak Aktif', value: stats.tidakAktif, icon: UserMinus, color: 'zinc' },
+          { label: 'Dikeluarkan', value: stats.dikeluarkan, icon: UserX, color: 'red' },
         ].map((stat, idx) => (
           <div
             key={idx}
             className="animate-in fade-in slide-in-from-bottom-5 duration-500"
             style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'both' }}
+          >
+            <Card className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group bg-white dark:bg-zinc-900">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start">
+                  <div className={`p-3 rounded-xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500 transition-colors duration-300`}>
+                    <stat.icon className={`w-5 h-5 text-${stat.color}-500 group-hover:text-white transition-colors duration-300`} />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <p className="text-2xl font-bold text-zinc-900 dark:text-white">{stat.value}</p>
+                  <p className="text-xs font-medium text-zinc-400 mt-1">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </div>
+
+      {/* Stats Overview - Tugas & Laporan */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[
+          { label: 'Total Tugas Dikerjakan', value: stats.tugasDikerjakan, icon: FileText, color: 'blue' },
+          { label: 'Total Laporan Dari Petugas', value: stats.totalLaporan, icon: MessageSquare, color: 'purple' },
+        ].map((stat, idx) => (
+          <div
+            key={idx}
+            className="animate-in fade-in slide-in-from-bottom-5 duration-500"
+            style={{ animationDelay: `${(idx + 6) * 100}ms`, animationFillMode: 'both' }}
           >
             <Card className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden group bg-white dark:bg-zinc-900">
               <CardContent className="p-6">
@@ -132,9 +179,9 @@ export default function AdminDashboardPage() {
                   <div className={`p-4 rounded-2xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500 transition-colors duration-300`}>
                     <stat.icon className={`w-6 h-6 text-${stat.color}-500 group-hover:text-white transition-colors duration-300`} />
                   </div>
-                  <div className={`flex items-center gap-1 text-xs font-bold ${stat.up ? 'text-green-500' : 'text-zinc-400'}`}>
-                    {stat.up ? <ArrowUpRight className="w-3 h-3" /> : null}
-                    {stat.trend}
+                  <div className={`flex items-center gap-1 text-xs font-bold text-green-500`}>
+                    <ArrowUpRight className="w-3 h-3" />
+                    Live
                   </div>
                 </div>
                 <div className="mt-6">
