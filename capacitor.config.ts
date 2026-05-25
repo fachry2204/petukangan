@@ -1,5 +1,3 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-
 /**
  * SI PETUT - Capacitor Configuration (Android wrapper)
  *
@@ -9,7 +7,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * cleartext (lihat android/app/src/main/res/xml/network_security_config.xml
  * yang dihasilkan otomatis).
  */
-const config: CapacitorConfig = {
+module.exports = {
   appId: 'id.go.jakarta.sipetut',
   appName: 'SI PETUT',
   webDir: 'public', // tidak dipakai saat server.url di-set, tapi wajib ada
@@ -28,5 +26,3 @@ const config: CapacitorConfig = {
     },
   },
 };
-
-export default config;
