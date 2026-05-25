@@ -12,7 +12,8 @@ import {
   Loader2, 
   SwitchCamera, 
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  X
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
@@ -34,6 +35,8 @@ export default function PpsuCreateTaskPage() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -157,25 +160,80 @@ export default function PpsuCreateTaskPage() {
     };
   }, []);
 
-  const startCamera = async (mode: 'user' | 'environment' = 'environment') => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  const enumerateVideoInputs = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videos = devices.filter((d) => d.kind === 'videoinput');
+      setVideoDevices(videos);
+      return videos;
+    } catch (err) {
+      console.error('enumerateDevices failed', err);
+      return [] as MediaDeviceInfo[];
+    }
+  };
+
+  const tryGetUserMedia = async (
+    constraints: MediaStreamConstraints,
+    retries = 2,
+  ): Promise<MediaStream> => {
+    let lastErr: any = null;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e: any) {
+        lastErr = e;
+        if (e?.name === 'NotReadableError' && i < retries) {
+          await sleep(400);
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw lastErr;
+  };
+
+  const startCamera = async (
+    opts: { deviceId?: string; mode?: 'user' | 'environment' } = {},
+  ) => {
     try {
       stopCamera();
+      await sleep(150);
       setIsCapturing(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode }
-      });
-      
+
+      const constraints: MediaStreamConstraints = opts.deviceId
+        ? { video: { deviceId: { exact: opts.deviceId } } }
+        : { video: { facingMode: opts.mode || facingMode } };
+
+      const stream = await tryGetUserMedia(constraints);
       setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       }, 100);
-    } catch (err) {
-      console.error('Camera access failed:', err);
+
+      const videos = await enumerateVideoInputs();
+      if (opts.deviceId) {
+        const idx = videos.findIndex((d) => d.deviceId === opts.deviceId);
+        if (idx >= 0) setCurrentDeviceIndex(idx);
+      }
+    } catch (err: any) {
+      const name = err?.name || 'Error';
+      const message = err?.message || String(err);
+      console.error('Camera access failed:', name, message, err);
+
+      let desc = 'Tidak dapat mengakses kamera Anda.';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        desc = 'Izin kamera ditolak. Buka pengaturan situs di browser dan izinkan akses Kamera.';
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        desc = 'Kamera yang diminta tidak tersedia. Coba ganti ke kamera lain.';
+      } else if (name === 'NotReadableError') {
+        desc = 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut, lalu coba lagi.';
+      }
+
       toast({
         variant: 'destructive',
-        title: 'Kamera Gagal',
-        description: 'Tidak dapat mengakses kamera Anda.'
+        title: `Kamera Gagal (${name})`,
+        description: desc,
       });
       setIsCapturing(false);
     }
@@ -190,12 +248,20 @@ export default function PpsuCreateTaskPage() {
     setIsCapturing(false);
   };
 
-  const toggleCameraFacing = () => {
-    const nextMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(nextMode);
-    if (isCapturing) {
-      startCamera(nextMode);
+  const toggleCameraFacing = async () => {
+    let devices = videoDevices;
+    if (devices.length < 2) devices = await enumerateVideoInputs();
+
+    if (devices.length < 2) {
+      const next = facingMode === 'environment' ? 'user' : 'environment';
+      setFacingMode(next);
+      if (isCapturing) await startCamera({ mode: next });
+      return;
     }
+
+    const nextIndex = (currentDeviceIndex + 1) % devices.length;
+    setCurrentDeviceIndex(nextIndex);
+    await startCamera({ deviceId: devices[nextIndex].deviceId });
   };
 
   const capturePhoto = () => {
@@ -214,7 +280,7 @@ export default function PpsuCreateTaskPage() {
 
   const handleRetake = () => {
     setPhoto(null);
-    startCamera(facingMode);
+    startCamera();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -361,7 +427,7 @@ export default function PpsuCreateTaskPage() {
 
           <div 
             className="relative aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer"
-            onClick={() => { if (!photo && !isCapturing) startCamera(facingMode); }}
+            onClick={() => { if (!photo && !isCapturing) startCamera(); }}
           >
             {photo ? (
               <img src={photo} alt="Task Capture" className="w-full h-full object-cover" />
@@ -388,44 +454,81 @@ export default function PpsuCreateTaskPage() {
           </div>
         </div>
 
-        {/* Fullscreen Camera Overlay */}
+        {/* Fullscreen Camera Overlay (attendance-style) */}
         {isCapturing && (
-          <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-            {/* Header controls */}
-            <div className="p-4 flex items-center justify-between absolute top-0 left-0 right-0 z-[101] bg-gradient-to-b from-black/80 to-transparent pt-8">
-              <Button 
+          <div className="fixed inset-0 z-[10001] bg-black flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+            {/* Top Controls */}
+            <div className="p-6 flex items-center justify-between z-50 bg-gradient-to-b from-black/80 to-transparent relative">
+              <Button
                 type="button"
-                variant="ghost" 
+                variant="ghost"
                 onClick={stopCamera}
-                className="text-white hover:bg-white/20 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+                className="text-white hover:bg-white/10 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+                aria-label="Tutup kamera"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <img src="/gambar/close.png" alt="Close" className="w-6 h-6 object-contain" />
               </Button>
-              <Button 
+
+              <Badge className="bg-orange-600 text-white font-bold border-none py-1.5 px-3 rounded-full flex items-center gap-1.5 animate-pulse">
+                <Clock className="w-3.5 h-3.5" /> GPS AKTIF
+              </Badge>
+
+              <Button
                 type="button"
                 variant="ghost"
                 onClick={toggleCameraFacing}
-                className="text-white hover:bg-white/20 rounded-full h-10 px-4 font-bold flex items-center gap-2"
+                className="text-white hover:bg-white/10 border border-white/20 px-3.5 py-1.5 h-auto rounded-xl flex items-center gap-1.5 text-[11px] font-black bg-black/30 backdrop-blur-sm"
               >
-                <SwitchCamera className="w-5 h-5" />
-                Putar
+                <SwitchCamera className="w-3.5 h-3.5" /> Ganti Kamera
               </Button>
             </div>
-            
+
             {/* Video Viewfinder */}
-            <div className="flex-1 relative flex items-center justify-center">
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <div className="absolute inset-0 z-10 flex items-center justify-center">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+              />
+
+              {/* Target frame */}
+              <div className="absolute inset-x-12 inset-y-28 border border-dashed border-white/25 rounded-2xl pointer-events-none flex items-center justify-center">
+                <div className="w-6 h-6 border-t-2 border-l-2 border-orange-500 absolute top-0 left-0 rounded-tl-lg" />
+                <div className="w-6 h-6 border-t-2 border-r-2 border-orange-500 absolute top-0 right-0 rounded-tr-lg" />
+                <div className="w-6 h-6 border-b-2 border-l-2 border-orange-500 absolute bottom-0 left-0 rounded-bl-lg" />
+                <div className="w-6 h-6 border-b-2 border-r-2 border-orange-500 absolute bottom-0 right-0 rounded-br-lg" />
+                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-center px-2">
+                  Arahkan Kamera ke Objek Tugas
+                </p>
+              </div>
             </div>
 
             {/* Bottom Controls */}
-            <div className="p-8 pb-12 flex items-center justify-center absolute bottom-0 left-0 right-0 z-[101] bg-gradient-to-t from-black/80 to-transparent">
-              <button 
-                type="button" 
-                onClick={capturePhoto} 
-                className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border-4 border-white backdrop-blur-sm active:scale-95 transition-transform"
-              >
-                <div className="w-16 h-16 bg-white rounded-full" />
-              </button>
+            <div className="p-8 z-50 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-4 relative">
+              {/* Info pill */}
+              <div className="bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-center max-w-xs space-y-0.5">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-orange-500 uppercase tracking-widest">
+                  <MapPin className="w-3 h-3" /> {location ? 'Akurasi GPS Tinggi' : 'Mencari GPS...'}
+                </div>
+                <p className="text-[10px] text-white/80 leading-normal truncate w-60">
+                  {address || 'Menghubungkan posisi GPS...'}
+                </p>
+              </div>
+
+              {/* Shutter */}
+              <div className="flex items-center justify-center py-2">
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="w-20 h-20 bg-orange-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all transform active:scale-90 hover:scale-105 active:bg-orange-700 overflow-hidden relative"
+                  aria-label="Ambil gambar"
+                >
+                  <div className="w-8 h-8 rounded-full bg-white/20 animate-ping absolute pointer-events-none" />
+                  <img src="/gambar/camera.png" alt="Shutter" className="w-10 h-10 object-contain" />
+                </button>
+              </div>
             </div>
           </div>
         )}

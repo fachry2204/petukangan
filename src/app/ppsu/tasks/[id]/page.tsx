@@ -13,7 +13,9 @@ import {
   Loader2, 
   Play, 
   ShieldAlert,
-  Clock
+  Clock,
+  X,
+  SwitchCamera
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
@@ -25,6 +27,9 @@ export default function PpsuTaskDetailPage() {
   const [task, setTask] = useState<any>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
@@ -62,11 +67,135 @@ export default function PpsuTaskDetailPage() {
     }
   }, [id, token]);
 
-  const startCamera = async () => {
-    setIsCapturing(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    if (videoRef.current) videoRef.current.srcObject = stream;
+  const stopCameraStream = () => {
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
   };
+
+  const enumerateVideoInputs = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videos = devices.filter((d) => d.kind === 'videoinput');
+      setVideoDevices(videos);
+      return videos;
+    } catch (err) {
+      console.error('enumerateDevices failed', err);
+      return [] as MediaDeviceInfo[];
+    }
+  };
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  const tryGetUserMedia = async (
+    constraints: MediaStreamConstraints,
+    retries = 2,
+  ): Promise<MediaStream> => {
+    let lastErr: any = null;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e: any) {
+        lastErr = e;
+        // NotReadableError commonly means the device wasn't fully released yet.
+        if (e?.name === 'NotReadableError' && i < retries) {
+          await sleep(400);
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw lastErr;
+  };
+
+  const openCamera = async (
+    opts: { deviceId?: string; mode?: 'user' | 'environment' } = {},
+  ) => {
+    try {
+      stopCameraStream();
+      // Give the OS a moment to release the previous device handle.
+      await sleep(150);
+      setIsCapturing(true);
+
+      const constraints: MediaStreamConstraints = opts.deviceId
+        ? { video: { deviceId: { exact: opts.deviceId } } }
+        : { video: { facingMode: opts.mode || facingMode } };
+
+      const stream = await tryGetUserMedia(constraints);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // Need a granted permission before labels/deviceIds are exposed in some browsers.
+      const videos = await enumerateVideoInputs();
+      if (opts.deviceId) {
+        const idx = videos.findIndex((d) => d.deviceId === opts.deviceId);
+        if (idx >= 0) setCurrentDeviceIndex(idx);
+      }
+    } catch (err: any) {
+      const name = err?.name || 'Error';
+      const message = err?.message || String(err);
+      console.error('Failed to start camera:', name, message, err);
+
+      let desc = 'Mohon izinkan akses kamera pada browser Anda.';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        desc = 'Izin kamera ditolak. Buka pengaturan situs di browser dan izinkan akses Kamera.';
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        desc = 'Kamera yang diminta tidak tersedia. Coba ganti ke kamera lain.';
+      } else if (name === 'NotReadableError') {
+        desc = 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut, lalu coba lagi.';
+      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        desc = 'Browser memblokir akses kamera karena situs tidak HTTPS. Buka via https atau localhost.';
+      }
+
+      toast({
+        variant: 'destructive',
+        title: `Kamera Tidak Dapat Diakses (${name})`,
+        description: desc,
+      });
+      setIsCapturing(false);
+
+      // If a deviceId-based open failed, retry with facingMode as a fallback once.
+      if (opts.deviceId) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+          if (videoRef.current) videoRef.current.srcObject = stream;
+          setIsCapturing(true);
+        } catch (_) { /* swallow */ }
+      }
+    }
+  };
+
+  const closeCamera = () => {
+    stopCameraStream();
+    setIsCapturing(false);
+  };
+
+  const switchCamera = async () => {
+    let devices = videoDevices;
+    if (devices.length < 2) devices = await enumerateVideoInputs();
+
+    if (devices.length < 2) {
+      // Fallback: toggle facingMode if only one device is reported (mobile browsers).
+      const next = facingMode === 'environment' ? 'user' : 'environment';
+      setFacingMode(next);
+      await openCamera({ mode: next });
+      return;
+    }
+
+    const nextIndex = (currentDeviceIndex + 1) % devices.length;
+    setCurrentDeviceIndex(nextIndex);
+    await openCamera({ deviceId: devices[nextIndex].deviceId });
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -76,8 +205,7 @@ export default function PpsuTaskDetailPage() {
         canvasRef.current.height = videoRef.current.videoHeight;
         context.drawImage(videoRef.current, 0, 0);
         setPhoto(canvasRef.current.toDataURL('image/jpeg'));
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        stopCameraStream();
         setIsCapturing(false);
       }
     }
@@ -160,7 +288,16 @@ export default function PpsuTaskDetailPage() {
   return (
     <div className="pb-24 min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Header */}
-      <div className="bg-white dark:bg-zinc-900 p-6 pt-12 rounded-b-3xl shadow-sm border-b border-zinc-100 dark:border-zinc-800 text-left">
+      <div className="bg-white dark:bg-zinc-900 p-6 pt-12 rounded-b-3xl shadow-sm border-b border-zinc-100 dark:border-zinc-800 text-left relative">
+        {/* Floating exit/back icon button */}
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Keluar / Kembali"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shadow-sm border border-zinc-200/80 dark:border-zinc-700/60 active:scale-95 transition"
+        >
+          <X className="w-5 h-5" />
+        </button>
         <button onClick={() => router.back()} className="mb-4 flex items-center text-zinc-550 font-black hover:text-zinc-700 transition-all text-sm active:scale-95">
           <ChevronLeft className="w-5 h-5 mr-1" /> Kembali
         </button>
@@ -196,48 +333,36 @@ export default function PpsuTaskDetailPage() {
               {task.status === 'TODO' ? 'Foto Sedang Mengerjakan Tugas *' : 'Foto Tugas Selesai *'}
             </h3>
             
-            <div className="relative aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner">
+            <button
+              type="button"
+              onClick={() => { if (!photo) openCamera(); }}
+              className="relative w-full aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer active:scale-[0.99] transition-transform"
+            >
               {photo ? (
                 <img src={photo} alt="Task state" className="w-full h-full object-cover" />
-              ) : isCapturing ? (
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50">
                   <img src="/gambar/icon/camera.png" alt="Kamera" className="w-10 h-10 object-contain opacity-40 animate-pulse" />
-                  <p className="text-xs text-zinc-500 font-bold">
+                  <p className="text-xs text-zinc-500 font-bold text-center px-4">
                     {task.status === 'TODO' ? 'Ambil foto Anda sedang mengerjakan tugas' : 'Ambil foto bukti tugas selesai'}
                   </p>
+                  <p className="text-[10px] text-zinc-400 font-semibold">Ketuk untuk membuka kamera</p>
                 </div>
               )}
               <canvas ref={canvasRef} className="hidden" />
-            </div>
+            </button>
 
-            <div className="flex gap-3">
-              {isCapturing ? (
-                <Button 
-                  onClick={capturePhoto} 
-                  className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold shadow-md shadow-orange-500/10"
-                >
-                  Ambil Gambar
-                </Button>
-              ) : photo ? (
+            {photo && (
+              <div className="flex gap-3">
                 <Button 
                   variant="outline" 
-                  onClick={() => setPhoto(null)} 
+                  onClick={() => { setPhoto(null); openCamera(); }} 
                   className="w-full py-6 rounded-2xl font-bold"
                 >
                   Ambil Ulang Foto
                 </Button>
-              ) : (
-                <Button 
-                  onClick={startCamera} 
-                  className="w-full py-6 bg-zinc-900 text-white hover:bg-zinc-850 rounded-2xl font-bold flex items-center justify-center gap-2"
-                >
-                  <img src="/gambar/icon/camera.png" alt="Kamera" className="w-5 h-5 object-contain" />
-                  Buka Kamera HP
-                </Button>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Active Action Button directly below the photo button */}
             <div className="pt-2">
@@ -286,6 +411,83 @@ export default function PpsuTaskDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen Camera Overlay (attendance-style) */}
+      {isCapturing && (
+        <div className="fixed inset-0 z-[10001] bg-black flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+          {/* Top Controls */}
+          <div className="p-6 flex items-center justify-between z-50 bg-gradient-to-b from-black/80 to-transparent relative">
+            <Button
+              variant="ghost"
+              onClick={closeCamera}
+              className="text-white hover:bg-white/10 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+              aria-label="Tutup kamera"
+            >
+              <img src="/gambar/close.png" alt="Close" className="w-6 h-6 object-contain" />
+            </Button>
+
+            <Badge className="bg-orange-600 text-white font-bold border-none py-1.5 px-3 rounded-full flex items-center gap-1.5 animate-pulse">
+              <Clock className="w-3.5 h-3.5" /> GPS AKTIF
+            </Badge>
+
+            <Button
+              variant="ghost"
+              onClick={switchCamera}
+              className="text-white hover:bg-white/10 border border-white/20 px-3.5 py-1.5 h-auto rounded-xl flex items-center gap-1.5 text-[11px] font-black bg-black/30 backdrop-blur-sm"
+            >
+              <SwitchCamera className="w-3.5 h-3.5" /> Ganti Kamera
+            </Button>
+          </div>
+
+          {/* Video Viewfinder */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+            />
+
+            {/* Target frame */}
+            <div className="absolute inset-x-12 inset-y-28 border border-dashed border-white/25 rounded-2xl pointer-events-none flex items-center justify-center">
+              <div className="w-6 h-6 border-t-2 border-l-2 border-orange-500 absolute top-0 left-0 rounded-tl-lg" />
+              <div className="w-6 h-6 border-t-2 border-r-2 border-orange-500 absolute top-0 right-0 rounded-tr-lg" />
+              <div className="w-6 h-6 border-b-2 border-l-2 border-orange-500 absolute bottom-0 left-0 rounded-bl-lg" />
+              <div className="w-6 h-6 border-b-2 border-r-2 border-orange-500 absolute bottom-0 right-0 rounded-br-lg" />
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-center px-2">
+                {task.status === 'TODO' ? 'Foto Sedang Mengerjakan' : 'Foto Bukti Selesai'}
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="p-8 z-50 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-4 relative">
+            {/* Info pill */}
+            <div className="bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-center max-w-xs space-y-0.5">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-orange-500 uppercase tracking-widest">
+                <MapPin className="w-3 h-3" /> Lokasi Tugas
+              </div>
+              <p className="text-[10px] text-white/80 leading-normal truncate w-60">
+                {task.address || 'Petukangan Utara'}
+              </p>
+            </div>
+
+            {/* Shutter */}
+            <div className="flex items-center justify-center py-2">
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="w-20 h-20 bg-orange-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all transform active:scale-90 hover:scale-105 active:bg-orange-700 overflow-hidden relative"
+                aria-label="Ambil gambar"
+              >
+                <div className="w-8 h-8 rounded-full bg-white/20 animate-ping absolute pointer-events-none" />
+                <img src="/gambar/camera.png" alt="Shutter" className="w-10 h-10 object-contain" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Premium Glassmorphic Warning Modal */}
       {isWarningOpen && (

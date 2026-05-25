@@ -6,4 +6,9 @@ export declare class TasksController {
     getTask(id: number): Promise<import("./task.entity").Task>;
     updateStatus(id: number, req: any, body: any): Promise<import("./task.entity").Task>;
     createTask(req: any, body: any): Promise<import("./task.entity").Task>;
+    updateTask(id: number, body: any): Promise<import("./task.entity").Task>;
+    deleteTask(id: number): Promise<{
+        id: number;
+        deleted: boolean;
+    }>;
 }

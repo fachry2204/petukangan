@@ -10,5 +10,10 @@ export declare class TasksService {
     findAll(userId?: number): Promise<Task[]>;
     findOne(id: number): Promise<Task>;
     updateStatus(id: number, userId: number, data: any): Promise<Task>;
+    update(id: number, data: any): Promise<Task>;
+    remove(id: number): Promise<{
+        id: number;
+        deleted: boolean;
+    }>;
     create(userId: number, data: any): Promise<Task>;
 }

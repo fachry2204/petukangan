@@ -70,6 +70,36 @@ export class TasksService {
     return this.taskRepository.save(task);
   }
 
+  async update(id: number, data: any) {
+    const task = await this.findOne(id);
+
+    if (data.title !== undefined) task.title = data.title;
+    if (data.description !== undefined) task.description = data.description;
+    if (data.status !== undefined) task.status = data.status;
+    if (data.priority !== undefined) task.priority = data.priority;
+    if (data.taskType !== undefined) task.taskType = data.taskType;
+    if (data.lat !== undefined) task.lat = data.lat;
+    if (data.lng !== undefined) task.lng = data.lng;
+    if (data.address !== undefined) task.address = data.address;
+    if (data.deadline !== undefined) task.deadline = data.deadline ? new Date(data.deadline) : (null as any);
+    if (data.assignedToId !== undefined) {
+      task.assignedTo = data.assignedToId ? ({ id: Number(data.assignedToId) } as any) : (null as any);
+    }
+    if (data.zoneId !== undefined) {
+      task.zone = data.zoneId ? ({ id: Number(data.zoneId) } as any) : (null as any);
+    }
+
+    return this.taskRepository.save(task);
+  }
+
+  async remove(id: number) {
+    const task = await this.findOne(id);
+    // Remove dependent logs first to avoid FK violation
+    await this.taskLogRepository.delete({ task: { id } as any });
+    await this.taskRepository.delete(id);
+    return { id, deleted: true };
+  }
+
   async create(userId: number, data: any) {
     let finalPhotoUrl = data.photoUrl;
     if (data.photoUrl && data.photoUrl.startsWith('data:image')) {
@@ -81,6 +111,7 @@ export class TasksService {
       description: data.description || '',
       status: 'TODO',
       priority: 'MEDIUM',
+      taskType: data.taskType || 'SELF',
       assignedTo: { id: userId } as any,
       zone: data.zoneId ? { id: Number(data.zoneId) } as any : undefined,
       deadline: data.deadline ? new Date(data.deadline) : undefined,

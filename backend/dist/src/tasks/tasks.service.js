@@ -71,6 +71,40 @@ let TasksService = class TasksService {
         task.status = data.status;
         return this.taskRepository.save(task);
     }
+    async update(id, data) {
+        const task = await this.findOne(id);
+        if (data.title !== undefined)
+            task.title = data.title;
+        if (data.description !== undefined)
+            task.description = data.description;
+        if (data.status !== undefined)
+            task.status = data.status;
+        if (data.priority !== undefined)
+            task.priority = data.priority;
+        if (data.taskType !== undefined)
+            task.taskType = data.taskType;
+        if (data.lat !== undefined)
+            task.lat = data.lat;
+        if (data.lng !== undefined)
+            task.lng = data.lng;
+        if (data.address !== undefined)
+            task.address = data.address;
+        if (data.deadline !== undefined)
+            task.deadline = data.deadline ? new Date(data.deadline) : null;
+        if (data.assignedToId !== undefined) {
+            task.assignedTo = data.assignedToId ? { id: Number(data.assignedToId) } : null;
+        }
+        if (data.zoneId !== undefined) {
+            task.zone = data.zoneId ? { id: Number(data.zoneId) } : null;
+        }
+        return this.taskRepository.save(task);
+    }
+    async remove(id) {
+        const task = await this.findOne(id);
+        await this.taskLogRepository.delete({ task: { id } });
+        await this.taskRepository.delete(id);
+        return { id, deleted: true };
+    }
     async create(userId, data) {
         let finalPhotoUrl = data.photoUrl;
         if (data.photoUrl && data.photoUrl.startsWith('data:image')) {
@@ -81,6 +115,7 @@ let TasksService = class TasksService {
             description: data.description || '',
             status: 'TODO',
             priority: 'MEDIUM',
+            taskType: data.taskType || 'SELF',
             assignedTo: { id: userId },
             zone: data.zoneId ? { id: Number(data.zoneId) } : undefined,
             deadline: data.deadline ? new Date(data.deadline) : undefined,

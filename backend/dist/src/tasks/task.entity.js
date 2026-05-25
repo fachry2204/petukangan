@@ -22,6 +22,7 @@ let Task = class Task {
     assignedTo;
     status;
     priority;
+    taskType;
     deadline;
     photoUrl;
     lat;
@@ -60,6 +61,10 @@ __decorate([
     (0, typeorm_1.Column)({ default: 'MEDIUM' }),
     __metadata("design:type", String)
 ], Task.prototype, "priority", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 16, default: 'ASSIGNED' }),
+    __metadata("design:type", String)
+], Task.prototype, "taskType", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Date)

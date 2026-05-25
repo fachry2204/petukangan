@@ -66,6 +66,7 @@ export default function AdminMonitoringPage() {
     });
 
     socket.on('locationUpdated', (data) => {
+      console.log('[Admin] locationUpdated received:', data);
       setOfficers(prev => {
         const existing = prev.findIndex(o => o.userId === data.userId);
         if (existing > -1) {
@@ -82,6 +83,7 @@ export default function AdminMonitoringPage() {
     });
 
     socket.on('activeLocationsSync', (activeList) => {
+      console.log('[Admin] activeLocationsSync received:', activeList);
       setOfficers(prev => {
         const newOfficers = [...prev];
         activeList.forEach((active: any) => {
@@ -130,6 +132,10 @@ export default function AdminMonitoringPage() {
   // Separate live officers from SOS-only officers
   const liveOfficers = officers.filter(o => !o.isSOS);
   const sosOfficers = officers.filter(o => o.isSOS);
+
+  // Debug: log officers state
+  console.log('[Admin] Officers state:', officers);
+  console.log('[Admin] Officers with valid GPS:', officers.filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0));
 
   // Convert officers to map points — only include those with valid GPS coordinates
   const mapPoints = officers

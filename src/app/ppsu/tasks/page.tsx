@@ -4,19 +4,34 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  ClipboardList, 
-  MapPin, 
-  Calendar, 
-  ArrowRight, 
-  Plus, 
+import {
+  ClipboardList,
+  MapPin,
+  Calendar,
+  ArrowRight,
+  Plus,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  Map
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+const MapComponent = dynamic(() => import('@/components/map-component'), {
+  ssr: false,
+  loading: () => <div className="w-full h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse" />
+});
 
 export default function PpsuTasksPage() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -24,6 +39,8 @@ export default function PpsuTasksPage() {
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
   const [warningReason, setWarningReason] = useState<string>('');
+  const [mapModalOpen, setMapModalOpen] = useState<boolean>(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
   const { token } = useAuthStore();
   const router = useRouter();
 
@@ -97,6 +114,12 @@ export default function PpsuTasksPage() {
     }
   };
 
+  const handleMapClick = (e: React.MouseEvent, task: any) => {
+    e.stopPropagation();
+    setSelectedTask(task);
+    setMapModalOpen(true);
+  };
+
   return (
     <div className="p-6 space-y-6 pb-24">
       {/* Header Area */}
@@ -114,98 +137,119 @@ export default function PpsuTasksPage() {
         </Button>
       </header>
 
-      {/* Tasks List */}
-      <div className="space-y-4">
+      {/* Tasks List - Table Layout */}
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             <p className="text-zinc-400 text-xs font-bold">Memuat tugas...</p>
           </div>
         ) : tasks.length === 0 ? (
-          <Card className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center bg-white dark:bg-zinc-900/40">
-            <CardContent className="p-0 space-y-3">
-              <ClipboardList className="w-12 h-12 text-zinc-300 mx-auto" />
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-zinc-800 dark:text-white">Belum Ada Tugas</p>
-                <p className="text-xs text-zinc-550 leading-relaxed max-w-[240px] mx-auto">
-                  Anda tidak memiliki disposisi dari staff pimpinan atau tugas mandiri hari ini.
-                </p>
-              </div>
-              <Button 
-                onClick={handleCreateClick}
-                variant="outline" 
-                className="mt-2 text-xs font-bold rounded-xl text-orange-600 border-orange-200 dark:border-zinc-800 hover:bg-orange-50/50"
-              >
-                Buat Tugas Mandiri Pertama Anda
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          tasks.map((task) => (
-            <div 
-              key={task.id} 
-              onClick={(e) => handleTaskClick(e, task.id)}
-              className="cursor-pointer"
+          <div className="p-8 text-center">
+            <ClipboardList className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
+            <p className="text-sm font-bold text-zinc-800 dark:text-white mb-1">Belum Ada Tugas</p>
+            <p className="text-xs text-zinc-550 mb-4">
+              Anda tidak memiliki disposisi dari staff pimpinan atau tugas mandiri hari ini.
+            </p>
+            <Button
+              onClick={handleCreateClick}
+              variant="outline"
+              className="text-xs font-bold rounded-xl text-orange-600 border-orange-200 dark:border-zinc-800 hover:bg-orange-50/50"
             >
-              <Card className="border-none shadow-sm rounded-2xl overflow-hidden hover:ring-2 hover:ring-orange-500/20 transition-all active:scale-[0.98] bg-white dark:bg-zinc-900">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className={`${getStatusColor(task.status)} border-none text-[9px] font-black`}>
-                          {task.status === 'TODO' ? 'MULAI DIKERJAKAN' :
-                           task.status === 'WORKING' ? 'SEDANG DIKERJAKAN' :
-                           task.status === 'VERIFY' ? 'MENUNGGU VERIFIKASI' :
-                           task.status === 'DONE' ? 'SELESAI' : task.status}
-                        </Badge>
-                        {/* Hide Priority badge completely if it is a self-created task */}
-                        {task.priority !== 'SELF' && (
-                          <Badge className={getPriorityBadge(task.priority)}>
-                            {task.priority}
-                          </Badge>
-                        )}
-                        {task.priority === 'SELF' && (
-                          <Badge className="bg-orange-50 text-orange-550 border-none text-[9px] font-bold dark:bg-orange-950/20">
-                            Tugas Mandiri
-                          </Badge>
+              Buat Tugas Mandiri Pertama Anda
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-zinc-50 dark:bg-zinc-800/50">
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Tugas</TableHead>
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Status</TableHead>
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Prioritas</TableHead>
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Lokasi</TableHead>
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Tanggal</TableHead>
+                  <TableHead className="text-xs font-bold text-zinc-600 dark:text-zinc-400 text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tasks.map((task) => (
+                  <TableRow
+                    key={task.id}
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 cursor-pointer transition-colors"
+                    onClick={(e) => handleTaskClick(e, task.id)}
+                  >
+                    <TableCell className="py-3">
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate max-w-[200px]">
+                          {task.title}
+                        </h3>
+                        {task.description && (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-[200px]">
+                            {task.description}
+                          </p>
                         )}
                       </div>
-                      <h3 className="font-black text-base text-zinc-805 dark:text-white leading-tight truncate">
-                        {task.title}
-                      </h3>
-                      {task.description && (
-                        <p className="text-xs text-zinc-450 dark:text-zinc-500 line-clamp-2 leading-relaxed">
-                          {task.description}
-                        </p>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <Badge className={`${getStatusColor(task.status)} border-none text-[9px] font-black`}>
+                        {task.status === 'TODO' ? 'MULAI DIKERJAKAN' :
+                         task.status === 'WORKING' ? 'SEDANG DIKERJAKAN' :
+                         task.status === 'VERIFY' ? 'MENUNGGU VERIFIKASI' :
+                         task.status === 'DONE' ? 'SELESAI' : task.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {task.priority === 'SELF' ? (
+                        <Badge className="bg-orange-50 text-orange-550 border-none text-[9px] font-bold dark:bg-orange-950/20">
+                          Tugas Mandiri
+                        </Badge>
+                      ) : task.priority !== 'SELF' && (
+                        <Badge className={getPriorityBadge(task.priority)}>
+                          {task.priority}
+                        </Badge>
                       )}
-                    </div>
-                    <div className="w-8 h-8 bg-zinc-50 dark:bg-zinc-850 rounded-full flex items-center justify-center flex-shrink-0 self-center">
-                      <ArrowRight className="w-4 h-4 text-zinc-400" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 pt-3 border-t border-zinc-50 dark:border-zinc-800/60 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <MapPin className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                      <span className="truncate font-medium">
-                        {task.address || 'Petukangan Utara'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <img src="/gambar/icon/calender.png" alt="Tanggal" className="w-3.5 h-3.5 object-contain" />
-                      <span className="font-semibold">
-                        {new Date(task.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                        <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[150px]">
+                          {task.address || 'Petukangan Utara'}
+                        </span>
+                        <button
+                          onClick={(e) => handleMapClick(e, task)}
+                          className="p-1.5 bg-orange-50 dark:bg-orange-950/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-950/30 transition-colors"
+                        >
+                          <Map className="w-3.5 h-3.5 text-orange-500" />
+                        </button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                        <img src="/gambar/icon/calender.png" alt="Tanggal" className="w-3.5 h-3.5 object-contain" />
+                        <span className="font-semibold">
+                          {new Date(task.createdAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      >
+                        <ArrowRight className="w-4 h-4 text-zinc-400" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
@@ -216,13 +260,13 @@ export default function PpsuTasksPage() {
             <div className="mx-auto w-14 h-14 bg-red-100 dark:bg-red-950/30 text-red-650 rounded-2xl flex items-center justify-center animate-bounce">
               <ShieldAlert className="w-7 h-7 text-red-500" />
             </div>
-            
+
             <div className="space-y-1.5 text-center">
               <h3 className="text-base font-black text-zinc-900 dark:text-white uppercase tracking-wide">
                 {warningReason === 'Absen Istirahat' ? 'Sedang Waktu Istirahat!' : 'Sudah Absen Pulang!'}
               </h3>
               <p className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold leading-relaxed">
-                {warningReason === 'Absen Istirahat' 
+                {warningReason === 'Absen Istirahat'
                   ? 'Anda saat ini sedang dalam status Absen Istirahat. Silakan selesaikan waktu istirahat Anda terlebih dahulu melalui menu Beranda sebelum dapat mengambil atau menambahkan tugas.'
                   : 'Anda telah menyelesaikan tugas hari ini dan melakukan Absen Pulang. Akses pengerjaan dan pendaftaran tugas mandiri dinonaktifkan.'
                 }
@@ -230,7 +274,7 @@ export default function PpsuTasksPage() {
             </div>
 
             <div className="pt-2 flex gap-3">
-              <Button 
+              <Button
                 onClick={() => {
                   setIsWarningOpen(false);
                   router.push('/ppsu/home');
@@ -239,10 +283,77 @@ export default function PpsuTasksPage() {
               >
                 Ke Beranda
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setIsWarningOpen(false)}
                 className="flex-1 py-5 rounded-xl font-bold text-xs border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Modal */}
+      {mapModalOpen && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-2xl overflow-hidden bg-white/95 dark:bg-zinc-950/95 border border-white/20 dark:border-zinc-800/80 rounded-3xl shadow-2xl text-left">
+            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-zinc-900 dark:text-white">Lokasi Tugas</h3>
+                <p className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold">{selectedTask.title}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMapModalOpen(false)}
+                className="h-8 w-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
+              </Button>
+            </div>
+            <div className="h-80">
+              {selectedTask.lat && selectedTask.lng ? (
+                <MapComponent
+                  points={[{
+                    id: `task-${selectedTask.id}`,
+                    lat: Number(selectedTask.lat),
+                    lng: Number(selectedTask.lng),
+                    name: selectedTask.title,
+                    status: selectedTask.status,
+                    photoUrl: null,
+                    isSOS: false
+                  }]}
+                  center={[Number(selectedTask.lat), Number(selectedTask.lng)]}
+                  zoom={16}
+                  showPopup={true}
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-zinc-400">
+                  <MapPin className="w-12 h-12 mb-2" />
+                  <p className="text-sm font-semibold">Lokasi GPS belum tersedia</p>
+                  <p className="text-xs">Alamat: {selectedTask.address || 'Petukangan Utara'}</p>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+              {selectedTask.lat && selectedTask.lng && (
+                <Button
+                  onClick={() => {
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${selectedTask.lat},${selectedTask.lng}`;
+                    window.open(googleMapsUrl, '_blank');
+                  }}
+                  variant="outline"
+                  className="w-full py-3 text-orange-600 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+                >
+                  <Map className="w-4 h-4" />
+                  Lihat di Google Maps
+                </Button>
+              )}
+              <Button
+                onClick={() => setMapModalOpen(false)}
+                className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs"
               >
                 Tutup
               </Button>

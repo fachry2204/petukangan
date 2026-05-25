@@ -33,6 +33,12 @@ let TasksController = class TasksController {
     async createTask(req, body) {
         return this.tasksService.create(req.user.userId, body);
     }
+    async updateTask(id, body) {
+        return this.tasksService.update(id, body);
+    }
+    async deleteTask(id) {
+        return this.tasksService.remove(id);
+    }
 };
 exports.TasksController = TasksController;
 __decorate([
@@ -66,6 +72,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TasksController.prototype, "createTask", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "updateTask", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "deleteTask", null);
 exports.TasksController = TasksController = __decorate([
     (0, common_1.Controller)('tasks'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

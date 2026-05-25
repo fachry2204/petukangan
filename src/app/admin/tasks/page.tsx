@@ -1,107 +1,606 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import axios from 'axios';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Plus, Search, MapPin, Calendar, ClipboardList, Filter,
+  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/auth-store';
+
+interface TaskItem {
+  id: number;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  taskType?: string;
+  deadline?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  address?: string | null;
+  photoUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  assignedTo?: { id: number; fullName?: string; photoUrl?: string } | null;
+  zone?: { id: number; name?: string } | null;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  NEW: 'Baru',
+  TODO: 'Belum Dikerjakan',
+  ON_WAY: 'Menuju Lokasi',
+  BEFORE: 'Foto Sebelum',
+  WORKING: 'Dikerjakan',
+  DONE: 'Selesai',
+  VERIFY: 'Verifikasi',
+  CANCELLED: 'Dibatalkan',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  NEW: 'bg-blue-100 text-blue-700',
+  TODO: 'bg-zinc-100 text-zinc-700',
+  ON_WAY: 'bg-amber-100 text-amber-700',
+  BEFORE: 'bg-amber-100 text-amber-700',
+  WORKING: 'bg-orange-100 text-orange-700',
+  DONE: 'bg-green-100 text-green-700',
+  VERIFY: 'bg-purple-100 text-purple-700',
+  CANCELLED: 'bg-red-100 text-red-700',
+};
+
+const PRIORITY_COLOR: Record<string, string> = {
+  LOW: 'bg-zinc-100 text-zinc-700',
+  MEDIUM: 'bg-blue-100 text-blue-700',
+  HIGH: 'bg-orange-100 text-orange-700',
+  URGENT: 'bg-red-100 text-red-700',
+};
+
+const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+
+const TASK_TYPE_LABEL: Record<string, string> = {
+  ASSIGNED: 'Ditugaskan',
+  SELF: 'Tugas Mandiri',
+};
+
+const TASK_TYPE_COLOR: Record<string, string> = {
+  ASSIGNED: 'bg-orange-100 text-orange-700',
+  SELF: 'bg-emerald-100 text-emerald-700',
+};
+
+const TASK_TYPES = ['ASSIGNED', 'SELF'];
 
 export default function AdminTasksPage() {
+  const { token } = useAuthStore();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
   const [search, setSearch] = useState('');
-  const [filterStartDate, setFilterStartDate] = useState('');
-  const [filterEndDate, setFilterEndDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Dialog states
+  const [viewTask, setViewTask] = useState<TaskItem | null>(null);
+  const [editTask, setEditTask] = useState<TaskItem | null>(null);
+  const [deleteTask, setDeleteTask] = useState<TaskItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '', description: '', status: 'TODO', priority: 'MEDIUM', taskType: 'ASSIGNED', deadline: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+
+  const fetchTasks = async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await axios.get(`${apiUrl}/tasks`, { headers: authHeaders });
+      setTasks(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      console.error('Failed to fetch tasks', e);
+      setErr(e?.response?.data?.message || e.message || 'Gagal memuat tugas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const openEdit = (t: TaskItem) => {
+    setEditTask(t);
+    setEditForm({
+      title: t.title || '',
+      description: t.description || '',
+      status: t.status || 'TODO',
+      priority: t.priority || 'MEDIUM',
+      taskType: t.taskType || 'ASSIGNED',
+      deadline: t.deadline ? new Date(t.deadline).toISOString().slice(0, 10) : '',
+    });
+  };
+
+  const submitEdit = async () => {
+    if (!editTask) return;
+    if (!editForm.title.trim()) {
+      alert('Judul tugas wajib diisi.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await axios.put(`${apiUrl}/tasks/${editTask.id}`, {
+        title: editForm.title,
+        description: editForm.description,
+        status: editForm.status,
+        priority: editForm.priority,
+        taskType: editForm.taskType,
+        deadline: editForm.deadline || null,
+      }, { headers: authHeaders });
+
+      // Optimistic update in list
+      setTasks((prev) => prev.map((t) => t.id === editTask.id ? { ...t, ...res.data } : t));
+      setEditTask(null);
+    } catch (e: any) {
+      console.error('Failed to update task', e);
+      alert(e?.response?.data?.message || 'Gagal menyimpan perubahan tugas.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitDelete = async () => {
+    if (!deleteTask) return;
+    setDeleting(true);
+    try {
+      await axios.delete(`${apiUrl}/tasks/${deleteTask.id}`, { headers: authHeaders });
+      setTasks((prev) => prev.filter((t) => t.id !== deleteTask.id));
+      setDeleteTask(null);
+    } catch (e: any) {
+      console.error('Failed to delete task', e);
+      alert(e?.response?.data?.message || 'Gagal menghapus tugas.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+    const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+
+    return tasks.filter((t) => {
+      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+      if (typeFilter !== 'ALL' && (t.taskType || 'ASSIGNED') !== typeFilter) return false;
+      if (q) {
+        const hay = `${t.title || ''} ${t.description || ''} ${t.assignedTo?.fullName || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      const ts = t.createdAt ? new Date(t.createdAt) : null;
+      if (from && ts && ts < from) return false;
+      if (to && ts && ts > to) return false;
+      return true;
+    }).sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [tasks, search, statusFilter, typeFilter, dateFrom, dateTo]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { ALL: tasks.length };
+    for (const t of tasks) c[t.status] = (c[t.status] || 0) + 1;
+    return c;
+  }, [tasks]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Tugas Lapangan</h1>
-          <p className="text-zinc-500">Manajemen penugasan dan monitoring progres pekerjaan PPSU.</p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-orange-500" /> Tugas Lapangan
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Manajemen penugasan dan monitoring progres pekerjaan PPSU.
+          </p>
         </div>
-        <Button onClick={() => window.location.href='/admin/tasks/new'} className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl h-11 px-6 shadow-lg shadow-orange-500/20 w-full sm:w-auto">
-          + Tugaskan PPSU
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchTasks} disabled={loading} className="gap-1.5">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Link href="/admin/tasks/new">
+            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+              <Plus className="w-4 h-4" />
+              Tugaskan PPSU
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Filters Area */}
-      <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900">
-        <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-end">
-          
-          {/* Search bar */}
-          <div className="flex-1 flex flex-col gap-1 w-full">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider pl-1">Cari Tugas / Petugas</label>
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <Input 
-                placeholder="Cari kata kunci..." 
-                className="pl-11 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 h-11 font-medium focus-visible:ring-orange-500 shadow-sm"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+      {/* Filter Bar */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div>
+            <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Cari Tugas / Petugas</label>
+            <div className="relative mt-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari kata kunci..." className="pl-8" />
             </div>
           </div>
-
-          {/* Status Filter */}
-          <div className="flex flex-col gap-1 w-full md:w-48">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider pl-1">Status Tugas</label>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status Tugas</label>
             <select
-              className="rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 h-11 px-3 font-medium focus-visible:ring-orange-500 shadow-sm text-zinc-600 dark:text-zinc-300 outline-none"
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
             >
-              <option value="ALL">Semua Status</option>
-              <option value="PENDING">Belum Dikerjakan</option>
-              <option value="IN_PROGRESS">Sedang Dikerjakan</option>
-              <option value="COMPLETED">Selesai</option>
+              <option value="ALL">Semua Status ({counts.ALL || 0})</option>
+              {Object.keys(STATUS_LABEL).map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]} ({counts[s] || 0})</option>
+              ))}
             </select>
           </div>
-
-          {/* Date Picker filter Range */}
-          <div className="w-full md:w-auto flex flex-col md:flex-row gap-3">
-            <div className="flex flex-col gap-1 w-full md:w-40">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider pl-1">Tanggal Mulai</label>
-              <Input 
-                type="date"
-                className="rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 h-11 font-medium focus-visible:ring-orange-500 shadow-sm text-zinc-600 dark:text-zinc-300"
-                value={filterStartDate}
-                onChange={e => setFilterStartDate(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full md:w-40">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider pl-1">Tanggal Akhir</label>
-              <Input 
-                type="date"
-                className="rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 h-11 font-medium focus-visible:ring-orange-500 shadow-sm text-zinc-600 dark:text-zinc-300"
-                value={filterEndDate}
-                onChange={e => setFilterEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {(search || filterStartDate || filterEndDate || statusFilter !== 'ALL') && (
-            <Button
-              variant="ghost"
-              onClick={() => { setSearch(''); setFilterStartDate(''); setFilterEndDate(''); setStatusFilter('ALL'); }}
-              className="h-11 px-4 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold rounded-2xl shrink-0"
+          <div>
+            <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Jenis Tugas</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
             >
-              Reset
-            </Button>
-          )}
-
-        </CardContent>
-      </Card>
-
-      <Card className="border-none shadow-xl rounded-3xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl overflow-hidden">
-        <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
-          <CardTitle>Daftar Tugas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-96 flex items-center justify-center text-zinc-400">
-            Modul Tugas Lapangan sedang dalam tahap pengembangan.
+              <option value="ALL">Semua Jenis</option>
+              {TASK_TYPES.map((tt) => (
+                <option key={tt} value={tt}>{TASK_TYPE_LABEL[tt]}</option>
+              ))}
+            </select>
           </div>
-        </CardContent>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Tanggal Mulai</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Tanggal Akhir</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1" />
+          </div>
+        </div>
       </Card>
+
+      {/* Task List */}
+      <Card className="p-0 overflow-hidden">
+        <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
+          <h3 className="font-bold text-sm flex items-center gap-2">
+            <Filter className="w-4 h-4 text-zinc-400" />
+            Daftar Tugas
+            <span className="text-zinc-400 font-normal">({filtered.length})</span>
+          </h3>
+        </div>
+
+        {err ? (
+          <div className="p-8 text-center text-sm text-red-500 flex flex-col items-center gap-2">
+            <AlertCircle className="w-6 h-6" />
+            {err}
+          </div>
+        ) : loading && tasks.length === 0 ? (
+          <div className="p-12 text-center text-sm text-zinc-400">Memuat data tugas...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-sm text-zinc-400 italic">
+            {tasks.length === 0
+              ? 'Belum ada tugas yang ditugaskan. Klik "Tugaskan PPSU" untuk membuat tugas baru.'
+              : 'Tidak ada tugas yang cocok dengan filter.'}
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+            {filtered.map((t) => {
+              const statusKey = t.status || 'TODO';
+              const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
+              const priorityColor = PRIORITY_COLOR[t.priority || 'MEDIUM'] || 'bg-zinc-100 text-zinc-700';
+              return (
+                <div key={t.id} className="px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors">
+                  <div className="flex items-start gap-3">
+                    {/* Officer photo */}
+                    <div className="shrink-0">
+                      {t.assignedTo?.photoUrl ? (
+                        <img
+                          src={t.assignedTo.photoUrl}
+                          alt={t.assignedTo.fullName}
+                          className="w-10 h-10 rounded-lg object-cover border border-zinc-100 dark:border-zinc-800"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logodki.png'; }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center font-bold text-orange-600">
+                          {(t.assignedTo?.fullName || 'P').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Main info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{t.title}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <User2 className="w-3 h-3" />
+                              {t.assignedTo?.fullName || `Petugas #${t.assignedTo?.id ?? '-'}`}
+                            </span>
+                            {t.deadline && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(t.deadline).toLocaleDateString('id-ID')}
+                              </span>
+                            )}
+                            {t.lat && t.lng && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {Number(t.lat).toFixed(4)}, {Number(t.lng).toFixed(4)}
+                              </span>
+                            )}
+                          </p>
+                          {t.description && <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{t.description}</p>}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <Badge className={`${statusColor} border-none font-bold text-[10px]`}>
+                            {STATUS_LABEL[statusKey] || statusKey}
+                          </Badge>
+                          <Badge className={`${priorityColor} border-none font-semibold text-[9px]`}>
+                            {t.priority || 'MEDIUM'}
+                          </Badge>
+                          <Badge className={`${TASK_TYPE_COLOR[t.taskType || 'ASSIGNED']} border-none font-semibold text-[9px]`}>
+                            {TASK_TYPE_LABEL[t.taskType || 'ASSIGNED']}
+                          </Badge>
+                          {t.createdAt && (
+                            <span className="text-[9px] text-zinc-400 mt-0.5">
+                              {new Date(t.createdAt).toLocaleString('id-ID', {
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1.5 mt-2.5">
+                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px]" onClick={() => setViewTask(t)}>
+                          <Eye className="w-3.5 h-3.5" /> View
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200" onClick={() => openEdit(t)}>
+                          <Pencil className="w-3.5 h-3.5" /> Edit
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={() => setDeleteTask(t)}>
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* View Dialog */}
+      <Dialog open={!!viewTask} onOpenChange={(o) => !o && setViewTask(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-orange-500" />
+              Detail Tugas
+            </DialogTitle>
+            <DialogDescription>Informasi lengkap tugas lapangan.</DialogDescription>
+          </DialogHeader>
+          {viewTask && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Judul</p>
+                <p className="font-bold text-base">{viewTask.title}</p>
+              </div>
+              {viewTask.description && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deskripsi</p>
+                  <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">{viewTask.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status</p>
+                  <Badge className={`${STATUS_COLOR[viewTask.status] || 'bg-zinc-100 text-zinc-700'} border-none font-bold text-[10px] mt-1`}>
+                    {STATUS_LABEL[viewTask.status] || viewTask.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Prioritas</p>
+                  <Badge className={`${PRIORITY_COLOR[viewTask.priority || 'MEDIUM']} border-none font-bold text-[10px] mt-1`}>
+                    {viewTask.priority || 'MEDIUM'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Jenis Tugas</p>
+                  <Badge className={`${TASK_TYPE_COLOR[viewTask.taskType || 'ASSIGNED']} border-none font-bold text-[10px] mt-1`}>
+                    {TASK_TYPE_LABEL[viewTask.taskType || 'ASSIGNED']}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Petugas</p>
+                  <p className="font-semibold">{viewTask.assignedTo?.fullName || `Petugas #${viewTask.assignedTo?.id ?? '-'}`}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deadline</p>
+                  <p className="font-semibold">{viewTask.deadline ? new Date(viewTask.deadline).toLocaleDateString('id-ID') : '—'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Lokasi</p>
+                  <p className="font-semibold">
+                    {viewTask.lat && viewTask.lng ? `${Number(viewTask.lat).toFixed(5)}, ${Number(viewTask.lng).toFixed(5)}` : '—'}
+                  </p>
+                  {viewTask.address && <p className="text-xs text-zinc-500 mt-0.5">{viewTask.address}</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Dibuat</p>
+                  <p className="text-xs">{viewTask.createdAt ? new Date(viewTask.createdAt).toLocaleString('id-ID') : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Diperbarui</p>
+                  <p className="text-xs">{viewTask.updatedAt ? new Date(viewTask.updatedAt).toLocaleString('id-ID') : '—'}</p>
+                </div>
+              </div>
+              {viewTask.photoUrl && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Foto</p>
+                  <img src={viewTask.photoUrl} alt="Foto tugas" className="w-full max-h-64 object-cover rounded-lg" />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewTask(null)}>Tutup</Button>
+            {viewTask && viewTask.lat && viewTask.lng && (
+              <a
+                href={`https://www.google.com/maps?q=${viewTask.lat},${viewTask.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline" className="gap-1.5">
+                  <MapPin className="w-4 h-4" /> Buka di Maps
+                </Button>
+              </a>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-blue-500" />
+              Edit Tugas
+            </DialogTitle>
+            <DialogDescription>Perbarui informasi tugas lapangan.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Judul</label>
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Judul tugas..."
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deskripsi</label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Deskripsi tugas..."
+                className="mt-1 min-h-[80px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm"
+                >
+                  {Object.keys(STATUS_LABEL).map((s) => (
+                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Prioritas</label>
+                <select
+                  value={editForm.priority}
+                  onChange={(e) => setEditForm((f) => ({ ...f, priority: e.target.value }))}
+                  className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm"
+                >
+                  {PRIORITIES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Jenis Tugas</label>
+                <select
+                  value={editForm.taskType}
+                  onChange={(e) => setEditForm((f) => ({ ...f, taskType: e.target.value }))}
+                  className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm"
+                >
+                  {TASK_TYPES.map((tt) => (
+                    <option key={tt} value={tt}>{TASK_TYPE_LABEL[tt]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deadline</label>
+                <Input
+                  type="date"
+                  value={editForm.deadline}
+                  onChange={(e) => setEditForm((f) => ({ ...f, deadline: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTask(null)} disabled={saving}>Batal</Button>
+            <Button onClick={submitEdit} disabled={saving} className="bg-blue-500 hover:bg-blue-600 text-white gap-1.5">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteTask} onOpenChange={(o) => !o && setDeleteTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Hapus Tugas?
+            </DialogTitle>
+            <DialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Tugas dan riwayat log-nya akan dihapus permanen.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTask && (
+            <div className="text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-lg p-3">
+              <p className="font-bold">{deleteTask.title}</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Petugas: {deleteTask.assignedTo?.fullName || '—'} · Status: {STATUS_LABEL[deleteTask.status] || deleteTask.status}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTask(null)} disabled={deleting}>Batal</Button>
+            <Button onClick={submitDelete} disabled={deleting} className="bg-red-500 hover:bg-red-600 text-white gap-1.5">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

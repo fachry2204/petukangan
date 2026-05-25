@@ -9,6 +9,7 @@ export declare class Task {
     assignedTo: User;
     status: string;
     priority: string;
+    taskType: string;
     deadline: Date;
     photoUrl: string;
     lat: number;

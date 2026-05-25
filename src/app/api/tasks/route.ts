@@ -21,8 +21,8 @@ export async function POST(req: Request) {
     const promises = officerIds.map((userId: number) => {
       // Create a task for each selected officer
       return conn.execute(
-        `INSERT INTO tasks (title, description, lat, lng, assignedToId, status, priority, deadline, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, 'TODO', ?, ?, NOW(6), NOW(6))`,
+        `INSERT INTO tasks (title, description, lat, lng, assignedToId, status, priority, taskType, deadline, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, 'TODO', ?, 'ASSIGNED', ?, NOW(6), NOW(6))`,
         [title, description || '', lat || null, lng || null, userId, priority || 'MEDIUM', deadline || null]
       );
     });

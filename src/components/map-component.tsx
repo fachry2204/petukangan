@@ -75,11 +75,15 @@ export default function MapComponent({
         if (point.lat == null || point.lng == null) return;
         const statusCheck = (point.status || '').toLowerCase();
         if (statusCheck === 'pulang' || statusCheck.includes('pulang')) return;
-        
+
+        const latNum = Number(point.lat);
+        const lngNum = Number(point.lng);
+        if (isNaN(latNum) || isNaN(lngNum)) return;
+
         // Use 5 decimal places for grouping (approx 1 meter precision)
-        const coordKey = `${point.lat.toFixed(5)},${point.lng.toFixed(5)}`;
+        const coordKey = `${latNum.toFixed(5)},${lngNum.toFixed(5)}`;
         if (!coordGroups[coordKey]) coordGroups[coordKey] = [];
-        coordGroups[coordKey].push(point);
+        coordGroups[coordKey].push({ ...point, lat: latNum, lng: lngNum });
       });
 
       // Render markers

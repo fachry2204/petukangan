@@ -88,7 +88,7 @@ let TrackingGateway = class TrackingGateway {
         }
     }
     async handleLocationUpdate(client, payload) {
-        console.log(`[Socket] Received updateLocation from user:`, payload?.userId, 'coords:', payload?.lat, payload?.lng);
+        console.log(`[Socket] Received updateLocation from user:`, payload?.userId, 'coords:', payload?.lat, payload?.lng, 'gpsStatus:', payload?.gpsStatus);
         try {
             if (payload.lat != null && payload.lng != null) {
                 try {
@@ -104,20 +104,25 @@ let TrackingGateway = class TrackingGateway {
                 catch (dbErr) {
                 }
             }
+            const prev = this.activeLocations.get(payload.userId) || {};
+            const hasNewCoords = payload.lat != null && payload.lng != null;
+            const finalLat = hasNewCoords ? payload.lat : prev.lat ?? null;
+            const finalLng = hasNewCoords ? payload.lng : prev.lng ?? null;
             const locationData = {
                 userId: payload.userId,
-                fullName: payload.fullName,
-                photoUrl: payload.photoUrl,
-                status: payload.status || 'Online',
-                lat: payload.lat,
-                lng: payload.lng,
-                gpsStatus: payload.gpsStatus || false,
+                fullName: payload.fullName ?? prev.fullName,
+                photoUrl: payload.photoUrl ?? prev.photoUrl,
+                status: payload.status || prev.status || 'Online',
+                lat: finalLat,
+                lng: finalLng,
+                gpsStatus: hasNewCoords ? !!payload.gpsStatus : prev.gpsStatus ?? false,
                 timestamp: payload.timestamp || Date.now(),
                 ipAddress: client.handshake.headers['x-forwarded-for'] || client.handshake.address || 'Unknown',
                 device: client.handshake.headers['user-agent'] || 'Unknown',
             };
             this.activeLocations.set(payload.userId, locationData);
             this.socketToUserId.set(client.id, payload.userId);
+            console.log(`[Socket] Broadcasting locationUpdated for userId ${payload.userId}:`, locationData);
             this.server.emit('locationUpdated', locationData);
         }
         catch (error) {

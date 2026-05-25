@@ -26,6 +26,10 @@ export class Task {
   @Column({ default: 'MEDIUM' })
   priority: string;
 
+  // 'ASSIGNED' = ditugaskan oleh admin, 'SELF' = tugas mandiri petugas
+  @Column({ length: 16, default: 'ASSIGNED' })
+  taskType: string;
+
   @Column({ nullable: true })
   deadline: Date;
 

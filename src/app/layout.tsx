@@ -28,7 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1500);
 
-    const res = await fetch('http://localhost:3001/settings', {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const res = await fetch(`${apiBase}/settings`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     });

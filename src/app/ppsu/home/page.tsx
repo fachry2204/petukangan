@@ -515,9 +515,9 @@ export default function PpsuHomePage() {
         }}
       >
         <div className="absolute inset-0 bg-white/75 dark:bg-zinc-950/80 backdrop-blur-[1px] pointer-events-none" />
-        <CardContent className="p-4 flex items-center justify-between gap-4 relative z-10">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 relative z-10">
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
             {/* Profile Photo */}
             <div className="w-14 h-14 rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-855 flex items-center justify-center flex-shrink-0 border border-zinc-100 dark:border-zinc-800 shadow-inner">
               {user?.photoUrl ? (
@@ -552,14 +552,14 @@ export default function PpsuHomePage() {
           </div>
 
           {/* Right Side: Running Server Clock & Date */}
-          <div className="text-right space-y-0.5 flex-shrink-0">
+          <div className="text-left sm:text-right space-y-0.5 sm:flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/40 dark:border-zinc-800/40">
             <p className="text-[9px] font-bold text-zinc-850 dark:text-zinc-200 uppercase tracking-wider">
               {serverDate || 'Memuat Tanggal...'}
             </p>
             <p className="text-sm font-black text-orange-600 dark:text-orange-500 tabular-nums">
               {serverTime || '00:00:00 WIB'}
             </p>
-            <div className="flex items-center gap-1 justify-end">
+            <div className="flex items-center gap-1 justify-start sm:justify-end">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               <span className="text-[8px] font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">Server Time</span>
             </div>

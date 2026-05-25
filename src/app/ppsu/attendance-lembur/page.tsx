@@ -147,12 +147,7 @@ export default function PpsuAttendanceLemburPage() {
         throw new Error('Perangkat Anda tidak mendukung GPS Geolocation.');
       }
 
-      const gpsPos: any = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
-      });
+      const gpsPos: any = await getGpsPosition();
 
       const coords = {
         lat: gpsPos.coords.latitude,
@@ -216,6 +211,41 @@ export default function PpsuAttendanceLemburPage() {
     }
   };
 
+  // Get GPS position with retry + fallback to low-accuracy when high-accuracy times out.
+  const getGpsPosition = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      const onError = (err: GeolocationPositionError) => {
+        // On timeout, retry once with low accuracy and a longer timeout.
+        if (err.code === err.TIMEOUT) {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            (err2) => {
+              const msg =
+                err2.code === err2.TIMEOUT
+                  ? 'GPS tidak merespons. Pastikan lokasi/GPS aktif dan sinyal cukup, lalu coba lagi.'
+                  : err2.code === err2.PERMISSION_DENIED
+                  ? 'Izin lokasi ditolak. Aktifkan izin lokasi pada browser Anda.'
+                  : err2.message || 'Gagal mengambil lokasi GPS.';
+              reject(new Error(msg));
+            },
+            { enableHighAccuracy: false, timeout: 25000, maximumAge: 60000 },
+          );
+          return;
+        }
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? 'Izin lokasi ditolak. Aktifkan izin lokasi pada browser Anda.'
+            : err.message || 'Gagal mengambil lokasi GPS.';
+        reject(new Error(msg));
+      };
+      navigator.geolocation.getCurrentPosition(resolve, onError, {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 30000,
+      });
+    });
+  };
+
   const submitQuickBreak = async (type: 'BREAK' | 'END_BREAK') => {
     setIsLoading(true);
     const endpoint = type === 'BREAK' ? 'break' : 'end-break';
@@ -227,12 +257,7 @@ export default function PpsuAttendanceLemburPage() {
         throw new Error('Perangkat Anda tidak mendukung GPS Geolocation.');
       }
 
-      const gpsPos: any = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
-      });
+      const gpsPos: any = await getGpsPosition();
 
       const coords = {
         lat: gpsPos.coords.latitude,

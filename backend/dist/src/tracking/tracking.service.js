@@ -12,11 +12,12 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TrackingService = void 0;
+exports.TrackingService = exports.GPS_RETENTION_MINUTES = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const gps_tracking_entity_1 = require("./gps-tracking.entity");
+exports.GPS_RETENTION_MINUTES = 5;
 let TrackingService = class TrackingService {
     gpsRepository;
     constructor(gpsRepository) {
@@ -35,6 +36,38 @@ let TrackingService = class TrackingService {
     }
     async getLatestLocations() {
         return [];
+    }
+    async purgeOldHistory(minutes = exports.GPS_RETENTION_MINUTES) {
+        const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+        const result = await this.gpsRepository.delete({ timestamp: (0, typeorm_2.LessThan)(cutoff) });
+        return result.affected ?? 0;
+    }
+    async getHistoryWithin(minutes = exports.GPS_RETENTION_MINUTES) {
+        const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+        const rows = await this.gpsRepository
+            .createQueryBuilder('g')
+            .leftJoin('users', 'u', 'u.id = g.userId')
+            .select([
+            'g.id AS id',
+            'g.userId AS userId',
+            'g.lat AS lat',
+            'g.lng AS lng',
+            'g.timestamp AS timestamp',
+            'u.fullName AS fullName',
+            'u.photoUrl AS photoUrl',
+        ])
+            .where('g.timestamp >= :cutoff', { cutoff })
+            .orderBy('g.timestamp', 'ASC')
+            .getRawMany();
+        return rows.map((r) => ({
+            id: Number(r.id),
+            userId: Number(r.userId),
+            lat: Number(r.lat),
+            lng: Number(r.lng),
+            timestamp: r.timestamp,
+            fullName: r.fullName,
+            photoUrl: r.photoUrl,
+        }));
     }
 };
 exports.TrackingService = TrackingService;
