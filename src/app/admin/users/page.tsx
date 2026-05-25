@@ -158,55 +158,60 @@ export default function AdminUsersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-zinc-100">
-                <TableHead className="w-[80px]">Foto</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Nama Petugas</TableHead>
-                <TableHead>No HP</TableHead>
-                <TableHead>Tanggal Gabung</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
-                  <TableCell>
-                    {user.photoUrl ? (
-                      <img src={user.photoUrl} alt={user.fullName} className="w-10 h-10 rounded-xl object-cover border border-zinc-100" />
-                    ) : (
-                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center font-bold text-orange-600 border border-orange-200">
-                        {user.fullName.charAt(0)}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-bold text-zinc-700">{user.username}</TableCell>
-                  <TableCell className="font-bold text-zinc-950">{user.fullName}</TableCell>
-                  <TableCell className="text-zinc-600 font-medium">{user.phone || '-'}</TableCell>
-                  <TableCell className="text-zinc-500 text-sm">
-                    {user.joinDate ? new Date(user.joinDate).toLocaleDateString('id-ID') : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <select
-                      value={user.status || 'ACTIVE'}
-                      onChange={(e) => handleStatusChangeClick(user, e.target.value)}
-                      className={`font-extrabold text-[11px] px-3 py-1.5 rounded-full border cursor-pointer outline-none transition-all ${getStatusBadgeStyle(user.status || 'ACTIVE')}`}
-                    >
-                      <option value="ACTIVE" className="bg-white text-zinc-900 font-semibold">Aktif</option>
-                      <option value="INACTIVE" className="bg-white text-zinc-900 font-semibold">Tidak Aktif</option>
-                      <option value="DISMISSED" className="bg-white text-zinc-900 font-semibold">Dikeluarkan</option>
-                    </select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsDetailOpen(true);
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-zinc-100">
+                  <TableHead className="w-[80px]">Foto</TableHead>
+                  <TableHead>User ID</TableHead>
+                  <TableHead>Nama Petugas</TableHead>
+                  <TableHead>No HP</TableHead>
+                  <TableHead>Tanggal Gabung</TableHead>
+                  <TableHead>Koordinat</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right w-[140px]">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                    <TableCell>
+                      {user.photoUrl ? (
+                        <img src={user.photoUrl} alt={user.fullName} className="w-10 h-10 rounded-xl object-cover border border-zinc-100" />
+                      ) : (
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center font-bold text-orange-600 border border-orange-200">
+                          {user.fullName.charAt(0)}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold text-zinc-700">{user.username}</TableCell>
+                    <TableCell className="font-bold text-zinc-950">{user.fullName}</TableCell>
+                    <TableCell className="text-zinc-600 font-medium">{user.phone || '-'}</TableCell>
+                    <TableCell className="text-zinc-500 text-sm">
+                      {user.joinDate ? new Date(user.joinDate).toLocaleDateString('id-ID') : '-'}
+                    </TableCell>
+                    <TableCell className="text-zinc-500 text-xs">
+                      {user.lat && user.lng ? `${user.lat.toFixed(5)}, ${user.lng.toFixed(5)}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        value={user.status || 'ACTIVE'}
+                        onChange={(e) => handleStatusChangeClick(user, e.target.value)}
+                        className={`font-extrabold text-[11px] px-3 py-1.5 rounded-full border cursor-pointer outline-none transition-all ${getStatusBadgeStyle(user.status || 'ACTIVE')}`}
+                      >
+                        <option value="ACTIVE" className="bg-white text-zinc-900 font-semibold">Aktif</option>
+                        <option value="INACTIVE" className="bg-white text-zinc-900 font-semibold">Tidak Aktif</option>
+                        <option value="DISMISSED" className="bg-white text-zinc-900 font-semibold">Dikeluarkan</option>
+                      </select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsDetailOpen(true);
                         }}
                         className="h-9 w-9 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50"
                       >
@@ -234,19 +239,21 @@ export default function AdminUsersPage() {
               ))}
               {filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-zinc-400">
+                  <TableCell colSpan={8} className="text-center py-8 text-zinc-400">
                     Belum ada data petugas lapangan.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Detail Petugas Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-4xl md:max-w-5xl rounded-3xl p-0 overflow-hidden border-none bg-white dark:bg-zinc-950 shadow-2xl">
+          <DialogTitle className="sr-only">Detail Petugas</DialogTitle>
           {selectedUser && (
             <div>
               {/* Header Profile Section */}
@@ -424,6 +431,7 @@ export default function AdminUsersPage() {
       {/* Delete Confirmation Warning Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 border-none bg-white dark:bg-zinc-950 shadow-2xl space-y-4">
+          <DialogTitle className="sr-only">Konfirmasi Hapus</DialogTitle>
           <div className="flex items-start gap-4 pt-2">
             <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-red-500 shrink-0">
               <AlertTriangle className="w-6 h-6" />
@@ -467,10 +475,11 @@ export default function AdminUsersPage() {
       {/* Alasan Status Dialog */}
       <Dialog open={isReasonOpen} onOpenChange={setIsReasonOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 border-none bg-white dark:bg-zinc-950 shadow-2xl space-y-4">
+          <DialogTitle className="sr-only">Ubah Status Petugas</DialogTitle>
           <div className="flex items-start gap-4 pt-2">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-              pendingStatus === 'INACTIVE' 
-                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-500' 
+              pendingStatus === 'INACTIVE'
+                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-500'
                 : 'bg-rose-50 dark:bg-rose-950/30 text-rose-500'
             }`}>
               <AlertTriangle className="w-6 h-6" />

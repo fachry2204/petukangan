@@ -133,23 +133,23 @@ export default function AdminDashboardPage() {
       {/* Stats Overview - Petugas */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Petugas', value: stats.totalPetugas, icon: Users, color: 'orange' },
-          { label: 'Petugas Aktif', value: stats.petugasAktif, icon: UserCheck, color: 'green' },
-          { label: 'Laki-Laki', value: stats.lakiLaki, icon: Users, color: 'blue' },
-          { label: 'Perempuan', value: stats.perempuan, icon: Users, color: 'pink' },
-          { label: 'Tidak Aktif', value: stats.tidakAktif, icon: UserMinus, color: 'zinc' },
-          { label: 'Dikeluarkan', value: stats.dikeluarkan, icon: UserX, color: 'red' },
+          { label: 'Total Petugas', value: stats.totalPetugas, icon: Users, color: 'orange', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
+          { label: 'Petugas Aktif', value: stats.petugasAktif, icon: UserCheck, color: 'green', bgClass: 'bg-green-50 dark:bg-green-950/20' },
+          { label: 'Laki-Laki', value: stats.lakiLaki, icon: Users, color: 'blue', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
+          { label: 'Perempuan', value: stats.perempuan, icon: Users, color: 'pink', bgClass: 'bg-pink-50 dark:bg-pink-950/20' },
+          { label: 'Tidak Aktif', value: stats.tidakAktif, icon: UserMinus, color: 'zinc', bgClass: 'bg-zinc-50 dark:bg-zinc-800' },
+          { label: 'Dikeluarkan', value: stats.dikeluarkan, icon: UserX, color: 'red', bgClass: 'bg-red-50 dark:bg-red-950/20' },
         ].map((stat, idx) => (
           <div
             key={idx}
             className="animate-in fade-in slide-in-from-bottom-5 duration-500"
             style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'both' }}
           >
-            <Card className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group bg-white dark:bg-zinc-900">
+            <Card className={`border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group ${stat.bgClass}`}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
-                  <div className={`p-3 rounded-xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500 transition-colors duration-300`}>
-                    <stat.icon className={`w-5 h-5 text-${stat.color}-500 group-hover:text-white transition-colors duration-300`} />
+                  <div className={`p-3 rounded-xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500/20 transition-colors duration-300`}>
+                    <stat.icon className={`w-5 h-5 text-${stat.color}-500 transition-colors duration-300`} />
                   </div>
                 </div>
                 <div className="mt-4">
@@ -165,19 +165,19 @@ export default function AdminDashboardPage() {
       {/* Stats Overview - Tugas & Laporan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[
-          { label: 'Total Tugas Dikerjakan', value: stats.tugasDikerjakan, icon: FileText, color: 'blue' },
-          { label: 'Total Laporan Dari Petugas', value: stats.totalLaporan, icon: MessageSquare, color: 'purple' },
+          { label: 'Total Tugas Dikerjakan', value: stats.tugasDikerjakan, icon: FileText, color: 'blue', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
+          { label: 'Total Laporan Dari Petugas', value: stats.totalLaporan, icon: MessageSquare, color: 'purple', bgClass: 'bg-purple-50 dark:bg-purple-950/20' },
         ].map((stat, idx) => (
           <div
             key={idx}
             className="animate-in fade-in slide-in-from-bottom-5 duration-500"
             style={{ animationDelay: `${(idx + 6) * 100}ms`, animationFillMode: 'both' }}
           >
-            <Card className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden group bg-white dark:bg-zinc-900">
+            <Card className={`border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden group ${stat.bgClass}`}>
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
-                  <div className={`p-4 rounded-2xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500 transition-colors duration-300`}>
-                    <stat.icon className={`w-6 h-6 text-${stat.color}-500 group-hover:text-white transition-colors duration-300`} />
+                  <div className={`p-4 rounded-2xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500/20 transition-colors duration-300`}>
+                    <stat.icon className={`w-6 h-6 text-${stat.color}-500 transition-colors duration-300`} />
                   </div>
                   <div className={`flex items-center gap-1 text-xs font-bold text-green-500`}>
                     <ArrowUpRight className="w-3 h-3" />

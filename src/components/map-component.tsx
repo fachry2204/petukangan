@@ -7,13 +7,15 @@ export default function MapComponent({
   center = [-6.2088, 106.8456],
   zoom = 12,
   showPopup = true,
-  onMapClick
+  onMapClick,
+  flyToCenter = true
 }: {
   points?: any[];
   center?: [number, number];
   zoom?: number;
   showPopup?: boolean;
   onMapClick?: (lat: number, lng: number) => void;
+  flyToCenter?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -42,9 +44,10 @@ export default function MapComponent({
         });
       }
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
       }).addTo(map);
 
       mapInstanceRef.current = map;
@@ -173,12 +176,12 @@ export default function MapComponent({
     });
   }, [points, showPopup]);
 
-  // Fly to new centre when it changes
+  // Fly to new centre when it changes (only if flyToCenter is enabled)
   useEffect(() => {
-    if (mapInstanceRef.current && center) {
+    if (mapInstanceRef.current && center && flyToCenter) {
       mapInstanceRef.current.flyTo(center, zoom, { animate: true, duration: 1.5 });
     }
-  }, [center, zoom]);
+  }, [center, zoom, flyToCenter]);
 
   return (
     <>

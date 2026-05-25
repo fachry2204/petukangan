@@ -12,6 +12,10 @@ import { Camera, MapPin, Loader2, Send, X, Clock, SwitchCamera, ChevronLeft } fr
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for MapComponent (No SSR)
+const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
 export default function PpsuReportPage() {
   const router = useRouter();
@@ -22,9 +26,7 @@ export default function PpsuReportPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({
     title: '',
-    type: 'KEJADIAN',
     description: '',
-    urgency: 'NORMAL',
   });
 
   // Camera state
@@ -39,6 +41,7 @@ export default function PpsuReportPage() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [address, setAddress] = useState<string>('Mengambil lokasi GPS...');
   const [now, setNow] = useState<Date>(new Date());
+  const [mapZoom, setMapZoom] = useState(16);
 
   // Live clock for watermark/display
   useEffect(() => {
@@ -336,7 +339,7 @@ export default function PpsuReportPage() {
   });
   const timeLabel = now.toLocaleTimeString('id-ID', {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta',
-  }) + ' WIB';
+  }) + ' WIB' || '-';
 
   return (
     <div className="p-6 space-y-6 pb-24">
@@ -391,20 +394,6 @@ export default function PpsuReportPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Kategori</Label>
-            <select
-              className="w-full p-4 rounded-xl border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-            >
-              <option value="KEJADIAN">Kejadian (Pohon Tumbang/Banjir)</option>
-              <option value="INFRASTRUKTUR">Infrastruktur (Jalan/Lampu)</option>
-              <option value="KEBERSIHAN">Kebersihan (Sampah Menumpuk)</option>
-              <option value="SOSIAL">Masalah Sosial</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
             <Label>Deskripsi Lengkap</Label>
             <Textarea
               placeholder="Jelaskan detail kejadian..."
@@ -414,6 +403,63 @@ export default function PpsuReportPage() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="rounded-xl"
             />
+          </div>
+
+          {/* Map Location Section */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Lokasi Kejadian
+            </Label>
+            <div className="h-64 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
+              {location ? (
+                <MapComponent
+                  points={[{
+                    id: 'report-location',
+                    lat: location.lat,
+                    lng: location.lng,
+                    name: 'Lokasi Kejadian',
+                    status: 'Report',
+                    photoUrl: null,
+                    isSOS: false
+                  }]}
+                  center={[location.lat, location.lng]}
+                  zoom={mapZoom}
+                  showPopup={false}
+                  flyToCenter={false}
+                  onMapClick={(lat, lng) => {
+                    setLocation({ lat, lng });
+                    reverseGeocode(lat, lng).then(setAddress);
+                  }}
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 dark:bg-zinc-900">
+                  <MapPin className="w-12 h-12 mb-2" />
+                  <p className="text-sm font-semibold">Mengambil lokasi GPS...</p>
+                  <button
+                    type="button"
+                    onClick={fetchLocation}
+                    className="mt-2 text-xs font-bold text-orange-600 hover:underline"
+                  >
+                    Refresh GPS
+                  </button>
+                </div>
+              )}
+            </div>
+            {location && (
+              <div className="flex items-center justify-between text-xs text-zinc-500">
+                <span className="tabular-nums">
+                  {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                </span>
+                <button
+                  type="button"
+                  onClick={fetchLocation}
+                  className="text-orange-600 hover:underline font-bold"
+                >
+                  Reset ke GPS
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

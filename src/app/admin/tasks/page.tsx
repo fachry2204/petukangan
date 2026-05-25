@@ -12,8 +12,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
+} from '@/components/ui/table';
+import {
   Plus, Search, MapPin, Calendar, ClipboardList, Filter,
-  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2,
+  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -305,92 +308,98 @@ export default function AdminTasksPage() {
               : 'Tidak ada tugas yang cocok dengan filter.'}
           </div>
         ) : (
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-            {filtered.map((t) => {
-              const statusKey = t.status || 'TODO';
-              const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
-              const priorityColor = PRIORITY_COLOR[t.priority || 'MEDIUM'] || 'bg-zinc-100 text-zinc-700';
-              return (
-                <div key={t.id} className="px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors">
-                  <div className="flex items-start gap-3">
-                    {/* Officer photo */}
-                    <div className="shrink-0">
-                      {t.assignedTo?.photoUrl ? (
-                        <img
-                          src={t.assignedTo.photoUrl}
-                          alt={t.assignedTo.fullName}
-                          className="w-10 h-10 rounded-lg object-cover border border-zinc-100 dark:border-zinc-800"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logodki.png'; }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center font-bold text-orange-600">
-                          {(t.assignedTo?.fullName || 'P').charAt(0).toUpperCase()}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-zinc-100">
+                  <TableHead className="w-[120px]">Tanggal Tugas</TableHead>
+                  <TableHead>Judul Tugas</TableHead>
+                  <TableHead>Nama Petugas</TableHead>
+                  <TableHead>Koordinat</TableHead>
+                  <TableHead>Status Tugas</TableHead>
+                  <TableHead>Prioritas</TableHead>
+                  <TableHead>Jenis Tugas</TableHead>
+                  <TableHead className="text-right w-[140px]">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((t) => {
+                  const statusKey = t.status || 'TODO';
+                  const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
+                  const priorityColor = PRIORITY_COLOR[t.priority || 'MEDIUM'] || 'bg-zinc-100 text-zinc-700';
+                  const taskTypeColor = TASK_TYPE_COLOR[t.taskType || 'ASSIGNED'] || 'bg-zinc-100 text-zinc-700';
+                  return (
+                    <TableRow key={t.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                      <TableCell className="text-zinc-500 text-sm">
+                        {t.createdAt ? new Date(t.createdAt).toLocaleDateString('id-ID') : '-'}
+                      </TableCell>
+                      <TableCell className="font-bold text-zinc-950">{t.title}</TableCell>
+                      <TableCell className="text-zinc-600 font-medium">
+                        {t.assignedTo?.fullName || `Petugas #${t.assignedTo?.id ?? '-'}`}
+                      </TableCell>
+                      <TableCell className="text-zinc-500 text-xs">
+                        {t.lat && t.lng ? (
+                          <div className="flex items-center gap-2">
+                            <span>{Number(t.lat).toFixed(5)}, {Number(t.lng).toFixed(5)}</span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:text-blue-600"
+                            >
+                              <Map className="w-4 h-4" />
+                            </a>
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${statusColor} border-none font-bold text-[10px]`}>
+                          {STATUS_LABEL[statusKey] || statusKey}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${priorityColor} border-none font-semibold text-[10px]`}>
+                          {t.priority || 'MEDIUM'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${taskTypeColor} border-none font-semibold text-[10px]`}>
+                          {TASK_TYPE_LABEL[t.taskType || 'ASSIGNED']}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewTask(t)}
+                            className="h-8 w-8 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(t)}
+                            className="h-8 w-8 rounded-lg text-zinc-400 hover:text-orange-500 hover:bg-orange-50"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTask(t)}
+                            className="h-8 w-8 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Main info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="min-w-0">
-                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{t.title}</p>
-                          <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <User2 className="w-3 h-3" />
-                              {t.assignedTo?.fullName || `Petugas #${t.assignedTo?.id ?? '-'}`}
-                            </span>
-                            {t.deadline && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {new Date(t.deadline).toLocaleDateString('id-ID')}
-                              </span>
-                            )}
-                            {t.lat && t.lng && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {Number(t.lat).toFixed(4)}, {Number(t.lng).toFixed(4)}
-                              </span>
-                            )}
-                          </p>
-                          {t.description && <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{t.description}</p>}
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <Badge className={`${statusColor} border-none font-bold text-[10px]`}>
-                            {STATUS_LABEL[statusKey] || statusKey}
-                          </Badge>
-                          <Badge className={`${priorityColor} border-none font-semibold text-[9px]`}>
-                            {t.priority || 'MEDIUM'}
-                          </Badge>
-                          <Badge className={`${TASK_TYPE_COLOR[t.taskType || 'ASSIGNED']} border-none font-semibold text-[9px]`}>
-                            {TASK_TYPE_LABEL[t.taskType || 'ASSIGNED']}
-                          </Badge>
-                          {t.createdAt && (
-                            <span className="text-[9px] text-zinc-400 mt-0.5">
-                              {new Date(t.createdAt).toLocaleString('id-ID', {
-                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-                              })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-1.5 mt-2.5">
-                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px]" onClick={() => setViewTask(t)}>
-                          <Eye className="w-3.5 h-3.5" /> View
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200" onClick={() => openEdit(t)}>
-                          <Pencil className="w-3.5 h-3.5" /> Edit
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={() => setDeleteTask(t)}>
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
       </Card>
