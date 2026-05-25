@@ -55,14 +55,28 @@ function AdminMonitoringContent() {
     fetchActiveSOS();
 
     // 2. Setup Socket.io
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
+    // Auto-detect socket URL from current domain
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${hostname}:3001`;
+
+    console.log('[Admin] Connecting to socket:', socketUrl);
     const socket = io(socketUrl, {
-      auth: { token }
+      auth: { token },
+      transports: ['websocket', 'polling']
     });
 
     socket.on('connect', () => {
-      console.log('Connected to Tracking System');
+      console.log('[Admin] Connected to Tracking System, socket ID:', socket.id);
       socket.emit('joinAdminRoom');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('[Admin] Socket connection error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('[Admin] Socket disconnected:', reason);
     });
 
     socket.on('locationUpdated', (data) => {
@@ -76,8 +90,10 @@ function AdminMonitoringContent() {
             updated[existing].isSOS = true;
             updated[existing].status = 'DARURAT';
           }
+          console.log('[Admin] Updated existing officer:', data.userId, 'new state:', updated[existing]);
           return updated;
         }
+        console.log('[Admin] Added new officer:', data.userId);
         return [...prev, data];
       });
     });
@@ -103,12 +119,18 @@ function AdminMonitoringContent() {
     });
 
     socket.on('userOffline', (data) => {
-      setOfficers(prev => prev.filter(o => {
-        if (o.userId === data.userId && !o.isSOS) {
-          return false;
-        }
-        return true;
-      }));
+      console.log('[Admin] userOffline received:', data);
+      setOfficers(prev => {
+        const filtered = prev.filter(o => {
+          if (o.userId === data.userId && !o.isSOS) {
+            console.log('[Admin] Removing officer from map:', data.userId);
+            return false;
+          }
+          return true;
+        });
+        console.log('[Admin] Officers after userOffline:', filtered.length);
+        return filtered;
+      });
     });
 
     socket.on('emergencySignal', (data) => {

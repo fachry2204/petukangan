@@ -24,48 +24,10 @@ const plusJakarta = localFont({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+  // Skip dynamic metadata fetch during build time - use fallback
+  // This allows deployment to any domain without manual configuration
+  // The real metadata will be fetched client-side via SettingsProvider
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-    const res = await fetch(`${apiBase}/settings`, {
-      next: { revalidate: 60 },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const settings = await res.json();
-      const title = settings.systemName || "PPSU Smart Monitoring";
-      const logo = settings.logoUrl || "/logodki.png";
-
-      return {
-        title,
-        applicationName: title,
-        description: settings.systemDescription || "Jakarta Smart City Monitoring System",
-        icons: {
-          icon: logo,
-          shortcut: logo,
-          apple: logo,
-        },
-        appleWebApp: {
-          title,
-          statusBarStyle: "default",
-          capable: true,
-        },
-      };
-    }
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.warn("⚠️ Dynamic metadata fetch aborted (backend not ready during build), using fallback.");
-    } else {
-      console.error("Dynamic metadata fetch failed, using fallback:", error.message || error);
-    }
-  }
-
-  // Fallback metadata
   return {
     title: "PPSU Smart Monitoring",
     applicationName: "PPSU Smart Monitoring",

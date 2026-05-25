@@ -73,8 +73,6 @@ export default function MapComponent({
       const coordGroups: Record<string, any[]> = {};
       points.forEach(point => {
         if (point.lat == null || point.lng == null) return;
-        const statusCheck = (point.status || '').toLowerCase();
-        if (statusCheck === 'pulang' || statusCheck.includes('pulang')) return;
 
         const latNum = Number(point.lat);
         const lngNum = Number(point.lng);
