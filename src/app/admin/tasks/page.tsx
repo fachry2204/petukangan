@@ -21,6 +21,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
+import { apiUrl } from '@/lib/api-config';
 
 interface TaskItem {
   id: number;
@@ -86,7 +87,7 @@ const TASK_TYPES = ['ASSIGNED', 'SELF'];
 export default function AdminTasksPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const apiUrl = apiUrl || 'http://localhost:3001/api';
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(false);

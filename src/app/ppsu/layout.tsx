@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiUrl } from '@/lib/api-config';
 
 // Map attendance status to a simplified status string for the map marker
 function resolveMapStatus(attendanceStatus: string): string {
@@ -47,7 +48,6 @@ export default function PpsuLayout({
   // Fetch today's attendance status so we can include it in location updates
   useEffect(() => {
     if (!token) return;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     fetch(`${apiUrl}/attendance/today`, {
       headers: { Authorization: `Bearer ${token}` }
     })

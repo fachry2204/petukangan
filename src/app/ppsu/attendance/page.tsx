@@ -16,11 +16,13 @@ import {
   Sparkles
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { apiUrl } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/lib/api-config';
 
 
 export default function PpsuAttendancePage() {
@@ -47,8 +49,6 @@ export default function PpsuAttendancePage() {
   const { user, token } = useAuthStore();
   const { toast } = useToast();
   const router = useRouter();
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // Cleanup camera stream
   const stopCameraStream = () => {

@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { apiUrl } from '@/lib/api-config';
 
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
@@ -40,7 +41,7 @@ interface UserOption {
 export default function GPSHistoryPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const apiUrl = apiUrl || 'http://localhost:3001/api';
 
   const [gpsPoints, setGpsPoints] = useState<GPSPoint[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);

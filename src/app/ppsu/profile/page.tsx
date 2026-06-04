@@ -24,6 +24,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
+import { apiUrl } from '@/lib/api-config';
 
 export default function PpsuProfilePage() {
   const { user, token, setAuth, logout } = useAuthStore();
@@ -41,8 +42,6 @@ export default function PpsuProfilePage() {
     newPassword: '',
     confirmPassword: '',
   });
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const refreshUserSession = async () => {
     try {

@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { apiUrl } from '@/lib/api-config';
 
 
 export default function PpsuSchedulePage() {
@@ -24,8 +25,6 @@ export default function PpsuSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<'this-week' | 'next-week' | 'this-month' | 'next-month'>('this-week');
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const fetchAllSchedules = async () => {
     try {

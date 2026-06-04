@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { apiUrl } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
 export default function PpsuCreateTaskPage() {
@@ -89,8 +90,6 @@ export default function PpsuCreateTaskPage() {
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // Fetch Location automatically on mount — 2-step: cached first, then refine
   const watchIdRef = useRef<number | null>(null);

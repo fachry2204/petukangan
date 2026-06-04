@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
+import { apiUrl } from '@/lib/api-config';
 
 export default function PpsuHomePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -102,8 +103,6 @@ export default function PpsuHomePage() {
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // Greeting helper
   const getGreeting = () => {

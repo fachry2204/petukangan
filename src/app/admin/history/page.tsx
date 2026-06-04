@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { History, MapPin, Search, RefreshCw, Trash2, Clock } from 'lucide-react';
 import axios from 'axios';
+import { apiUrl } from '@/lib/api-config';
 
 const HistoryMap = dynamic(() => import('./history-map'), { ssr: false });
 
@@ -41,7 +42,7 @@ export default function AdminHistoryPage() {
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [purging, setPurging] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const apiUrl = apiUrl || 'http://localhost:3001/api';
   const intervalRef = useRef<any>(null);
 
   const fetchHistory = async () => {

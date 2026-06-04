@@ -44,8 +44,6 @@ export default function PpsuTasksPage() {
   const { token } = useAuthStore();
   const router = useRouter();
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
   const fetchTasks = async () => {
     try {
       setIsLoading(true);

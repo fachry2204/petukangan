@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { apiUrl } from '@/lib/api-config';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -73,7 +74,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const response = await axios.post(`${apiUrl}/auth/login`, {
         username,
         password,
       });

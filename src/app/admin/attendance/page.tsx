@@ -49,7 +49,6 @@ interface AttendanceItem {
 export default function AdminAttendancePage() {
   const router = useRouter();
   const { token, user, logout } = useAuthStore();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // State Management
   const [attendance, setAttendance] = useState<AttendanceItem[]>([]);

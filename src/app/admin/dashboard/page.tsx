@@ -19,6 +19,7 @@ import {
 
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
+import { apiUrl } from '@/lib/api-config';
 
 export default function AdminDashboardPage() {
   const { token } = useAuthStore();
@@ -44,7 +45,7 @@ export default function AdminDashboardPage() {
       let reportsData: any[] = [];
 
       try {
-        const usersRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        const usersRes = await axios.get(`${apiUrl}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         usersData = usersRes.data || [];
@@ -53,7 +54,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const tasksRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
+        const tasksRes = await axios.get(`${apiUrl}/tasks`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         tasksData = tasksRes.data || [];
@@ -62,7 +63,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const reportsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/reports`, {
+        const reportsRes = await axios.get(`${apiUrl}/reports`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         reportsData = reportsRes.data || [];

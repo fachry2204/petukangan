@@ -11,6 +11,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/api-config';
 
 export default function AdminSettingsPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -96,7 +97,6 @@ export default function AdminSettingsPage() {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       await axios.post(`${apiUrl}/settings`, {
         logoUrl: settings.logoUrl,
         bgType: settings.bgType,
@@ -126,7 +126,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        const res = await axios.get(`${apiUrl}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUsers(res.data);

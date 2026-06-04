@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtime } from '@/hooks/use-realtime';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { apiUrl } from '@/lib/api-config';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -35,7 +36,7 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      const res = await axios.get(`${apiUrl}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data);
@@ -63,7 +64,7 @@ export default function AdminUsersPage() {
     if (!selectedUserForDelete || !token) return;
     setIsDeleting(true);
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/users/${selectedUserForDelete.id}`, {
+      await axios.delete(`${apiUrl}/users/${selectedUserForDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast({ title: 'Berhasil', description: 'Data Petugas berhasil dihapus' });
@@ -97,7 +98,7 @@ export default function AdminUsersPage() {
     setIsUpdatingStatus(true);
     const changedAt = status === 'ACTIVE' ? null : (customDateISO || new Date().toISOString());
     try {
-      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, { 
+      await axios.put(`${apiUrl}/users/${userId}`, { 
         status, 
         statusReason: reason || null,
         statusChangedAt: changedAt

@@ -45,7 +45,6 @@ export default function AdminSchedulesPage() {
   const router = useRouter();
   const settings = useSettingsStore();
   const { token, logout } = useAuthStore();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // State Management
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);

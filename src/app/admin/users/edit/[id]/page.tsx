@@ -12,6 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { apiUrl } from '@/lib/api-config';
 
 export default function EditPetugasPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
@@ -98,7 +99,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
     const fetchUser = async () => {
       if (!token || !id) return;
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
+        const res = await axios.get(`${apiUrl}/users/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -334,7 +335,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         return d;
       };
 
-      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
+      await axios.put(`${apiUrl}/users/${id}`, {
         fullName: formData.fullName,
         gender: formData.gender,
         birthDate: parseDate(formData.birthDate),

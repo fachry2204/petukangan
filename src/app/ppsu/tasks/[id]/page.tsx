@@ -20,6 +20,7 @@ import {
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import { apiUrl } from '@/lib/api-config';
 
 export default function PpsuTaskDetailPage() {
   const { id } = useParams();
@@ -41,7 +42,7 @@ export default function PpsuTaskDetailPage() {
 
   const fetchTask = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks/${id}`, {
+      const res = await axios.get(`${apiUrl}/tasks/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTask(res.data);
@@ -53,7 +54,7 @@ export default function PpsuTaskDetailPage() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/attendance/today`, {
+        const res = await axios.get(`${apiUrl}/attendance/today`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAttendanceStatus(res.data.status || 'Belum Absen');
@@ -251,7 +252,7 @@ export default function PpsuTaskDetailPage() {
       }
       
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/tasks/${id}/status`,
+        `${apiUrl}/tasks/${id}/status`,
         {
           status: newStatus,
           photo: photo,

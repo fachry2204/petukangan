@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { usePathname } from 'next/navigation';
 import axios from 'axios';
+import { apiUrl } from '@/lib/api-config';
 
 // Dynamic Axios request interceptor to automatically adapt to localhost or local Wi-Fi IP address
 if (typeof window !== 'undefined') {
@@ -30,7 +31,6 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         const res = await axios.get(`${apiUrl}/settings`);
         settings.setSettings(res.data);
       } catch (err) {

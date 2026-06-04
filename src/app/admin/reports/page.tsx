@@ -12,11 +12,12 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
+import { apiUrl } from '@/lib/api-config';
 
 export default function AdminReportsPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const apiUrl = apiUrl || 'http://localhost:3001/api';
 
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

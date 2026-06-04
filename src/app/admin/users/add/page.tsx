@@ -12,6 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { apiUrl } from '@/lib/api-config';
 
 export default function AddPetugasPage() {
   const router = useRouter();
@@ -240,7 +241,7 @@ export default function AddPetugasPage() {
         return d;
       };
 
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      await axios.post(`${apiUrl}/users`, {
         ...formData,
         birthDate: parseDate(formData.birthDate),
         joinDate: parseDate(formData.joinDate),

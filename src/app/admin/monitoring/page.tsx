@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
+import { apiUrl } from '@/lib/api-config';
 
 // Dynamic import for Leaflet (No SSR)
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
@@ -58,7 +59,7 @@ function AdminMonitoringContent() {
     // 2. Fetch offline officers with today's schedules
     const fetchOfflineOfficers = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+        const apiUrl = apiUrl || 'http://localhost:3001/api';
         const res = await fetch(`${apiUrl}/schedules/today/officers`, {
           headers: { Authorization: `Bearer ${token}` }
         });
