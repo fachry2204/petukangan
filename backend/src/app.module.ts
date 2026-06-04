@@ -33,7 +33,7 @@ import { SchedulesModule } from './schedules/schedules.module';
         password: configService.get<string>('DB_PASSWORD') || '',
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Set to false in production
+        synchronize: false, // Disabled in production to prevent schema conflicts
       }),
       inject: [ConfigService],
     }),
