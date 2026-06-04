@@ -87,8 +87,6 @@ const TASK_TYPES = ['ASSIGNED', 'SELF'];
 export default function AdminTasksPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = apiUrl || 'http://localhost:3001/api';
-
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);

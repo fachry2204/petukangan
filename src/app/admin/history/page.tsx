@@ -42,7 +42,6 @@ export default function AdminHistoryPage() {
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [purging, setPurging] = useState(false);
-  const apiUrl = apiUrl || 'http://localhost:3001/api';
   const intervalRef = useRef<any>(null);
 
   const fetchHistory = async () => {

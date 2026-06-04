@@ -59,7 +59,6 @@ function AdminMonitoringContent() {
     // 2. Fetch offline officers with today's schedules
     const fetchOfflineOfficers = async () => {
       try {
-        const apiUrl = apiUrl || 'http://localhost:3001/api';
         const res = await fetch(`${apiUrl}/schedules/today/officers`, {
           headers: { Authorization: `Bearer ${token}` }
         });

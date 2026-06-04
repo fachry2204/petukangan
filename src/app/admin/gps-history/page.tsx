@@ -41,8 +41,6 @@ interface UserOption {
 export default function GPSHistoryPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = apiUrl || 'http://localhost:3001/api';
-
   const [gpsPoints, setGpsPoints] = useState<GPSPoint[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(false);

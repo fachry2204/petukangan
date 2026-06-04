@@ -22,7 +22,6 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { apiUrl } from '@/lib/api-config';
 
 
 export default function PpsuAttendancePage() {

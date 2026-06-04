@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
+import { apiUrl } from '@/lib/api-config';
 import { 
   Plus, Search, Filter, Clock, MapPin, Users, Calendar as CalendarIcon, 
   Trash2, X, AlertCircle, RefreshCw, CheckCircle2, Eye, Edit2 

@@ -19,6 +19,7 @@ import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { apiUrl } from '@/lib/api-config';
 import {
   Table,
   TableBody,

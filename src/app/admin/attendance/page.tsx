@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
+import { apiUrl } from '@/lib/api-config';
 import { 
   Users, FileText, Clock, Search, MapPin, 
   CheckCircle2, XCircle, AlertTriangle, RefreshCw, 

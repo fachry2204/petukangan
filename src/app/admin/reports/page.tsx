@@ -17,8 +17,6 @@ import { apiUrl } from '@/lib/api-config';
 export default function AdminReportsPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
-  const apiUrl = apiUrl || 'http://localhost:3001/api';
-
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
