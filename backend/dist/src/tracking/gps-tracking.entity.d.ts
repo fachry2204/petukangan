@@ -7,5 +7,9 @@ export declare class GPSTracking {
     speed: number;
     batteryLevel: number;
     isMock: boolean;
+    ipAddress: string;
+    wifiName: string;
+    provider: string;
+    statusAbsen: string;
     timestamp: Date;
 }

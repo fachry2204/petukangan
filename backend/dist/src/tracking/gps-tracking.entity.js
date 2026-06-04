@@ -20,6 +20,10 @@ let GPSTracking = class GPSTracking {
     speed;
     batteryLevel;
     isMock;
+    ipAddress;
+    wifiName;
+    provider;
+    statusAbsen;
     timestamp;
 };
 exports.GPSTracking = GPSTracking;
@@ -51,6 +55,22 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], GPSTracking.prototype, "isMock", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 45, nullable: true }),
+    __metadata("design:type", String)
+], GPSTracking.prototype, "ipAddress", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 100, nullable: true }),
+    __metadata("design:type", String)
+], GPSTracking.prototype, "wifiName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 50, nullable: true }),
+    __metadata("design:type", String)
+], GPSTracking.prototype, "provider", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 30, nullable: true }),
+    __metadata("design:type", String)
+], GPSTracking.prototype, "statusAbsen", void 0);
 __decorate([
     (0, typeorm_1.Index)(),
     (0, typeorm_1.CreateDateColumn)(),

@@ -110,7 +110,9 @@ let AttendanceService = class AttendanceService {
                     reason: data.reason || null,
                     status: 'PENDING',
                 });
-                return this.requestRepository.save(request);
+                const savedRequest = await this.requestRepository.save(request);
+                this.trackingGateway.emitAttendanceChange('create', { ...savedRequest, isRequestTable: true });
+                return savedRequest;
             }
         }
         const isPendingStatus = isPermitType;
@@ -128,7 +130,9 @@ let AttendanceService = class AttendanceService {
                 isOutsideSchedule: true,
                 reason: data.reason || null,
             });
-            return this.lemburRepository.save(lembur);
+            const savedLembur = await this.lemburRepository.save(lembur);
+            this.trackingGateway.emitAttendanceChange('create', savedLembur);
+            return savedLembur;
         }
         const attendance = this.attendanceRepository.create({
             user: { id: userId },
@@ -143,7 +147,9 @@ let AttendanceService = class AttendanceService {
             isOutsideSchedule,
             reason: data.reason || null,
         });
-        return this.attendanceRepository.save(attendance);
+        const savedAttendance = await this.attendanceRepository.save(attendance);
+        this.trackingGateway.emitAttendanceChange('create', savedAttendance);
+        return savedAttendance;
     }
     async getTodayAttendance(userId) {
         const today = new Date();

@@ -31,6 +31,10 @@ let TrackingService = class TrackingService {
             speed: data.speed,
             batteryLevel: data.batteryLevel,
             isMock: data.isMock,
+            ipAddress: data.ipAddress,
+            wifiName: data.wifiName,
+            provider: data.provider,
+            statusAbsen: data.statusAbsen,
         });
         return this.gpsRepository.save(tracking);
     }
@@ -94,6 +98,10 @@ let TrackingService = class TrackingService {
             speed: r.speed,
             batteryLevel: r.batteryLevel,
             isMock: r.isMock,
+            ipAddress: r.ipAddress,
+            wifiName: r.wifiName,
+            provider: r.provider,
+            statusAbsen: r.statusAbsen,
         }));
     }
     async getActiveUsersInRange(startDate, endDate) {
