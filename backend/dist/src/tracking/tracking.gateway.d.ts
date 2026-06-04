@@ -15,4 +15,9 @@ export declare class TrackingGateway implements OnGatewayConnection, OnGatewayDi
     handleForceLogoutUser(client: Socket, payload: {
         userId: number;
     }): void;
+    emitDataChange(entity: string, action: 'create' | 'update' | 'delete', data: any): void;
+    emitTaskChange(action: 'create' | 'update' | 'delete', taskData: any): void;
+    emitReportChange(action: 'create' | 'update' | 'delete', reportData: any): void;
+    emitUserChange(action: 'create' | 'update' | 'delete', userData: any): void;
+    emitAttendanceChange(action: 'create' | 'update', attendanceData: any): void;
 }

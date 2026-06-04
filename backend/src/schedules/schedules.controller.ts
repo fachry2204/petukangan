@@ -13,6 +13,11 @@ export class SchedulesController {
     return this.schedulesService.findAll();
   }
 
+  @Get('today/officers')
+  async getTodayOfficers(): Promise<any[]> {
+    return this.schedulesService.findTodayOfficers();
+  }
+
   @Post()
   async createSchedule(@Body() data: Partial<Schedule>): Promise<Schedule> {
     return this.schedulesService.create(data);

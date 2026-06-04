@@ -24,6 +24,8 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { useRealtime } from '@/hooks/use-realtime';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PpsuHomePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -407,6 +409,14 @@ export default function PpsuHomePage() {
     checkAuthAndFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
+
+  // Realtime updates for attendance status
+  useRealtime((event) => {
+    if (event.entity === 'attendance') {
+      // Refresh attendance data when admin approves/rejects
+      fetchData();
+    }
+  }, ['attendance']);
 
   // Generate Current Week's Schedules (Monday to Sunday)
   const getWeekSchedules = () => {

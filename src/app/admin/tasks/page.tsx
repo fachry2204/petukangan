@@ -19,6 +19,8 @@ import {
   RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { useRealtime } from '@/hooks/use-realtime';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskItem {
   id: number;
@@ -83,6 +85,7 @@ const TASK_TYPES = ['ASSIGNED', 'SELF'];
 
 export default function AdminTasksPage() {
   const { token } = useAuthStore();
+  const { toast } = useToast();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -126,6 +129,17 @@ export default function AdminTasksPage() {
     fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Realtime updates for tasks
+  useRealtime((event) => {
+    if (event.entity === 'task') {
+      toast({
+        title: 'Data Tugas Diperbarui',
+        description: `Tugas ${event.action === 'create' ? 'baru ditambahkan' : event.action === 'update' ? 'diperbarui' : 'dihapus'}`,
+      });
+      fetchTasks();
+    }
+  }, ['task']);
 
   const openEdit = (t: TaskItem) => {
     setEditTask(t);
@@ -406,45 +420,60 @@ export default function AdminTasksPage() {
 
       {/* View Dialog */}
       <Dialog open={!!viewTask} onOpenChange={(o) => !o && setViewTask(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-orange-500" />
-              Detail Tugas
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <ClipboardList className="w-6 h-6 text-orange-500" />
+              Detail Tugas Lapangan
             </DialogTitle>
-            <DialogDescription>Informasi lengkap tugas lapangan.</DialogDescription>
+            <DialogDescription>Informasi lengkap tugas dari petugas lapangan.</DialogDescription>
           </DialogHeader>
           {viewTask && (
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Judul</p>
-                <p className="font-bold text-base">{viewTask.title}</p>
+            <div className="space-y-4 text-sm">
+              {/* Status Section */}
+              <div className="flex flex-wrap gap-2">
+                <Badge className={`${STATUS_COLOR[viewTask.status] || 'bg-zinc-100 text-zinc-700'} border-none font-bold text-xs px-3 py-1`}>
+                  {STATUS_LABEL[viewTask.status] || viewTask.status}
+                </Badge>
+                <Badge className={`${PRIORITY_COLOR[viewTask.priority || 'MEDIUM']} border-none font-bold text-xs px-3 py-1`}>
+                  Prioritas: {viewTask.priority || 'MEDIUM'}
+                </Badge>
+                <Badge className={`${TASK_TYPE_COLOR[viewTask.taskType || 'ASSIGNED']} border-none font-bold text-xs px-3 py-1`}>
+                  {TASK_TYPE_LABEL[viewTask.taskType || 'ASSIGNED']}
+                </Badge>
               </div>
+
+              {/* Title */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Judul Tugas</p>
+                <p className="font-bold text-lg">{viewTask.title}</p>
+              </div>
+
+              {/* Description */}
               {viewTask.description && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deskripsi</p>
-                  <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">{viewTask.description}</p>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Deskripsi</p>
+                  <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl">{viewTask.description}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* Photo Section */}
+              {viewTask.photoUrl && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status</p>
-                  <Badge className={`${STATUS_COLOR[viewTask.status] || 'bg-zinc-100 text-zinc-700'} border-none font-bold text-[10px] mt-1`}>
-                    {STATUS_LABEL[viewTask.status] || viewTask.status}
-                  </Badge>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-2">Foto Tugas</p>
+                  <div className="relative rounded-xl overflow-hidden border border-zinc-200">
+                    <img
+                      src={viewTask.photoUrl}
+                      alt="Foto tugas"
+                      className="w-full max-h-80 object-cover cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => viewTask.photoUrl && window.open(viewTask.photoUrl, '_blank')}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Prioritas</p>
-                  <Badge className={`${PRIORITY_COLOR[viewTask.priority || 'MEDIUM']} border-none font-bold text-[10px] mt-1`}>
-                    {viewTask.priority || 'MEDIUM'}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Jenis Tugas</p>
-                  <Badge className={`${TASK_TYPE_COLOR[viewTask.taskType || 'ASSIGNED']} border-none font-bold text-[10px] mt-1`}>
-                    {TASK_TYPE_LABEL[viewTask.taskType || 'ASSIGNED']}
-                  </Badge>
-                </div>
+              )}
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Petugas</p>
                   <p className="font-semibold">{viewTask.assignedTo?.fullName || `Petugas #${viewTask.assignedTo?.id ?? '-'}`}</p>
@@ -453,11 +482,27 @@ export default function AdminTasksPage() {
                   <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deadline</p>
                   <p className="font-semibold">{viewTask.deadline ? new Date(viewTask.deadline).toLocaleDateString('id-ID') : '—'}</p>
                 </div>
-                <div className="col-span-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Zona</p>
+                  <p className="font-semibold">{viewTask.zone?.name || '-'}</p>
+                </div>
+                <div className="col-span-2 md:col-span-3">
                   <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Lokasi</p>
-                  <p className="font-semibold">
-                    {viewTask.lat && viewTask.lng ? `${Number(viewTask.lat).toFixed(5)}, ${Number(viewTask.lng).toFixed(5)}` : '—'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">
+                      {viewTask.lat && viewTask.lng ? `${Number(viewTask.lat).toFixed(6)}, ${Number(viewTask.lng).toFixed(6)}` : '—'}
+                    </p>
+                    {viewTask.lat && viewTask.lng && (
+                      <a
+                        href={`https://www.google.com/maps?q=${viewTask.lat},${viewTask.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        Buka di Maps
+                      </a>
+                    )}
+                  </div>
                   {viewTask.address && <p className="text-xs text-zinc-500 mt-0.5">{viewTask.address}</p>}
                 </div>
                 <div>
@@ -469,12 +514,6 @@ export default function AdminTasksPage() {
                   <p className="text-xs">{viewTask.updatedAt ? new Date(viewTask.updatedAt).toLocaleString('id-ID') : '—'}</p>
                 </div>
               </div>
-              {viewTask.photoUrl && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Foto</p>
-                  <img src={viewTask.photoUrl} alt="Foto tugas" className="w-full max-h-64 object-cover rounded-lg" />
-                </div>
-              )}
             </div>
           )}
           <DialogFooter>

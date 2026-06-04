@@ -8,4 +8,6 @@ export declare class TrackingService {
     getLatestLocations(): Promise<never[]>;
     purgeOldHistory(minutes?: number): Promise<number>;
     getHistoryWithin(minutes?: number): Promise<any[]>;
+    getGPSHistory(startDate: Date, endDate: Date, userId?: number): Promise<any[]>;
+    getActiveUsersInRange(startDate: Date, endDate: Date): Promise<any[]>;
 }

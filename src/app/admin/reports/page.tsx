@@ -10,9 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Search, MapPin, Calendar, User2, Map, Eye, Trash2, Loader2, AlertCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
+import { useRealtime } from '@/hooks/use-realtime';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminReportsPage() {
   const { token } = useAuthStore();
+  const { toast } = useToast();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
   const [reports, setReports] = useState<any[]>([]);
@@ -47,6 +50,17 @@ export default function AdminReportsPage() {
       setLoading(false);
     }
   };
+
+  // Realtime updates for reports
+  useRealtime((event) => {
+    if (event.entity === 'report') {
+      toast({
+        title: 'Data Laporan Diperbarui',
+        description: `Laporan ${event.action === 'create' ? 'baru masuk' : event.action === 'update' ? 'diperbarui' : 'dihapus'}`,
+      });
+      fetchReports();
+    }
+  }, ['report']);
 
   // Filter reports
   const filteredReports = useMemo(() => {

@@ -118,7 +118,9 @@ let TrackingGateway = class TrackingGateway {
                 gpsStatus: hasNewCoords ? !!payload.gpsStatus : prev.gpsStatus ?? false,
                 timestamp: payload.timestamp || Date.now(),
                 ipAddress: client.handshake.headers['x-forwarded-for'] || client.handshake.address || 'Unknown',
-                device: client.handshake.headers['user-agent'] || 'Unknown',
+                device: payload.device || prev.device || 'Unknown',
+                os: payload.os || prev.os || 'Unknown',
+                provider: payload.provider || prev.provider || '',
             };
             this.activeLocations.set(payload.userId, locationData);
             this.socketToUserId.set(client.id, payload.userId);
@@ -179,6 +181,22 @@ let TrackingGateway = class TrackingGateway {
             this.socketToUserId.delete(targetSocketId);
             this.server.emit('userOffline', { userId: payload.userId });
         }
+    }
+    emitDataChange(entity, action, data) {
+        console.log(`[Socket] Emitting dataChange: ${entity} ${action}`, data?.id || '');
+        this.server.emit('dataChange', { entity, action, data, timestamp: Date.now() });
+    }
+    emitTaskChange(action, taskData) {
+        this.emitDataChange('task', action, taskData);
+    }
+    emitReportChange(action, reportData) {
+        this.emitDataChange('report', action, reportData);
+    }
+    emitUserChange(action, userData) {
+        this.emitDataChange('user', action, userData);
+    }
+    emitAttendanceChange(action, attendanceData) {
+        this.emitDataChange('attendance', action, attendanceData);
     }
 };
 exports.TrackingGateway = TrackingGateway;

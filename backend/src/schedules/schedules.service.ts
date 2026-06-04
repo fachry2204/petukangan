@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Schedule } from './schedule.entity';
 
 @Injectable()
@@ -17,6 +17,36 @@ export class SchedulesService {
         id: 'DESC',
       },
     });
+  }
+
+  async findTodayOfficers(): Promise<any[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const schedules = await this.scheduleRepository.find({
+      where: {
+        date: Between(today, tomorrow),
+      },
+    });
+
+    // Extract assigned users from all today's schedules
+    const officers: any[] = [];
+    schedules.forEach(s => {
+      if (s.assignedUsers && Array.isArray(s.assignedUsers)) {
+        s.assignedUsers.forEach((user: any) => {
+          officers.push({
+            userId: user.id,
+            fullName: user.fullName || user.name || `Petugas ${user.id}`,
+            photoUrl: user.photoUrl,
+            scheduleTime: s.timeRange || '-',
+          });
+        });
+      }
+    });
+
+    return officers;
   }
 
   async create(data: Partial<Schedule>): Promise<Schedule> {

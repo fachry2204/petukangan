@@ -8,6 +8,15 @@ export declare class TrackingController {
         count: number;
         points: any[];
     }>;
+    getGPSHistory(startDate: string, endDate: string, userId?: string): Promise<{
+        startDate: string;
+        endDate: string;
+        count: number;
+        points: any[];
+    }>;
+    getActiveUsers(startDate: string, endDate: string): Promise<{
+        users: any[];
+    }>;
     purgeOld(minutes?: string): Promise<{
         minutes: number;
         purged: number;

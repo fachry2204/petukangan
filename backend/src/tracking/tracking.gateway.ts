@@ -101,7 +101,9 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         gpsStatus: hasNewCoords ? !!payload.gpsStatus : prev.gpsStatus ?? false,
         timestamp: payload.timestamp || Date.now(),
         ipAddress: client.handshake.headers['x-forwarded-for'] || client.handshake.address || 'Unknown',
-        device: client.handshake.headers['user-agent'] || 'Unknown',
+        device: payload.device || prev.device || 'Unknown',
+        os: payload.os || prev.os || 'Unknown',
+        provider: payload.provider || prev.provider || '',
       };
 
       this.activeLocations.set(payload.userId, locationData);
@@ -178,5 +180,27 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       this.socketToUserId.delete(targetSocketId);
       this.server.emit('userOffline', { userId: payload.userId });
     }
+  }
+
+  // Data change events for realtime updates
+  emitDataChange(entity: string, action: 'create' | 'update' | 'delete', data: any) {
+    console.log(`[Socket] Emitting dataChange: ${entity} ${action}`, data?.id || '');
+    this.server.emit('dataChange', { entity, action, data, timestamp: Date.now() });
+  }
+
+  emitTaskChange(action: 'create' | 'update' | 'delete', taskData: any) {
+    this.emitDataChange('task', action, taskData);
+  }
+
+  emitReportChange(action: 'create' | 'update' | 'delete', reportData: any) {
+    this.emitDataChange('report', action, reportData);
+  }
+
+  emitUserChange(action: 'create' | 'update' | 'delete', userData: any) {
+    this.emitDataChange('user', action, userData);
+  }
+
+  emitAttendanceChange(action: 'create' | 'update', attendanceData: any) {
+    this.emitDataChange('attendance', action, attendanceData);
   }
 }

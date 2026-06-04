@@ -95,8 +95,11 @@ export default function PpsuTasksPage() {
     }
   };
 
+  const allowedTaskStatuses = ['Sudah Absen'];
+  const canDoTask = allowedTaskStatuses.includes(attendanceStatus);
+
   const handleCreateClick = () => {
-    if (attendanceStatus === 'Absen Istirahat' || attendanceStatus === 'Sudah Absen Pulang') {
+    if (!canDoTask) {
       setWarningReason(attendanceStatus);
       setIsWarningOpen(true);
     } else {
@@ -105,7 +108,7 @@ export default function PpsuTasksPage() {
   };
 
   const handleTaskClick = (e: React.MouseEvent, taskId: number) => {
-    if (attendanceStatus === 'Absen Istirahat' || attendanceStatus === 'Sudah Absen Pulang') {
+    if (!canDoTask) {
       e.preventDefault();
       setWarningReason(attendanceStatus);
       setIsWarningOpen(true);
@@ -263,13 +266,40 @@ export default function PpsuTasksPage() {
 
             <div className="space-y-1.5 text-center">
               <h3 className="text-base font-black text-zinc-900 dark:text-white uppercase tracking-wide">
-                {warningReason === 'Absen Istirahat' ? 'Sedang Waktu Istirahat!' : 'Sudah Absen Pulang!'}
+                {(() => {
+                  switch (warningReason) {
+                    case 'Belum Absen': return 'Belum Absen Masuk!';
+                    case 'Menunggu Diterima': return 'Permintaan Menunggu Persetujuan!';
+                    case 'Izin Tidak Masuk': return 'Status Izin Tidak Masuk!';
+                    case 'Pulang Awal': return 'Sudah Pulang Awal!';
+                    case 'Absen Istirahat': return 'Sedang Waktu Istirahat!';
+                    case 'Selesai Istirahat': return 'Selesai Istirahat!';
+                    case 'Sudah Absen Pulang': return 'Sudah Absen Pulang!';
+                    default: return 'Tidak Dapat Melakukan Tugas!';
+                  }
+                })()}
               </h3>
               <p className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold leading-relaxed">
-                {warningReason === 'Absen Istirahat'
-                  ? 'Anda saat ini sedang dalam status Absen Istirahat. Silakan selesaikan waktu istirahat Anda terlebih dahulu melalui menu Beranda sebelum dapat mengambil atau menambahkan tugas.'
-                  : 'Anda telah menyelesaikan tugas hari ini dan melakukan Absen Pulang. Akses pengerjaan dan pendaftaran tugas mandiri dinonaktifkan.'
-                }
+                {(() => {
+                  switch (warningReason) {
+                    case 'Belum Absen':
+                      return 'Anda belum melakukan absen masuk hari ini. Silakan lakukan absen masuk melalui menu Beranda terlebih dahulu sebelum dapat menambahkan atau mengerjakan tugas.';
+                    case 'Menunggu Diterima':
+                      return 'Permintaan absen Anda sedang menunggu persetujuan dari admin. Anda baru dapat melakukan tugas setelah permintaan disetujui.';
+                    case 'Izin Tidak Masuk':
+                      return 'Anda sedang dalam status izin tidak masuk hari ini. Anda tidak dapat menambahkan atau mengerjakan tugas selama status ini.';
+                    case 'Pulang Awal':
+                      return 'Anda sudah melakukan pulang awal. Akses pengerjaan dan pendaftaran tugas mandiri telah dinonaktifkan.';
+                    case 'Absen Istirahat':
+                      return 'Anda saat ini sedang dalam status Absen Istirahat. Silakan selesaikan waktu istirahat Anda terlebih dahulu melalui menu Beranda sebelum dapat mengambil atau menambahkan tugas.';
+                    case 'Selesai Istirahat':
+                      return 'Anda telah selesai istirahat tetapi belum melakukan absen masuk kembali. Silakan absen masuk melalui menu Beranda untuk melanjutkan tugas.';
+                    case 'Sudah Absen Pulang':
+                      return 'Anda telah menyelesaikan tugas hari ini dan melakukan Absen Pulang. Akses pengerjaan dan pendaftaran tugas mandiri dinonaktifkan.';
+                    default:
+                      return 'Saat ini Anda tidak dapat menambahkan atau mengerjakan tugas. Pastikan status absen Anda sudah "Absen Masuk" untuk melakukan tugas.';
+                  }
+                })()}
               </p>
             </div>
 

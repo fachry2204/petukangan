@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Attendance } from './attendance.entity';
@@ -8,6 +8,7 @@ import { Lembur } from './lembur.entity';
 import { AntiManipulationService } from '../common/anti-manipulation.service';
 import { GeofenceService } from '../common/geofence.service';
 import { FileService } from '../common/file.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 
 @Injectable()
 export class AttendanceService {
@@ -23,6 +24,8 @@ export class AttendanceService {
     private antiManipulation: AntiManipulationService,
     private geofence: GeofenceService,
     private fileService: FileService,
+    @Inject(forwardRef(() => TrackingGateway))
+    private trackingGateway: TrackingGateway,
   ) {}
 
   async submit(userId: number, type: string, data: any) {
@@ -106,7 +109,9 @@ export class AttendanceService {
           reason: data.reason || null,
           status: 'PENDING',
         });
-        return this.requestRepository.save(request);
+        const savedRequest = await this.requestRepository.save(request);
+        this.trackingGateway.emitAttendanceChange('create', { ...savedRequest, isRequestTable: true });
+        return savedRequest;
       }
     }
 
@@ -127,7 +132,9 @@ export class AttendanceService {
         isOutsideSchedule: true,
         reason: data.reason || null,
       });
-      return this.lemburRepository.save(lembur);
+      const savedLembur = await this.lemburRepository.save(lembur);
+      this.trackingGateway.emitAttendanceChange('create', savedLembur);
+      return savedLembur;
     }
 
     // Otherwise, save to regular attendance table
@@ -145,7 +152,9 @@ export class AttendanceService {
       reason: data.reason || null,
     });
 
-    return this.attendanceRepository.save(attendance);
+    const savedAttendance = await this.attendanceRepository.save(attendance);
+    this.trackingGateway.emitAttendanceChange('create', savedAttendance);
+    return savedAttendance;
   }
 
   async getTodayAttendance(userId: number) {
@@ -295,7 +304,10 @@ export class AttendanceService {
       if (rejectionReason !== undefined) {
         request.rejectionReason = rejectionReason;
       }
-      return this.requestRepository.save(request);
+      const savedRequest = await this.requestRepository.save(request);
+      // Emit realtime event
+      this.trackingGateway.emitAttendanceChange('update', { ...savedRequest, isRequestTable: true });
+      return savedRequest;
     }
 
     let record = await this.attendanceRepository.findOne({
@@ -320,8 +332,12 @@ export class AttendanceService {
     }
 
     if (isLembur) {
-      return this.lemburRepository.save(record as any);
+      const savedRecord = await this.lemburRepository.save(record as any);
+      this.trackingGateway.emitAttendanceChange('update', savedRecord);
+      return savedRecord;
     }
-    return this.attendanceRepository.save(record);
+    const savedRecord = await this.attendanceRepository.save(record);
+    this.trackingGateway.emitAttendanceChange('update', savedRecord);
+    return savedRecord;
   }
 }

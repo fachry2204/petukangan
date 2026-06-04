@@ -17,6 +17,7 @@ const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: 
 
 function AdminMonitoringContent() {
   const [officers, setOfficers] = useState<any[]>([]);
+  const [offlineOfficers, setOfflineOfficers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isPanelVisible, setIsPanelVisible] = useState(true);
   const [activeCenter, setActiveCenter] = useState<[number, number] | null>(null);
@@ -54,7 +55,24 @@ function AdminMonitoringContent() {
     };
     fetchActiveSOS();
 
-    // 2. Setup Socket.io
+    // 2. Fetch offline officers with today's schedules
+    const fetchOfflineOfficers = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+        const res = await fetch(`${apiUrl}/schedules/today/officers`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOfflineOfficers(data || []);
+        }
+      } catch (err) {
+        console.log('Failed to fetch offline officers:', err);
+      }
+    };
+    fetchOfflineOfficers();
+
+    // 3. Setup Socket.io
     // Auto-detect socket URL from current domain
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const hostname = window.location.hostname;
@@ -160,17 +178,23 @@ function AdminMonitoringContent() {
   console.log('[Admin] Officers with valid GPS:', officers.filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0));
 
   // Convert officers to map points — only include those with valid GPS coordinates
+  // Exclude officers who have checked out (Pulang)
   const mapPoints = officers
-    .filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0)
+    .filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0 && o.status !== 'Pulang')
     .map(o => ({
       id: `officer-${o.userId}`,
       lat: o.lat,
       lng: o.lng,
       name: o.fullName || `Petugas ID: ${o.userId}`,
-      status: o.status || 'Online (Live)',
+      status: o.status || 'Online',
       photoUrl: o.photoUrl,
       isSOS: o.isSOS,
-      address: o.address
+      address: o.address,
+      ipAddress: o.ipAddress,
+      device: o.device,
+      os: o.os,
+      provider: o.provider,
+      wifi: o.wifi,
     }));
 
   const filteredOfficers = officers.filter(o =>
@@ -357,8 +381,15 @@ function AdminMonitoringContent() {
                     </div>
 
                     <div className="flex flex-col items-end gap-1">
-                      <Badge className="bg-green-100 text-green-600 border-none font-bold text-[8px] px-1.5 py-0.5">
-                        ONLINE
+                      <Badge className={cn(
+                        "border-none font-bold text-[8px] px-1.5 py-0.5",
+                        o.status === 'Pulang' && "bg-gray-100 text-gray-600",
+                        o.status === 'Kembali Bekerja' && "bg-blue-100 text-blue-600",
+                        o.status === 'Istirahat' && "bg-yellow-100 text-yellow-600",
+                        o.status === 'Absen Masuk' && "bg-green-100 text-green-600",
+                        (!o.status || o.status === 'Online') && "bg-green-100 text-green-600"
+                      )}>
+                        {o.status || 'Online'}
                       </Badge>
                       <span className="text-[8px] text-zinc-400">
                         {o.timestamp ? new Date(o.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -369,6 +400,50 @@ function AdminMonitoringContent() {
               )}
             </div>
           </div>
+
+          {/* Offline Officers with Schedules */}
+          {offlineOfficers.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                Petugas Offline ({offlineOfficers.length})
+              </h3>
+              <div className="space-y-1.5">
+                {offlineOfficers.map((o, idx) => (
+                  <div
+                    key={`offline-${idx}`}
+                    className="flex items-center justify-between p-2.5 bg-gray-50/50 dark:bg-zinc-900/40 border border-gray-100/50 dark:border-zinc-800/30 rounded-xl transition-all opacity-70"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {o.photoUrl ? (
+                        <img
+                          src={o.photoUrl}
+                          alt={o.fullName}
+                          className="w-8 h-8 rounded-lg object-cover border border-zinc-100 grayscale"
+                          onError={(e) => { e.currentTarget.src = '/logodki.png'; }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center font-bold text-xs text-gray-500 dark:text-zinc-400">
+                          {(o.fullName || 'P').charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-[11px] text-zinc-600 dark:text-zinc-300">{o.fullName || `Petugas ${o.userId}`}</p>
+                        <p className="text-[9px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+                          {o.scheduleTime || 'Jadwal: -'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className="bg-gray-100 text-gray-500 border-none font-bold text-[8px] px-1.5 py-0.5">
+                        OFFLINE
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

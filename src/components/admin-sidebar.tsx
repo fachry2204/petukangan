@@ -28,7 +28,7 @@ const generalMenuItems = [
   { label: 'Live Monitoring', icon: MapIcon, href: '/admin/monitoring' },
   { label: 'Data Petugas Online', icon: MonitorSmartphone, href: '/admin/online-officers' },
   { label: 'SOS (Emergency)', icon: Siren, href: '/admin/sos' },
-  { label: 'Riwayat GPS', icon: History, href: '/admin/history' },
+  { label: 'Riwayat GPS', icon: History, href: '/admin/gps-history' },
 ];
 
 const ppsuMenuItems = [

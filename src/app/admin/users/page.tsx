@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
+import { useRealtime } from '@/hooks/use-realtime';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
@@ -46,6 +47,17 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (token) fetchUsers();
   }, [token]);
+
+  // Realtime updates for users
+  useRealtime((event) => {
+    if (event.entity === 'user') {
+      toast({
+        title: 'Data Petugas Diperbarui',
+        description: `Petugas ${event.action === 'create' ? 'baru ditambahkan' : event.action === 'update' ? 'diperbarui' : 'dihapus'}`,
+      });
+      fetchUsers();
+    }
+  }, ['user']);
 
   const handleDelete = async () => {
     if (!selectedUserForDelete || !token) return;

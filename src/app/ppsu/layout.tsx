@@ -8,12 +8,22 @@ import { useAuthStore } from '@/store/auth-store';
 import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Map attendance status to a simplified status string for the map marker pulse
+// Map attendance status to a simplified status string for the map marker
 function resolveMapStatus(attendanceStatus: string): string {
   const s = (attendanceStatus || '').toLowerCase();
-  if (s.includes('istirahat'))   return 'Istirahat';
-  if (s.includes('pulang') || s.includes('check-out') || s.includes('checkout')) return 'Pulang';
-  if (s.includes('sudah absen') || s.includes('selesai istirahat') || s.includes('belum absen') === false) return 'Absen';
+  
+  // Check for specific statuses in priority order
+  if (s.includes('pulang') || s.includes('check-out') || s.includes('checkout') || s.includes('sudah pulang')) 
+    return 'Pulang';
+  if (s.includes('selesai istirahat') || s.includes('kembali bekerja') || s.includes('selesai break')) 
+    return 'Kembali Bekerja';
+  if (s.includes('istirahat') || s.includes('absen istirahat') || s.includes('break')) 
+    return 'Istirahat';
+  if (s.includes('sudah absen') || s.includes('sudah masuk') || s.includes('absen masuk') || s.includes('check-in') || s.includes('masuk')) 
+    return 'Absen Masuk';
+  if (s.includes('belum absen') || s.includes('libur') || s.includes('menunggu')) 
+    return 'Online';
+  
   return 'Online';
 }
 
@@ -106,12 +116,40 @@ export default function PpsuLayout({
       } catch (_) { /* not critical */ }
     };
 
+    // Get device and connection info
+    const getDeviceInfo = () => {
+      const ua = navigator.userAgent;
+      let device = 'Unknown Device';
+      let os = 'Unknown OS';
+      
+      // Detect OS
+      if (ua.includes('Windows')) os = 'Windows';
+      else if (ua.includes('Mac')) os = 'macOS';
+      else if (ua.includes('Linux')) os = 'Linux';
+      else if (ua.includes('Android')) os = 'Android';
+      else if (ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iOS')) os = 'iOS';
+      
+      // Detect device type
+      if (ua.includes('Mobile')) device = 'Mobile Browser';
+      else if (ua.includes('Tablet')) device = 'Tablet';
+      else device = 'Desktop/Laptop';
+      
+      // Get connection info if available
+      const conn = (navigator as any).connection;
+      const provider = conn?.effectiveType || '';
+      
+      return { device, os, provider };
+    };
+
     const emitWithGps = (pos: GeolocationPosition) => {
       lastGpsRef.current = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         timestamp: Date.now(),
       };
+      
+      const deviceInfo = getDeviceInfo();
+      
       socketRef.current?.emit('updateLocation', {
         userId: user.id,
         fullName: user.fullName,
@@ -121,12 +159,16 @@ export default function PpsuLayout({
         lng: pos.coords.longitude,
         gpsStatus: true,
         timestamp: Date.now(),
+        device: deviceInfo.device,
+        os: deviceInfo.os,
+        provider: deviceInfo.provider,
       });
     };
 
     const emitHeartbeat = () => {
       if (!socketRef.current?.connected) return;
       const g = lastGpsRef.current;
+      const deviceInfo = getDeviceInfo();
       socketRef.current.emit('updateLocation', {
         userId: user.id,
         fullName: user.fullName,
@@ -136,6 +178,9 @@ export default function PpsuLayout({
         lng: g?.lng ?? null,
         gpsStatus: !!g,
         timestamp: Date.now(),
+        device: deviceInfo.device,
+        os: deviceInfo.os,
+        provider: deviceInfo.provider,
       });
     };
 

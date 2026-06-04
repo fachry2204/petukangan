@@ -98,8 +98,8 @@ export default function LoginPage() {
     } catch (error: any) {
       setModalState({
         isOpen: true,
-        title: 'Login Gagal ❌',
-        description: error.response?.data?.message || 'Terjadi kesalahan sistem, silakan periksa kembali username & password Anda.',
+        title: error.response ? 'Login Gagal ❌' : 'Server Offline 🚫',
+        description: error.response?.data?.message || 'SERVER Sedang Offline atau tidak dapat dihubungi. Silakan coba lagi nanti.',
         type: 'error'
       });
     } finally {

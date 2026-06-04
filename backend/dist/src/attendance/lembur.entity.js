@@ -58,7 +58,7 @@ __decorate([
     __metadata("design:type", String)
 ], Lembur.prototype, "address", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Lembur.prototype, "photoUrl", void 0);
 __decorate([
@@ -74,7 +74,7 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Lembur.prototype, "isMock", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'VALID' }),
+    (0, typeorm_1.Column)({ default: 'VALID', length: 16 }),
     __metadata("design:type", String)
 ], Lembur.prototype, "status", void 0);
 __decorate([

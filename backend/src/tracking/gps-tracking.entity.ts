@@ -24,6 +24,18 @@ export class GPSTracking {
   @Column({ default: false })
   isMock: boolean;
 
+  @Column({ length: 45, nullable: true })
+  ipAddress: string;
+
+  @Column({ length: 100, nullable: true })
+  wifiName: string;
+
+  @Column({ length: 50, nullable: true })
+  provider: string;
+
+  @Column({ length: 30, nullable: true })
+  statusAbsen: string;
+
   @Index()
   @CreateDateColumn()
   timestamp: Date;

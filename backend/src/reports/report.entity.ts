@@ -10,16 +10,16 @@ export class Report {
   @ManyToOne(() => User)
   user: User;
 
-  @Column()
+  @Column({ length: 200 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   category: string;
 
-  @Column({ default: 'MEDIUM' })
+  @Column({ default: 'MEDIUM', length: 16 })
   priority: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
@@ -31,7 +31,7 @@ export class Report {
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ default: 'NEW' })
+  @Column({ default: 'NEW', length: 16 })
   status: string;
 
   @CreateDateColumn()

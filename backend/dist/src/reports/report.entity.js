@@ -38,7 +38,7 @@ __decorate([
     __metadata("design:type", user_entity_1.User)
 ], Report.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ length: 200 }),
     __metadata("design:type", String)
 ], Report.prototype, "title", void 0);
 __decorate([
@@ -46,11 +46,11 @@ __decorate([
     __metadata("design:type", String)
 ], Report.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], Report.prototype, "category", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'MEDIUM' }),
+    (0, typeorm_1.Column)({ default: 'MEDIUM', length: 16 }),
     __metadata("design:type", String)
 ], Report.prototype, "priority", void 0);
 __decorate([
@@ -66,7 +66,7 @@ __decorate([
     __metadata("design:type", String)
 ], Report.prototype, "address", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'NEW' }),
+    (0, typeorm_1.Column)({ default: 'NEW', length: 16 }),
     __metadata("design:type", String)
 ], Report.prototype, "status", void 0);
 __decorate([

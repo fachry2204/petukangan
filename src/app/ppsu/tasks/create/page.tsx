@@ -92,7 +92,21 @@ export default function PpsuCreateTaskPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  // Fetch Location automatically on mount
+  // Fetch Location automatically on mount — 2-step: cached first, then refine
+  const watchIdRef = useRef<number | null>(null);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLocationWatch = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (safetyTimerRef.current !== null) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+  };
+
   const fetchLocation = () => {
     setIsFetchingLocation(true);
     if (!navigator.geolocation) {
@@ -105,25 +119,74 @@ export default function PpsuCreateTaskPage() {
       return;
     }
 
+    // Clear any previous watch/timer before starting fresh
+    clearLocationWatch();
+
+    const gotInitialRef = { current: false };
+
+    // Step 1: INSTANT cached position — accept ANY cached location, no matter how old
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+        // Show position immediately so map renders fast
+        gotInitialRef.current = true;
         setLocation({ lat, lng });
         setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
-        setIsFetchingLocation(false);
+        // If accuracy is decent, stop right away
+        if (pos.coords.accuracy && pos.coords.accuracy < 100) {
+          setIsFetchingLocation(false);
+          clearLocationWatch();
+        }
       },
       (err) => {
-        console.error('Failed to get location:', err);
+        console.warn('Cached GPS failed:', err?.code, err?.message);
+        // If even cached fails, we'll still try watchPosition below
+      },
+      { enableHighAccuracy: false, timeout: 1500, maximumAge: Infinity }
+    );
+
+    // Step 2: Refinement via watchPosition — updates as accuracy improves
+    try {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          gotInitialRef.current = true;
+          setLocation({ lat, lng });
+          setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+          // Stop when accuracy is acceptable (< 50m)
+          if (pos.coords.accuracy && pos.coords.accuracy < 50) {
+            setIsFetchingLocation(false);
+            clearLocationWatch();
+          }
+        },
+        (err) => {
+          console.warn('GPS watch error:', err?.code, err?.message);
+          // Keep whatever we have and stop loading
+          if (gotInitialRef.current) {
+            setIsFetchingLocation(false);
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+    } catch (e) {
+      console.error('watchPosition failed:', e);
+    }
+
+    // Safety: stop spinner after 5s max — enough time for any reasonable GPS
+    safetyTimerRef.current = setTimeout(() => {
+      setIsFetchingLocation(false);
+      clearLocationWatch();
+      // If still no location at all, warn user
+      if (!gotInitialRef.current) {
         toast({
           variant: 'destructive',
-          title: 'Gagal Mendapatkan GPS',
-          description: 'Harap aktifkan izin lokasi GPS pada browser Anda.'
+          title: 'GPS Tidak Ditemukan',
+          description: 'Tidak dapat mendapatkan lokasi. Pastikan izin GPS aktif dan coba ulangi.'
         });
-        setIsFetchingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+      }
+    }, 5000);
   };
 
   const [isHydrated, setIsHydrated] = useState(false);
@@ -145,7 +208,16 @@ export default function PpsuCreateTaskPage() {
         const res = await axios.get(`${apiUrl}/attendance/today`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setAttendanceStatus(res.data.status || 'Belum Absen');
+        const status = res.data.status || 'Belum Absen';
+        setAttendanceStatus(status);
+        if (status !== 'Sudah Absen') {
+          toast({
+            variant: 'destructive',
+            title: 'Tidak Dapat Membuat Tugas',
+            description: 'Anda harus dalam status Absen Masuk untuk membuat tugas. Silakan absen masuk terlebih dahulu melalui menu Beranda.'
+          });
+          router.push('/ppsu/home');
+        }
       } catch (err) {
         console.error('Failed to fetch attendance status', err);
       }
@@ -153,10 +225,11 @@ export default function PpsuCreateTaskPage() {
     fetchStatus();
   }, [token]);
 
-  // Clean up camera stream on unmount
+  // Clean up camera stream + GPS watch + safety timer on unmount
   useEffect(() => {
     return () => {
       stopCamera();
+      clearLocationWatch();
     };
   }, []);
 

@@ -1,7 +1,9 @@
-import { Controller, Delete, Get, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Query, UseGuards } from '@nestjs/common';
 import { GPS_RETENTION_MINUTES, TrackingService } from './tracking.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('tracking')
+@UseGuards(JwtAuthGuard)
 export class TrackingController {
   constructor(private readonly trackingService: TrackingService) {}
 
@@ -13,6 +15,45 @@ export class TrackingController {
     const purged = await this.trackingService.purgeOldHistory(m);
     const points = await this.trackingService.getHistoryWithin(m);
     return { minutes: m, purged, count: points.length, points };
+  }
+
+  // Get GPS history by date range with optional user filter
+  @Get('gps-history')
+  async getGPSHistory(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('userId') userId?: string,
+  ) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    const points = await this.trackingService.getGPSHistory(
+      start, 
+      end, 
+      userId ? Number(userId) : undefined
+    );
+    
+    return { 
+      startDate, 
+      endDate, 
+      count: points.length, 
+      points 
+    };
+  }
+
+  // Get distinct users who have GPS data in a date range
+  @Get('gps-users')
+  async getActiveUsers(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    const users = await this.trackingService.getActiveUsersInRange(start, end);
+    return { users };
   }
 
   // Manual cleanup endpoint (idempotent).

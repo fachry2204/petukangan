@@ -47,15 +47,15 @@ __decorate([
     __metadata("design:type", Number)
 ], User.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)({ unique: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ length: 100 }),
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ length: 100 }),
     __metadata("design:type", String)
 ], User.prototype, "fullName", void 0);
 __decorate([
@@ -67,7 +67,7 @@ __decorate([
     __metadata("design:type", zone_entity_1.Zone)
 ], User.prototype, "zone", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 16 }),
     __metadata("design:type", String)
 ], User.prototype, "gender", void 0);
 __decorate([
@@ -75,7 +75,7 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "birthDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 20 }),
     __metadata("design:type", String)
 ], User.prototype, "phone", void 0);
 __decorate([
@@ -83,27 +83,27 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "address", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "country", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "province", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "city", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "district", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 50 }),
     __metadata("design:type", String)
 ], User.prototype, "village", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 10 }),
     __metadata("design:type", String)
 ], User.prototype, "postalCode", void 0);
 __decorate([
@@ -111,7 +111,7 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "joinDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "photoUrl", void 0);
 __decorate([
@@ -119,7 +119,7 @@ __decorate([
     __metadata("design:type", Object)
 ], User.prototype, "documents", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'ACTIVE' }),
+    (0, typeorm_1.Column)({ default: 'ACTIVE', length: 16 }),
     __metadata("design:type", String)
 ], User.prototype, "status", void 0);
 __decorate([
@@ -135,7 +135,7 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "lastSeen", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, length: 100 }),
     __metadata("design:type", String)
 ], User.prototype, "deviceId", void 0);
 __decorate([

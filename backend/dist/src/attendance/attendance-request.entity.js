@@ -53,7 +53,7 @@ __decorate([
     __metadata("design:type", String)
 ], AttendanceRequest.prototype, "reason", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'PENDING' }),
+    (0, typeorm_1.Column)({ default: 'PENDING', length: 16 }),
     __metadata("design:type", String)
 ], AttendanceRequest.prototype, "status", void 0);
 __decorate([

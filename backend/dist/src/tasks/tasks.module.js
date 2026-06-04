@@ -13,12 +13,16 @@ const tasks_controller_1 = require("./tasks.controller");
 const tasks_service_1 = require("./tasks.service");
 const task_entity_1 = require("./task.entity");
 const task_log_entity_1 = require("./task-log.entity");
+const tracking_module_1 = require("../tracking/tracking.module");
 let TasksModule = class TasksModule {
 };
 exports.TasksModule = TasksModule;
 exports.TasksModule = TasksModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([task_entity_1.Task, task_log_entity_1.TaskLog])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([task_entity_1.Task, task_log_entity_1.TaskLog]),
+            (0, common_1.forwardRef)(() => tracking_module_1.TrackingModule),
+        ],
         controllers: [tasks_controller_1.TasksController],
         providers: [tasks_service_1.TasksService],
         exports: [tasks_service_1.TasksService],

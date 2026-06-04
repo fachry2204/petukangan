@@ -17,10 +17,13 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("./user.entity");
+const tracking_gateway_1 = require("../tracking/tracking.gateway");
 let UsersService = class UsersService {
     usersRepository;
-    constructor(usersRepository) {
+    trackingGateway;
+    constructor(usersRepository, trackingGateway) {
         this.usersRepository = usersRepository;
+        this.trackingGateway = trackingGateway;
     }
     async findOne(username) {
         return this.usersRepository.findOne({
@@ -101,7 +104,9 @@ let UsersService = class UsersService {
             });
         }
         const user = this.usersRepository.create(userData);
-        return this.usersRepository.save(user);
+        const savedUser = await this.usersRepository.save(user);
+        this.trackingGateway.emitUserChange('create', savedUser);
+        return savedUser;
     }
     async findAll() {
         return this.usersRepository.find({ relations: ['role', 'zone'] });
@@ -138,7 +143,9 @@ let UsersService = class UsersService {
             });
         }
         Object.assign(user, updateData);
-        return this.usersRepository.save(user);
+        const savedUser = await this.usersRepository.save(user);
+        this.trackingGateway.emitUserChange('update', savedUser);
+        return savedUser;
     }
     async updateLastSeen(id) {
         await this.usersRepository.update(id, { lastSeen: new Date() });
@@ -160,12 +167,15 @@ let UsersService = class UsersService {
             console.error('Failed to delete user folder:', error);
         }
         await this.usersRepository.delete(id);
+        this.trackingGateway.emitUserChange('delete', { id });
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => tracking_gateway_1.TrackingGateway))),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        tracking_gateway_1.TrackingGateway])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

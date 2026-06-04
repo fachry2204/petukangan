@@ -38,26 +38,46 @@ export default function AdminDashboardPage() {
   const fetchStats = async () => {
     if (!token) return;
     try {
-      const [usersRes, tasksRes, reportsRes] = await Promise.all([
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/reports`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
+      // Use Promise.all with individual try-catch for each request
+      let usersData: any[] = [];
+      let tasksData: any[] = [];
+      let reportsData: any[] = [];
 
-      const ppsuUsers = usersRes.data.filter((u: any) => (u.role?.name || u.roleName) === 'PPSU');
+      try {
+        const usersRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        usersData = usersRes.data || [];
+      } catch (e) {
+        console.error('Failed to fetch users:', e);
+      }
+
+      try {
+        const tasksRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        tasksData = tasksRes.data || [];
+      } catch (e) {
+        console.error('Failed to fetch tasks:', e);
+      }
+
+      try {
+        const reportsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/reports`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        reportsData = reportsRes.data || [];
+      } catch (e) {
+        console.error('Failed to fetch reports:', e);
+      }
+
+      const ppsuUsers = usersData.filter((u: any) => (u.role?.name || u.roleName) === 'PPSU');
       const activePpsu = ppsuUsers.filter((u: any) => u.status === 'ACTIVE');
       const lakiLaki = ppsuUsers.filter((u: any) => u.gender === 'LAKI-LAKI' || u.gender === 'Laki-Laki' || u.gender === 'Male');
       const perempuan = ppsuUsers.filter((u: any) => u.gender === 'PEREMPUAN' || u.gender === 'Perempuan' || u.gender === 'Female');
       const tidakAktif = ppsuUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
       const dikeluarkan = ppsuUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
-      const tugasDikerjakan = tasksRes.data.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
-      const totalLaporan = reportsRes.data.length;
+      const tugasDikerjakan = tasksData.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
+      const totalLaporan = reportsData.length;
 
       setStats({
         totalPetugas: ppsuUsers.length,
@@ -72,7 +92,7 @@ export default function AdminDashboardPage() {
 
       const recentActivities: any[] = [];
       
-      tasksRes.data.slice(0, 3).forEach((task: any) => {
+      tasksData.slice(0, 3).forEach((task: any) => {
         let title = '';
         if (task.status === 'WORKING') {
           title = `Tugas Dikerjakan: ${task.assignedTo?.fullName || 'Petugas'}`;

@@ -24,6 +24,9 @@ let SchedulesController = class SchedulesController {
     async getSchedules() {
         return this.schedulesService.findAll();
     }
+    async getTodayOfficers() {
+        return this.schedulesService.findTodayOfficers();
+    }
     async createSchedule(data) {
         return this.schedulesService.create(data);
     }
@@ -42,6 +45,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SchedulesController.prototype, "getSchedules", null);
+__decorate([
+    (0, common_1.Get)('today/officers'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulesController.prototype, "getTodayOfficers", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),

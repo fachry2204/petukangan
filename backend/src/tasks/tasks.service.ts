@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from './task.entity';
 import { TaskLog } from './task-log.entity';
 import { FileService } from '../common/file.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 
 @Injectable()
 export class TasksService {
@@ -13,6 +14,8 @@ export class TasksService {
     @InjectRepository(TaskLog)
     private taskLogRepository: Repository<TaskLog>,
     private fileService: FileService,
+    @Inject(forwardRef(() => TrackingGateway))
+    private trackingGateway: TrackingGateway,
   ) {}
 
   async findAll(userId?: number) {
@@ -67,7 +70,9 @@ export class TasksService {
 
     // Update task status
     task.status = data.status;
-    return this.taskRepository.save(task);
+    const savedTask = await this.taskRepository.save(task);
+    this.trackingGateway.emitTaskChange('update', savedTask);
+    return savedTask;
   }
 
   async update(id: number, data: any) {
@@ -89,7 +94,9 @@ export class TasksService {
       task.zone = data.zoneId ? ({ id: Number(data.zoneId) } as any) : (null as any);
     }
 
-    return this.taskRepository.save(task);
+    const savedTask = await this.taskRepository.save(task);
+    this.trackingGateway.emitTaskChange('update', savedTask);
+    return savedTask;
   }
 
   async remove(id: number) {
@@ -97,6 +104,7 @@ export class TasksService {
     // Remove dependent logs first to avoid FK violation
     await this.taskLogRepository.delete({ task: { id } as any });
     await this.taskRepository.delete(id);
+    this.trackingGateway.emitTaskChange('delete', { id });
     return { id, deleted: true };
   }
 
@@ -120,6 +128,8 @@ export class TasksService {
       lng: data.lng,
       address: data.address,
     });
-    return this.taskRepository.save(task);
+    const savedTask = await this.taskRepository.save(task);
+    this.trackingGateway.emitTaskChange('create', savedTask);
+    return savedTask;
   }
 }

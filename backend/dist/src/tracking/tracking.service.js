@@ -69,6 +69,50 @@ let TrackingService = class TrackingService {
             photoUrl: r.photoUrl,
         }));
     }
+    async getGPSHistory(startDate, endDate, userId) {
+        const query = this.gpsRepository
+            .createQueryBuilder('g')
+            .leftJoinAndSelect('g.user', 'u')
+            .where('g.timestamp >= :startDate AND g.timestamp <= :endDate', {
+            startDate,
+            endDate
+        });
+        if (userId) {
+            query.andWhere('g.userId = :userId', { userId });
+        }
+        const rows = await query
+            .orderBy('g.timestamp', 'ASC')
+            .getMany();
+        return rows.map((r) => ({
+            id: Number(r.id),
+            userId: r.user?.id,
+            lat: Number(r.lat),
+            lng: Number(r.lng),
+            timestamp: r.timestamp,
+            fullName: r.user?.fullName,
+            photoUrl: r.user?.photoUrl,
+            speed: r.speed,
+            batteryLevel: r.batteryLevel,
+            isMock: r.isMock,
+        }));
+    }
+    async getActiveUsersInRange(startDate, endDate) {
+        const rows = await this.gpsRepository
+            .createQueryBuilder('g')
+            .select('g.userId', 'userId')
+            .addSelect('MIN(u.fullName)', 'fullName')
+            .leftJoin('users', 'u', 'u.id = g.userId')
+            .where('g.timestamp >= :startDate AND g.timestamp <= :endDate', {
+            startDate,
+            endDate
+        })
+            .groupBy('g.userId')
+            .getRawMany();
+        return rows.map((r) => ({
+            userId: Number(r.userId),
+            fullName: r.fullName || `Petugas ${r.userId}`,
+        }));
+    }
 };
 exports.TrackingService = TrackingService;
 exports.TrackingService = TrackingService = __decorate([

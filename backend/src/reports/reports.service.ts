@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report } from './report.entity';
 import { ReportPhoto } from './report-photo.entity';
 import { FileService } from '../common/file.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 
 @Injectable()
 export class ReportsService {
@@ -13,6 +14,8 @@ export class ReportsService {
     @InjectRepository(ReportPhoto)
     private reportPhotoRepository: Repository<ReportPhoto>,
     private fileService: FileService,
+    @Inject(forwardRef(() => TrackingGateway))
+    private trackingGateway: TrackingGateway,
   ) {}
 
   async create(userId: number, data: any) {
@@ -42,6 +45,9 @@ export class ReportsService {
         await this.reportPhotoRepository.save(reportPhoto);
       }
     }
+
+    // Emit realtime event
+    this.trackingGateway.emitReportChange('create', savedReport);
 
     return savedReport;
   }

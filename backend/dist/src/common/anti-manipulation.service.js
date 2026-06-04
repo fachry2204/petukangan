@@ -12,9 +12,6 @@ let AntiManipulationService = class AntiManipulationService {
     validateGPS(lat, lng, isMock) {
         if (isMock)
             return false;
-        if (lat < -6.4 || lat > -6.0 || lng < 106.6 || lng > 107.0) {
-            return false;
-        }
         return true;
     }
     validateTimestamp(clientTime) {

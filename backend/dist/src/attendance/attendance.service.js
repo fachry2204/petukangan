@@ -23,6 +23,7 @@ const lembur_entity_1 = require("./lembur.entity");
 const anti_manipulation_service_1 = require("../common/anti-manipulation.service");
 const geofence_service_1 = require("../common/geofence.service");
 const file_service_1 = require("../common/file.service");
+const tracking_gateway_1 = require("../tracking/tracking.gateway");
 let AttendanceService = class AttendanceService {
     attendanceRepository;
     scheduleRepository;
@@ -31,7 +32,8 @@ let AttendanceService = class AttendanceService {
     antiManipulation;
     geofence;
     fileService;
-    constructor(attendanceRepository, scheduleRepository, requestRepository, lemburRepository, antiManipulation, geofence, fileService) {
+    trackingGateway;
+    constructor(attendanceRepository, scheduleRepository, requestRepository, lemburRepository, antiManipulation, geofence, fileService, trackingGateway) {
         this.attendanceRepository = attendanceRepository;
         this.scheduleRepository = scheduleRepository;
         this.requestRepository = requestRepository;
@@ -39,6 +41,7 @@ let AttendanceService = class AttendanceService {
         this.antiManipulation = antiManipulation;
         this.geofence = geofence;
         this.fileService = fileService;
+        this.trackingGateway = trackingGateway;
     }
     async submit(userId, type, data) {
         const isPermitType = ['PERMIT', 'EARLY_OUT'].includes(type);
@@ -284,7 +287,9 @@ let AttendanceService = class AttendanceService {
             if (rejectionReason !== undefined) {
                 request.rejectionReason = rejectionReason;
             }
-            return this.requestRepository.save(request);
+            const savedRequest = await this.requestRepository.save(request);
+            this.trackingGateway.emitAttendanceChange('update', { ...savedRequest, isRequestTable: true });
+            return savedRequest;
         }
         let record = await this.attendanceRepository.findOne({
             where: { id }
@@ -304,9 +309,13 @@ let AttendanceService = class AttendanceService {
             record.rejectionReason = rejectionReason;
         }
         if (isLembur) {
-            return this.lemburRepository.save(record);
+            const savedRecord = await this.lemburRepository.save(record);
+            this.trackingGateway.emitAttendanceChange('update', savedRecord);
+            return savedRecord;
         }
-        return this.attendanceRepository.save(record);
+        const savedRecord = await this.attendanceRepository.save(record);
+        this.trackingGateway.emitAttendanceChange('update', savedRecord);
+        return savedRecord;
     }
 };
 exports.AttendanceService = AttendanceService;
@@ -316,12 +325,14 @@ exports.AttendanceService = AttendanceService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(schedule_entity_1.Schedule)),
     __param(2, (0, typeorm_1.InjectRepository)(attendance_request_entity_1.AttendanceRequest)),
     __param(3, (0, typeorm_1.InjectRepository)(lembur_entity_1.Lembur)),
+    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => tracking_gateway_1.TrackingGateway))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         anti_manipulation_service_1.AntiManipulationService,
         geofence_service_1.GeofenceService,
-        file_service_1.FileService])
+        file_service_1.FileService,
+        tracking_gateway_1.TrackingGateway])
 ], AttendanceService);
 //# sourceMappingURL=attendance.service.js.map

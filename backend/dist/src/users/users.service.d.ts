@@ -1,8 +1,10 @@
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 export declare class UsersService {
     private usersRepository;
-    constructor(usersRepository: Repository<User>);
+    private trackingGateway;
+    constructor(usersRepository: Repository<User>, trackingGateway: TrackingGateway);
     findOne(username: string): Promise<User | null>;
     findById(id: number): Promise<User | null>;
     generatePpsuId(): Promise<string>;

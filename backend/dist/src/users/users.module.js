@@ -13,12 +13,16 @@ const users_service_1 = require("./users.service");
 const user_entity_1 = require("./user.entity");
 const role_entity_1 = require("./role.entity");
 const users_controller_1 = require("./users.controller");
+const tracking_module_1 = require("../tracking/tracking.module");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
 exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, role_entity_1.Role])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, role_entity_1.Role]),
+            (0, common_1.forwardRef)(() => tracking_module_1.TrackingModule),
+        ],
         controllers: [users_controller_1.UsersController],
         providers: [users_service_1.UsersService],
         exports: [users_service_1.UsersService],

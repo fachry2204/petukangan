@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { LessThan, Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { GPSTracking } from './gps-tracking.entity';
 
-// Retain only the most recent N minutes of GPS history.
+// Retain only the most recent N minutes of GPS history for live tracking.
 export const GPS_RETENTION_MINUTES = 5;
 
 @Injectable()
@@ -21,6 +21,10 @@ export class TrackingService {
       speed: data.speed,
       batteryLevel: data.batteryLevel,
       isMock: data.isMock,
+      ipAddress: data.ipAddress,
+      wifiName: data.wifiName,
+      provider: data.provider,
+      statusAbsen: data.statusAbsen,
     });
     return this.gpsRepository.save(tracking);
   }
@@ -64,6 +68,62 @@ export class TrackingService {
       timestamp: r.timestamp,
       fullName: r.fullName,
       photoUrl: r.photoUrl,
+    }));
+  }
+
+  // Get GPS history by date range and optional user filter
+  async getGPSHistory(startDate: Date, endDate: Date, userId?: number): Promise<any[]> {
+    const query = this.gpsRepository
+      .createQueryBuilder('g')
+      .leftJoinAndSelect('g.user', 'u')
+      .where('g.timestamp >= :startDate AND g.timestamp <= :endDate', { 
+        startDate, 
+        endDate 
+      });
+
+    if (userId) {
+      query.andWhere('g.userId = :userId', { userId });
+    }
+
+    const rows = await query
+      .orderBy('g.timestamp', 'ASC')
+      .getMany();
+
+    return rows.map((r) => ({
+      id: Number(r.id),
+      userId: r.user?.id,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      timestamp: r.timestamp,
+      fullName: r.user?.fullName,
+      photoUrl: r.user?.photoUrl,
+      speed: r.speed,
+      batteryLevel: r.batteryLevel,
+      isMock: r.isMock,
+      ipAddress: r.ipAddress,
+      wifiName: r.wifiName,
+      provider: r.provider,
+      statusAbsen: r.statusAbsen,
+    }));
+  }
+
+  // Get distinct users who have GPS data in a date range
+  async getActiveUsersInRange(startDate: Date, endDate: Date): Promise<any[]> {
+    const rows = await this.gpsRepository
+      .createQueryBuilder('g')
+      .select('g.userId', 'userId')
+      .addSelect('MIN(u.fullName)', 'fullName')
+      .leftJoin('users', 'u', 'u.id = g.userId')
+      .where('g.timestamp >= :startDate AND g.timestamp <= :endDate', { 
+        startDate, 
+        endDate 
+      })
+      .groupBy('g.userId')
+      .getRawMany();
+
+    return rows.map((r) => ({
+      userId: Number(r.userId),
+      fullName: r.fullName || `Petugas ${r.userId}`,
     }));
   }
 }

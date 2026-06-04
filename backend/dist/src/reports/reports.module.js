@@ -13,12 +13,16 @@ const reports_controller_1 = require("./reports.controller");
 const reports_service_1 = require("./reports.service");
 const report_entity_1 = require("./report.entity");
 const report_photo_entity_1 = require("./report-photo.entity");
+const tracking_module_1 = require("../tracking/tracking.module");
 let ReportsModule = class ReportsModule {
 };
 exports.ReportsModule = ReportsModule;
 exports.ReportsModule = ReportsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([report_entity_1.Report, report_photo_entity_1.ReportPhoto])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([report_entity_1.Report, report_photo_entity_1.ReportPhoto]),
+            (0, common_1.forwardRef)(() => tracking_module_1.TrackingModule),
+        ],
         controllers: [reports_controller_1.ReportsController],
         providers: [reports_service_1.ReportsService],
         exports: [reports_service_1.ReportsService],

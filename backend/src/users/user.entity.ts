@@ -7,13 +7,13 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 50 })
   username: string;
 
-  @Column()
+  @Column({ length: 100 })
   password: string;
 
-  @Column()
+  @Column({ length: 100 })
   fullName: string;
 
   @ManyToOne(() => Role)
@@ -22,46 +22,46 @@ export class User {
   @ManyToOne(() => Zone, { nullable: true })
   zone: Zone;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 16 })
   gender: string;
 
   @Column({ type: 'date', nullable: true })
   birthDate: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 20 })
   phone: string;
 
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   country: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   province: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   city: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   district: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 50 })
   village: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 10 })
   postalCode: string;
 
   @Column({ type: 'date', nullable: true })
   joinDate: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   photoUrl: string;
 
   @Column({ type: 'json', nullable: true })
   documents: any;
 
-  @Column({ default: 'ACTIVE' })
+  @Column({ default: 'ACTIVE', length: 16 })
   status: string;
 
   @Column({ type: 'text', nullable: true })
@@ -73,7 +73,7 @@ export class User {
   @Column({ nullable: true })
   lastSeen: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 100 })
   deviceId: string;
 
   @CreateDateColumn()

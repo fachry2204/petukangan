@@ -285,8 +285,8 @@ export default function AdminSettingsPage() {
           {/* Setting Jadwal dan Zona */}
           <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
             <CardHeader>
-              <CardTitle>Setting Jadwal dan Zona</CardTitle>
-              <CardDescription>Kelola daftar nama shift dan nama zona penugasan petugas lapangan.</CardDescription>
+              <CardTitle>Setting Jadwal dan Zona atau Kategori</CardTitle>
+              <CardDescription>Kelola daftar nama shift dan nama zona atau kategori penugasan petugas lapangan.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -417,7 +417,7 @@ export default function AdminSettingsPage() {
 
                 {/* Zone Management Block */}
                 <div className="space-y-4">
-                  <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Daftar Nama Zona</label>
+                  <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Daftar Nama Zona atau Kategori</label>
                   <div className="flex flex-wrap gap-2 min-h-[46px] p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
                     {settings.zones && settings.zones.length > 0 ? (
                       settings.zones.map((zone, idx) => (
@@ -440,7 +440,7 @@ export default function AdminSettingsPage() {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-xs text-zinc-400 p-1">Belum ada zona. Silakan tambah baru di bawah.</span>
+                      <span className="text-xs text-zinc-400 p-1">Belum ada zona atau kategori. Silakan tambah baru di bawah.</span>
                     )}
                   </div>
                   
@@ -448,7 +448,7 @@ export default function AdminSettingsPage() {
                   <div className="flex gap-2">
                     <Input 
                       type="text" 
-                      placeholder="Contoh: Zona A" 
+                      placeholder="Contoh: Zona A atau Kategori 1" 
                       id="new-zone-input"
                       className="rounded-xl border-zinc-200 dark:border-zinc-800"
                       onKeyDown={(e) => {
@@ -458,7 +458,7 @@ export default function AdminSettingsPage() {
                           const val = input.value.trim();
                           if (val) {
                             if (settings.zones.includes(val)) {
-                              alert('Nama Zona sudah ada!');
+                              alert('Nama Zona atau Kategori sudah ada!');
                               return;
                             }
                             settings.setSettings({ zones: [...settings.zones, val] });

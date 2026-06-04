@@ -6,6 +6,7 @@ import { Lembur } from './lembur.entity';
 import { AntiManipulationService } from '../common/anti-manipulation.service';
 import { GeofenceService } from '../common/geofence.service';
 import { FileService } from '../common/file.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 export declare class AttendanceService {
     private attendanceRepository;
     private scheduleRepository;
@@ -14,7 +15,8 @@ export declare class AttendanceService {
     private antiManipulation;
     private geofence;
     private fileService;
-    constructor(attendanceRepository: Repository<Attendance>, scheduleRepository: Repository<Schedule>, requestRepository: Repository<AttendanceRequest>, lemburRepository: Repository<Lembur>, antiManipulation: AntiManipulationService, geofence: GeofenceService, fileService: FileService);
+    private trackingGateway;
+    constructor(attendanceRepository: Repository<Attendance>, scheduleRepository: Repository<Schedule>, requestRepository: Repository<AttendanceRequest>, lemburRepository: Repository<Lembur>, antiManipulation: AntiManipulationService, geofence: GeofenceService, fileService: FileService, trackingGateway: TrackingGateway);
     submit(userId: number, type: string, data: any): Promise<Attendance | AttendanceRequest | Lembur>;
     getTodayAttendance(userId: number): Promise<any>;
     getAllAttendance(userId: number): Promise<{

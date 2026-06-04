@@ -24,7 +24,7 @@ export class Attendance {
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   photoUrl: string;
 
   @Column({ type: 'text', nullable: true })
@@ -36,7 +36,7 @@ export class Attendance {
   @Column({ default: false })
   isMock: boolean;
 
-  @Column({ default: 'VALID' })
+  @Column({ default: 'VALID', length: 16 })
   status: string;
 
   @Column({ default: false })

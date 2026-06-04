@@ -30,6 +30,31 @@ let SchedulesService = class SchedulesService {
             },
         });
     }
+    async findTodayOfficers() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const schedules = await this.scheduleRepository.find({
+            where: {
+                date: (0, typeorm_2.Between)(today, tomorrow),
+            },
+        });
+        const officers = [];
+        schedules.forEach(s => {
+            if (s.assignedUsers && Array.isArray(s.assignedUsers)) {
+                s.assignedUsers.forEach((user) => {
+                    officers.push({
+                        userId: user.id,
+                        fullName: user.fullName || user.name || `Petugas ${user.id}`,
+                        photoUrl: user.photoUrl,
+                        scheduleTime: s.timeRange || '-',
+                    });
+                });
+            }
+        });
+        return officers;
+    }
     async create(data) {
         const schedule = this.scheduleRepository.create(data);
         return this.scheduleRepository.save(schedule);

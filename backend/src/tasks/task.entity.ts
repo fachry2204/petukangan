@@ -8,7 +8,7 @@ export class Task {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ length: 200 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
@@ -20,10 +20,10 @@ export class Task {
   @ManyToOne(() => User, { nullable: true })
   assignedTo: User;
 
-  @Column({ default: 'NEW' })
+  @Column({ default: 'NEW', length: 16 })
   status: string;
 
-  @Column({ default: 'MEDIUM' })
+  @Column({ default: 'MEDIUM', length: 16 })
   priority: string;
 
   // 'ASSIGNED' = ditugaskan oleh admin, 'SELF' = tugas mandiri petugas
@@ -33,7 +33,7 @@ export class Task {
   @Column({ nullable: true })
   deadline: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   photoUrl: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })

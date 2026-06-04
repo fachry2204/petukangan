@@ -4,6 +4,7 @@ export declare class SchedulesController {
     private readonly schedulesService;
     constructor(schedulesService: SchedulesService);
     getSchedules(): Promise<Schedule[]>;
+    getTodayOfficers(): Promise<any[]>;
     createSchedule(data: Partial<Schedule>): Promise<Schedule>;
     updateSchedule(id: number, data: Partial<Schedule>): Promise<Schedule>;
     deleteSchedule(id: number): Promise<{

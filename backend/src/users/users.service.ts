@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => TrackingGateway))
+    private trackingGateway: TrackingGateway,
   ) {}
 
   async findOne(username: string): Promise<User | null> {
@@ -109,7 +112,9 @@ export class UsersService {
     }
 
     const user = this.usersRepository.create(userData);
-    return this.usersRepository.save(user) as any;
+    const savedUser = await this.usersRepository.save(user) as any;
+    this.trackingGateway.emitUserChange('create', savedUser);
+    return savedUser;
   }
 
 
@@ -156,7 +161,9 @@ export class UsersService {
     }
 
     Object.assign(user, updateData);
-    return this.usersRepository.save(user) as any;
+    const savedUser = await this.usersRepository.save(user) as any;
+    this.trackingGateway.emitUserChange('update', savedUser);
+    return savedUser;
   }
 
   async updateLastSeen(id: number): Promise<void> {
@@ -181,6 +188,7 @@ export class UsersService {
     }
 
     await this.usersRepository.delete(id);
+    this.trackingGateway.emitUserChange('delete', { id });
   }
 }
 

@@ -19,14 +19,17 @@ const typeorm_2 = require("typeorm");
 const report_entity_1 = require("./report.entity");
 const report_photo_entity_1 = require("./report-photo.entity");
 const file_service_1 = require("../common/file.service");
+const tracking_gateway_1 = require("../tracking/tracking.gateway");
 let ReportsService = class ReportsService {
     reportRepository;
     reportPhotoRepository;
     fileService;
-    constructor(reportRepository, reportPhotoRepository, fileService) {
+    trackingGateway;
+    constructor(reportRepository, reportPhotoRepository, fileService, trackingGateway) {
         this.reportRepository = reportRepository;
         this.reportPhotoRepository = reportPhotoRepository;
         this.fileService = fileService;
+        this.trackingGateway = trackingGateway;
     }
     async create(userId, data) {
         const report = this.reportRepository.create({
@@ -51,6 +54,7 @@ let ReportsService = class ReportsService {
                 await this.reportPhotoRepository.save(reportPhoto);
             }
         }
+        this.trackingGateway.emitReportChange('create', savedReport);
         return savedReport;
     }
     async findAll() {
@@ -71,8 +75,10 @@ exports.ReportsService = ReportsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(report_entity_1.Report)),
     __param(1, (0, typeorm_1.InjectRepository)(report_photo_entity_1.ReportPhoto)),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => tracking_gateway_1.TrackingGateway))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        file_service_1.FileService])
+        file_service_1.FileService,
+        tracking_gateway_1.TrackingGateway])
 ], ReportsService);
 //# sourceMappingURL=reports.service.js.map

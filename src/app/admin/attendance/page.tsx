@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
+import { useRealtimeEntity } from '@/hooks/use-realtime';
 import { 
   Users, FileText, Clock, Search, MapPin, 
   CheckCircle2, XCircle, AlertTriangle, RefreshCw, 
@@ -125,13 +126,20 @@ export default function AdminAttendancePage() {
       if (err.response?.status === 401 || err.response?.status === 403) {
         logout();
         router.push('/login');
+      } else if (err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK') {
+        setError('Gagal terhubung ke server. Pastikan backend berjalan di port 3001.');
       } else {
-        setError('Gagal memuat riwayat absensi.');
+        setError(`Gagal memuat riwayat absensi: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Real-time attendance updates via WebSocket
+  useRealtimeEntity('attendance', () => {
+    fetchAttendance();
+  });
 
   const getScheduleForUser = (userId: number, timestamp: string) => {
     if (!timestamp || !userId || !schedules.length) return null;

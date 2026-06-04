@@ -19,14 +19,17 @@ const typeorm_2 = require("typeorm");
 const task_entity_1 = require("./task.entity");
 const task_log_entity_1 = require("./task-log.entity");
 const file_service_1 = require("../common/file.service");
+const tracking_gateway_1 = require("../tracking/tracking.gateway");
 let TasksService = class TasksService {
     taskRepository;
     taskLogRepository;
     fileService;
-    constructor(taskRepository, taskLogRepository, fileService) {
+    trackingGateway;
+    constructor(taskRepository, taskLogRepository, fileService, trackingGateway) {
         this.taskRepository = taskRepository;
         this.taskLogRepository = taskLogRepository;
         this.fileService = fileService;
+        this.trackingGateway = trackingGateway;
     }
     async findAll(userId) {
         const query = this.taskRepository.createQueryBuilder('task')
@@ -69,7 +72,9 @@ let TasksService = class TasksService {
         });
         await this.taskLogRepository.save(log);
         task.status = data.status;
-        return this.taskRepository.save(task);
+        const savedTask = await this.taskRepository.save(task);
+        this.trackingGateway.emitTaskChange('update', savedTask);
+        return savedTask;
     }
     async update(id, data) {
         const task = await this.findOne(id);
@@ -97,12 +102,15 @@ let TasksService = class TasksService {
         if (data.zoneId !== undefined) {
             task.zone = data.zoneId ? { id: Number(data.zoneId) } : null;
         }
-        return this.taskRepository.save(task);
+        const savedTask = await this.taskRepository.save(task);
+        this.trackingGateway.emitTaskChange('update', savedTask);
+        return savedTask;
     }
     async remove(id) {
         const task = await this.findOne(id);
         await this.taskLogRepository.delete({ task: { id } });
         await this.taskRepository.delete(id);
+        this.trackingGateway.emitTaskChange('delete', { id });
         return { id, deleted: true };
     }
     async create(userId, data) {
@@ -124,7 +132,9 @@ let TasksService = class TasksService {
             lng: data.lng,
             address: data.address,
         });
-        return this.taskRepository.save(task);
+        const savedTask = await this.taskRepository.save(task);
+        this.trackingGateway.emitTaskChange('create', savedTask);
+        return savedTask;
     }
 };
 exports.TasksService = TasksService;
@@ -132,8 +142,10 @@ exports.TasksService = TasksService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(task_entity_1.Task)),
     __param(1, (0, typeorm_1.InjectRepository)(task_log_entity_1.TaskLog)),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => tracking_gateway_1.TrackingGateway))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        file_service_1.FileService])
+        file_service_1.FileService,
+        tracking_gateway_1.TrackingGateway])
 ], TasksService);
 //# sourceMappingURL=tasks.service.js.map

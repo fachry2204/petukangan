@@ -24,7 +24,7 @@ export class AttendanceRequest {
   @Column({ type: 'text', nullable: true })
   reason: string;
 
-  @Column({ default: 'PENDING' })
+  @Column({ default: 'PENDING', length: 16 })
   status: string; // 'PENDING' | 'APPROVED' | 'REJECTED'
 
   @Column({ type: 'text', nullable: true })

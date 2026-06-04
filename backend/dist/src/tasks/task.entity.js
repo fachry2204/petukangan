@@ -38,7 +38,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Task.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ length: 200 }),
     __metadata("design:type", String)
 ], Task.prototype, "title", void 0);
 __decorate([
@@ -54,11 +54,11 @@ __decorate([
     __metadata("design:type", user_entity_1.User)
 ], Task.prototype, "assignedTo", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'NEW' }),
+    (0, typeorm_1.Column)({ default: 'NEW', length: 16 }),
     __metadata("design:type", String)
 ], Task.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'MEDIUM' }),
+    (0, typeorm_1.Column)({ default: 'MEDIUM', length: 16 }),
     __metadata("design:type", String)
 ], Task.prototype, "priority", void 0);
 __decorate([
@@ -70,7 +70,7 @@ __decorate([
     __metadata("design:type", Date)
 ], Task.prototype, "deadline", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Task.prototype, "photoUrl", void 0);
 __decorate([
