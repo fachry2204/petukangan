@@ -89,15 +89,28 @@ app.prepare().then(() => {
       io.emit('emergencySignal', { ...data, timestamp: Date.now() });
     });
 
-    socket.on('forceLogoutUser', (data) => {
+    socket.on('forceLogoutUser', async (data) => {
       if (data && data.userId) {
         const userIdStr = String(data.userId);
-        const loc = activeLocations.get(userIdStr);
-        if (loc) {
+        const userIdNum = Number(data.userId);
+
+        // Remove from memory
+        if (activeLocations.has(userIdStr)) {
           activeLocations.delete(userIdStr);
         }
-        io.emit('userOffline', { userId: Number(data.userId) });
-        console.log('[Socket] Force logout user:', data.userId);
+
+        // Also remove from database so they don't reappear on refresh
+        if (dbPool) {
+          try {
+            await dbPool.execute('DELETE FROM gps_tracking WHERE userId = ?', [userIdNum]);
+            console.log('[Socket] Deleted GPS records for user:', userIdNum);
+          } catch (dbErr) {
+            console.error('[Socket] Failed to delete GPS records:', dbErr);
+          }
+        }
+
+        io.emit('userOffline', { userId: userIdNum });
+        console.log('[Socket] Force logout user:', userIdNum);
       }
     });
 

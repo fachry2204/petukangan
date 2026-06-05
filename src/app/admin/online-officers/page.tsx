@@ -7,6 +7,7 @@ import { MapPin, Globe, Clock, LogOut, Loader2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
 import { socketUrl } from '@/lib/socket-config';
+import { apiUrl } from '@/lib/api-config';
 import { Button } from '@/components/ui/button';
 
 export default function OnlineOfficersPage() {
@@ -98,12 +99,30 @@ export default function OnlineOfficersPage() {
     };
   }, [token]);
 
-  const handleForceLogout = (userId: number, name: string) => {
-    if (confirm(`Apakah Anda yakin ingin melakukan Force Logout pada petugas ${name || 'ini'}?`)) {
-      if (socket) {
-        socket.emit('forceLogoutUser', { userId });
-      }
+  const handleForceLogout = async (userId: number, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin melakukan Force Logout pada petugas ${name || 'ini'}?`)) return;
+
+    // 1. Emit via Socket.io (realtime)
+    if (socket) {
+      socket.emit('forceLogoutUser', { userId });
     }
+
+    // 2. Also call REST API to ensure database is cleared (more reliable)
+    try {
+      await fetch(`${apiUrl}/tracking/offline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+    } catch (err) {
+      console.error('[OnlineOfficers] Failed to call offline API:', err);
+    }
+
+    // 3. Remove from local state immediately for responsive UI
+    setOfficers(prev => prev.filter(o => o.userId !== userId));
   };
 
   return (

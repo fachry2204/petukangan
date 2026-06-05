@@ -426,7 +426,7 @@ export default function GPSHistoryPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.uniqueUsers}</p>
-              <p className="text-sm text-zinc-500">Petugas Aktif</p>
+              <p className="text-sm text-zinc-500">Petugas (Riwayat)</p>
             </div>
           </CardContent>
         </Card>
