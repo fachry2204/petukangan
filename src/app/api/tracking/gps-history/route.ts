@@ -23,10 +23,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'startDate dan endDate wajib diisi' }, { status: 400 });
     }
 
-    // Query GPS tracking - coba dengan LEFT JOIN users
-    let sql = `SELECT g.*, u.fullName, u.photoUrl 
-               FROM gps_tracking g 
-               LEFT JOIN users u ON u.id = g.userId 
+    // Get GPS update interval from settings (default 30 seconds)
+    let gpsIntervalSeconds = 30;
+    try {
+      const settingsRows: any = await queryDb('SELECT gpsUpdateInterval FROM system_settings LIMIT 1');
+      if (settingsRows?.[0]?.gpsUpdateInterval) {
+        gpsIntervalSeconds = Number(settingsRows[0].gpsUpdateInterval);
+      }
+    } catch { /* ignore settings fetch error */ }
+
+    // Query GPS tracking
+    let sql = `SELECT g.*, u.fullName, u.photoUrl
+               FROM gps_tracking g
+               LEFT JOIN users u ON u.id = g.userId
                WHERE g.timestamp >= ? AND g.timestamp <= ?`;
     const params: any[] = [startDate, endDate + ' 23:59:59'];
 
@@ -35,11 +44,27 @@ export async function GET(req: Request) {
       params.push(Number(userId));
     }
 
-    sql += ' ORDER BY g.timestamp ASC';
+    sql += ' ORDER BY g.timestamp DESC'; // Latest first for deduplication
 
     const rows: any = await queryDb(sql, params);
 
-    const points = (rows || []).map((r: any) => ({
+    // Deduplicate: keep only one record per user per time bucket (based on interval)
+    const seen = new Map<string, any>();
+    for (const r of rows || []) {
+      const ts = new Date(r.timestamp).getTime();
+      const bucket = Math.floor(ts / (gpsIntervalSeconds * 1000));
+      const key = `${r.userId}_${bucket}`;
+      if (!seen.has(key)) {
+        seen.set(key, r);
+      }
+    }
+
+    // Convert back to array and sort by timestamp ASC
+    const dedupedRows = Array.from(seen.values()).sort((a: any, b: any) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    const points = dedupedRows.map((r: any) => ({
       id: Number(r.id),
       userId: Number(r.userId),
       lat: Number(r.lat),
@@ -56,7 +81,7 @@ export async function GET(req: Request) {
       statusAbsen: r.statusAbsen,
     }));
 
-    return NextResponse.json({ startDate, endDate, count: points.length, points });
+    return NextResponse.json({ startDate, endDate, count: points.length, points, interval: gpsIntervalSeconds });
   } catch (err: any) {
     console.error('[GET /api/tracking/gps-history] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
