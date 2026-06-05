@@ -405,39 +405,40 @@ export default function PpsuTaskDetailPage() {
               </div>
             </div>
 
-            {/* 6. Alamat Tugas */}
-            <div>
-              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Alamat Tugas</p>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-zinc-800 dark:text-white">{task.address || 'Petukangan Utara'}</p>
+            {/* 6. Lokasi Tugas (styled card) */}
+            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-900/30">
+              <p className="text-[10px] font-black uppercase text-blue-500 tracking-wider mb-2">Lokasi Tugas</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  {task.address ? (
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white leading-relaxed">{task.address}</p>
+                  ) : (
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Petukangan Utara</p>
+                  )}
                   {task.lat && task.lng && (
-                    <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                    <p className="text-xs text-zinc-500 font-mono mt-1">
                       {Number(task.lat).toFixed(6)}, {Number(task.lng).toFixed(6)}
                     </p>
                   )}
                 </div>
+                {task.lat && task.lng && (
+                  <a
+                    href={`https://www.google.com/maps?q=${task.lat},${task.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs flex items-center gap-1"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      Maps
+                    </Button>
+                  </a>
+                )}
               </div>
             </div>
-
-            {/* 7. Tombol Lihat Lokasi (Google Maps) */}
-            {task.lat && task.lng && (
-              <a
-                href={`https://www.google.com/maps?q=${task.lat},${task.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full"
-              >
-                <Button
-                  type="button"
-                  className="w-full py-5 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <MapPin className="w-5 h-5" />
-                  Lihat Lokasi di Google Maps
-                </Button>
-              </a>
-            )}
           </CardContent>
         </Card>
 
