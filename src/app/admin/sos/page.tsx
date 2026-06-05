@@ -56,9 +56,11 @@ export default function AdminSosPage() {
     fetchHistory();
 
     // 2. Connect to socket server for real-time SOS
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
     const socket = io(socketUrl, {
-      auth: { token }
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      path: '/socket.io'
     });
 
     socket.on('connect', () => {

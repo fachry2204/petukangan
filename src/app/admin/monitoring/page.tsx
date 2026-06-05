@@ -106,15 +106,14 @@ function AdminMonitoringContent() {
     };
     fetchOfflineOfficers();
 
-    // 4. Setup Socket.io for real-time updates
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const hostname = window.location.hostname;
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${hostname}:3001`;
+    // 4. Setup Socket.io for real-time updates (via same-origin rewrite)
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
 
     console.log('[Admin] Connecting to socket:', socketUrl);
     const socket = io(socketUrl, {
       auth: { token },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      path: '/socket.io'
     });
 
     socket.on('connect', () => {

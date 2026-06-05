@@ -32,8 +32,8 @@ export function BottomNav() {
       if (!token || !user) throw new Error('Not authenticated');
 
       const { io } = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
-      const socket = io(socketUrl, { auth: { token } });
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
+      const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 
       // Validasi GPS tersedia — wajib ada lokasi nyata
       if (!navigator.geolocation) {

@@ -93,11 +93,12 @@ export default function NewTaskPage() {
     let socket: any;
     const setupSocket = async () => {
       const ioModule = await import('socket.io-client');
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${window.location.hostname}:3001`;
+      // Gunakan same-origin path agar melewati Next.js rewrite ke backend
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
       socket = ioModule.io(socketUrl, {
         auth: { token },
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        path: '/socket.io'
       });
 
       socket.on('connect', () => {

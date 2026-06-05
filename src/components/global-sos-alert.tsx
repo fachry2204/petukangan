@@ -106,8 +106,8 @@ export function GlobalSOSAlert() {
     checkSOSStatus();
     const interval = setInterval(checkSOSStatus, 3000);
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
-    const socket = io(socketUrl, { auth: { token } });
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
+    const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 
     socket.on('connect', () => {
       socket.emit('joinAdminRoom');

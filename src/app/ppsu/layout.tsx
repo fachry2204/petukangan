@@ -238,8 +238,8 @@ export default function PpsuLayout({
 
     const setupTracking = async () => {
       const ioModule = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
-      socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl } });
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
+      socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, transports: ['websocket', 'polling'], path: '/socket.io' });
       socketRef.current = socket;
 
       const handleConnected = async () => {
