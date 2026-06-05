@@ -3,6 +3,8 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 
+// Env vars should be loaded by the shell or OS
+
 const dev = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
 
@@ -11,6 +13,24 @@ const handle = app.getRequestHandler();
 
 // In-memory active locations for GPS tracking
 const activeLocations = new Map();
+
+// MySQL connection pool for socket.io
+let dbPool = null;
+try {
+  const mysql = require('mysql2/promise');
+  dbPool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'ppsu_monitoring',
+    waitForConnections: true,
+    connectionLimit: 5,
+  });
+  console.log('[Socket] MySQL pool ready');
+} catch (e) {
+  console.log('[Socket] MySQL not available:', e.message);
+}
 
 app.prepare().then(() => {
   const server = createServer((req, res) => {
@@ -28,10 +48,23 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log('[Socket] Client connected:', socket.id);
 
-    socket.on('updateLocation', (data) => {
+    socket.on('updateLocation', async (data) => {
       if (data && data.userId) {
         activeLocations.set(String(data.userId), { ...data, socketId: socket.id, lastSeen: Date.now() });
         socket.broadcast.emit('locationUpdated', data);
+        
+        // Also save to database for history
+        if (dbPool) {
+          try {
+            await dbPool.execute(
+              `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?, NOW(6))`,
+              [data.userId, data.lat, data.lng, data.speed || null, data.batteryLevel || null, data.isMock ? 1 : 0]
+            );
+          } catch (dbErr) {
+            // Silently ignore DB errors in socket handler
+          }
+        }
       }
     });
 
