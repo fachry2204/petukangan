@@ -161,10 +161,10 @@ export default function PpsuHomePage() {
       setTodaySchedule(todaySched || null);
 
       // 3. Fetch All Attendance
-      const resAllAtt = await axios.get(`${apiUrl}/attendance`, {
+      const resAllAtt = await axios.get(`${apiUrl}/attendance/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const myAttendance = resAllAtt.data;
+      const myAttendance = Array.isArray(resAllAtt.data) ? resAllAtt.data : [];
 
       // Calculate Monthly Statistics (1st to last day of current month)
       const now = new Date();
