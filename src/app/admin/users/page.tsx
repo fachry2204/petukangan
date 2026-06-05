@@ -193,7 +193,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
                     <TableCell>
                       {user.photoUrl ? (
-                        <img src={user.photoUrl} alt={user.fullName} className="w-10 h-10 rounded-xl object-cover border border-zinc-100" />
+                        <img src={user.photoUrl} alt={user.fullName} className="w-10 h-10 rounded-xl object-contain border border-zinc-100 bg-zinc-50" />
                       ) : (
                         <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center font-bold text-orange-600 border border-orange-200">
                           {user.fullName.charAt(0)}
@@ -278,10 +278,10 @@ export default function AdminUsersPage() {
                 
                 <div className="relative z-10">
                   {selectedUser.photoUrl ? (
-                    <img 
-                      src={selectedUser.photoUrl} 
-                      alt={selectedUser.fullName} 
-                      className="w-24 h-24 rounded-2xl object-cover border-4 border-white/20 shadow-lg"
+                    <img
+                      src={selectedUser.photoUrl}
+                      alt={selectedUser.fullName}
+                      className="w-24 h-24 rounded-2xl object-contain border-4 border-white/20 shadow-lg bg-white/10"
                     />
                   ) : (
                     <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-3xl text-white border-2 border-white/20 shadow-lg">

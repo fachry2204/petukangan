@@ -539,7 +539,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
               <div className="space-y-3 col-span-2 mt-4 pt-8 border-t">
                 <Label className="text-base">Foto Petugas (Opsional)</Label>
                 <Input type="file" accept="image/*" onChange={handlePhotoUpload} className="rounded-xl h-14 text-base py-3 px-4" />
-                {formData.photoUrl && <img src={formData.photoUrl} alt="Preview" className="w-32 h-32 object-cover rounded-xl mt-4" />}
+                {formData.photoUrl && <img src={formData.photoUrl} alt="Preview" className="w-32 h-32 object-contain rounded-xl mt-4 bg-zinc-50 border border-zinc-100" />}
               </div>
               
               <div className="space-y-4 col-span-2 mt-4 pt-8 border-t">
