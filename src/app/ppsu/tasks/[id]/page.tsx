@@ -21,6 +21,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
+import { useRealtime } from '@/hooks/use-realtime';
 
 export default function PpsuTaskDetailPage() {
   const { id } = useParams();
@@ -35,6 +36,7 @@ export default function PpsuTaskDetailPage() {
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
   const [warningReason, setWarningReason] = useState<string>('');
+  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuthStore();
@@ -67,6 +69,35 @@ export default function PpsuTaskDetailPage() {
       fetchStatus();
     }
   }, [id, token]);
+
+  // Track current GPS location continuously
+  useEffect(() => {
+    if (!token) return;
+    const getCurrentLocation = () => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCurrentGps({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            address: 'Lokasi terdeteksi'
+          });
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
+      );
+    };
+    getCurrentLocation();
+    const interval = setInterval(getCurrentLocation, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  // Realtime updates without page refresh
+  useRealtime((event) => {
+    if (event.entity === 'task' && event.data?.id === Number(id)) {
+      fetchTask();
+    }
+  }, ['task']);
 
   const stopCameraStream = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
@@ -490,6 +521,25 @@ export default function PpsuTaskDetailPage() {
                 )}
               </>
             ) : null}
+
+            {/* GPS Location Tracker */}
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-3 border border-green-100 dark:border-green-900/30 flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-green-600 animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-green-800 dark:text-green-400">
+                  Lokasi GPS Tercatat
+                </p>
+                {currentGps ? (
+                  <p className="text-[10px] text-zinc-500 font-mono truncate">
+                    {currentGps.lat.toFixed(6)}, {currentGps.lng.toFixed(6)}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-zinc-400">Mendeteksi lokasi...</p>
+                )}
+              </div>
+            </div>
 
             {/* Active Action Button */}
             <div className="pt-2">

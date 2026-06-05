@@ -22,6 +22,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useRealtimeEntity } from '@/hooks/use-realtime';
 
 
 export default function PpsuAttendancePage() {
@@ -310,6 +311,11 @@ export default function PpsuAttendancePage() {
     }
     fetchTodayStatus(true);
   }, [token, user, isHydrated]);
+
+  // Realtime updates for attendance without page refresh
+  useRealtimeEntity('attendance', () => {
+    fetchTodayStatus();
+  });
 
   // Draw photo canvas with professional timestamp + GPS watermark
   const drawWatermark = (canvas: HTMLCanvasElement, timestamp: string, coordsStr: string, addrStr: string) => {

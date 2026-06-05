@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { apiUrl } from '@/lib/api-config';
+import { useRealtime } from '@/hooks/use-realtime';
 import {
   Table,
   TableBody,
@@ -75,6 +76,13 @@ export default function PpsuTasksPage() {
       fetchStatus();
     }
   }, [token]);
+
+  // Realtime updates for tasks without page refresh
+  useRealtime((event) => {
+    if (event.entity === 'task') {
+      fetchTasks();
+    }
+  }, ['task']);
 
   const getStatusColor = (status: string) => {
     switch (status) {

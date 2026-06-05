@@ -409,13 +409,12 @@ export default function PpsuHomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
-  // Realtime updates for attendance status
+  // Realtime updates for attendance, tasks, and reports
   useRealtime((event) => {
-    if (event.entity === 'attendance') {
-      // Refresh attendance data when admin approves/rejects
+    if (event.entity === 'attendance' || event.entity === 'task' || event.entity === 'report') {
       fetchData();
     }
-  }, ['attendance']);
+  }, ['attendance', 'task', 'report']);
 
   // Generate Current Week's Schedules (Monday to Sunday)
   const getWeekSchedules = () => {

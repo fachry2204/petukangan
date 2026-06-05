@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
 import { apiUrl } from '@/lib/api-config';
+import { useRealtime } from '@/hooks/use-realtime';
 
 export default function AdminDashboardPage() {
   const { token } = useAuthStore();
@@ -139,6 +140,13 @@ export default function AdminDashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Realtime updates for dashboard stats
+  useRealtime((event) => {
+    if (['user', 'task', 'report', 'attendance'].includes(event.entity)) {
+      fetchStats();
+    }
+  }, ['user', 'task', 'report', 'attendance']);
 
   if (loading) {
     return (

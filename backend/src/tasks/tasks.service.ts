@@ -90,7 +90,7 @@ export class TasksService {
     return savedTask;
   }
 
-  async update(id: number, data: any) {
+  async update(id: number, data: any, userId?: number) {
     const task = await this.findOne(id);
 
     if (data.title !== undefined) task.title = data.title;
@@ -107,6 +107,21 @@ export class TasksService {
     }
     if (data.zoneId !== undefined) {
       task.zone = data.zoneId ? ({ id: Number(data.zoneId) } as any) : (null as any);
+    }
+
+    // Handle admin rejection: save reason and create log
+    if (data.rejectionReason) {
+      task.rejectionReason = data.rejectionReason;
+      const log = this.taskLogRepository.create({
+        task,
+        status: data.status || task.status,
+        lat: data.lat,
+        lng: data.lng,
+        address: data.address,
+        photoUrl: data.photoUrl,
+        note: `Ditolak admin: ${data.rejectionReason}`,
+      });
+      await this.taskLogRepository.save(log);
     }
 
     const savedTask = await this.taskRepository.save(task);

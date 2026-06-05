@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   MapPin, ChevronLeft, ClipboardList, Pencil, Trash2, 
-  ArrowUpRight, Loader2 
+  ArrowUpRight, Loader2, CheckCircle2, XCircle, ShieldAlert
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
+import { useRealtime } from '@/hooks/use-realtime';
 
 const STATUS_LABEL: Record<string, string> = {
   TASK_NEW: 'Tugas Baru',
@@ -60,6 +61,11 @@ export default function AdminTaskDetailPage() {
   const { toast } = useToast();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectStatus, setRejectStatus] = useState('WORKING');
+  const [rejecting, setRejecting] = useState(false);
 
   const fetchTask = async () => {
     try {
@@ -74,9 +80,51 @@ export default function AdminTaskDetailPage() {
     }
   };
 
+  const handleVerify = async () => {
+    setVerifying(true);
+    try {
+      await axios.put(`${apiUrl}/tasks/${id}`, { status: 'DONE' }, { headers: { Authorization: `Bearer ${token}` } });
+      toast({ title: 'Berhasil', description: 'Tugas telah diverifikasi dan diselesaikan' });
+      fetchTask();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Gagal', description: err.response?.data?.message || 'Gagal memverifikasi tugas' });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      alert('Alasan penolakan wajib diisi');
+      return;
+    }
+    setRejecting(true);
+    try {
+      await axios.put(`${apiUrl}/tasks/${id}`, {
+        status: rejectStatus,
+        rejectionReason: rejectReason
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      toast({ title: 'Berhasil', description: `Tugas dikembalikan ke status ${STATUS_LABEL[rejectStatus] || rejectStatus}` });
+      setRejectModalOpen(false);
+      setRejectReason('');
+      fetchTask();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Gagal', description: err.response?.data?.message || 'Gagal menolak tugas' });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   useEffect(() => {
     if (token && id) fetchTask();
   }, [id, token]);
+
+  // Realtime updates without page refresh
+  useRealtime((event) => {
+    if (event.entity === 'task' && event.data?.id === Number(id)) {
+      fetchTask();
+    }
+  }, ['task']);
 
   if (loading) return <div className="p-12 text-center text-sm font-bold text-zinc-400 animate-pulse">Memuat detail tugas...</div>;
   if (!task) return <div className="p-12 text-center text-sm font-bold text-zinc-400">Tugas tidak ditemukan.</div>;
@@ -205,6 +253,48 @@ export default function AdminTaskDetailPage() {
           </div>
         </div>
 
+        {/* Verification Actions — only show when status is VERIFY */}
+        {task.status === 'VERIFY' && (
+          <Card className="border-none shadow-sm rounded-2xl bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-900/30">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-yellow-600" />
+                <p className="text-sm font-black text-yellow-800 dark:text-yellow-500 uppercase tracking-wider">Verifikasi Tugas</p>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Tugas ini sedang menunggu verifikasi. Pilih <b>Setujui</b> untuk menyelesaikan tugas, atau <b>Tolak</b> untuk mengembalikan ke petugas dengan alasan.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleVerify}
+                  disabled={verifying}
+                  className="flex-1 py-5 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-green-500/20"
+                >
+                  {verifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                  Setujui & Selesaikan
+                </Button>
+                <Button
+                  onClick={() => setRejectModalOpen(true)}
+                  variant="outline"
+                  className="flex-1 py-5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-2xl font-bold text-sm"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Tolak
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rejection Reason Display */}
+        {task.rejectionReason && (
+          <Card className="border-none shadow-sm rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30">
+            <CardContent className="p-5">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-red-500 mb-1">Alasan Penolakan Terakhir</p>
+              <p className="text-sm font-semibold text-red-800 dark:text-red-400">{task.rejectionReason}</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
           <Button
@@ -222,6 +312,62 @@ export default function AdminTaskDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Reject Modal */}
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-6 h-6" />
+              <h3 className="text-lg font-black">Tolak Verifikasi</h3>
+            </div>
+            <p className="text-sm text-zinc-500">
+              Tugas akan dikembalikan ke petugas untuk diperbaiki. Pilih status pengembalian dan berikan alasan.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Kembalikan ke Status</label>
+                <select
+                  value={rejectStatus}
+                  onChange={(e) => setRejectStatus(e.target.value)}
+                  className="mt-1 w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm"
+                >
+                  <option value="WORKING">Mulai Di Kerjakan</option>
+                  <option value="NOT_STARTED">Belum Di Kerjakan</option>
+                  <option value="ARRIVED">Sampai Di Lokasi</option>
+                  <option value="TASK_ACCEPTED">Tugas Diterima</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Alasan Penolakan</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Jelaskan mengapa tugas ditolak dan apa yang perlu diperbaiki..."
+                  className="mt-1 w-full min-h-[100px] rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleReject}
+                disabled={rejecting}
+                className="flex-1 py-5 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold text-sm"
+              >
+                {rejecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                Tolak & Kembalikan
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setRejectModalOpen(false); setRejectReason(''); }}
+                className="flex-1 py-5 rounded-2xl font-bold text-sm"
+              >
+                Batal
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

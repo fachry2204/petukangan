@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useRealtime } from '@/hooks/use-realtime';
 
 interface EmergencySignal {
   id?: number;
@@ -32,27 +33,26 @@ export default function AdminSosPage() {
   const { token } = useAuthStore();
   const router = useRouter();
 
-  useEffect(() => {
-    // 1. Fetch existing SOS History from Database
-    const fetchHistory = async () => {
-      try {
-        const res = await fetch('/api/sos');
-        if (res.ok) {
-          const data = await res.json();
-          // Transform timestamp string from DB to milliseconds for date-fns
-          const parsedData = data.map((d: any) => ({
-            ...d,
-            timestamp: new Date(d.timestamp).getTime()
-          }));
-          setSignals(parsedData);
-        }
-      } catch (err) {
-        console.error('Failed to load SOS history', err);
-      } finally {
-        setIsLoading(false);
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/sos');
+      if (res.ok) {
+        const data = await res.json();
+        // Transform timestamp string from DB to milliseconds for date-fns
+        const parsedData = data.map((d: any) => ({
+          ...d,
+          timestamp: new Date(d.timestamp).getTime()
+        }));
+        setSignals(parsedData);
       }
-    };
-    
+    } catch (err) {
+      console.error('Failed to load SOS history', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
 
     // 2. Connect to socket server for real-time SOS
@@ -89,6 +89,13 @@ export default function AdminSosPage() {
       socket.disconnect();
     };
   }, [token]);
+
+  // Realtime updates via dataChange (fallback for non-emergency updates)
+  useRealtime((event) => {
+    if (event.entity === 'sos' || event.entity === 'emergency') {
+      fetchHistory();
+    }
+  }, ['sos', 'emergency']);
 
   const updateStatus = async (userId: string | number, newStatus: EmergencySignal['status']) => {
     // 1. Update on screen immediately for fast feedback

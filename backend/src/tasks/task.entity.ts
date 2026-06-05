@@ -45,6 +45,10 @@ export class Task {
   @Column({ type: 'text', nullable: true })
   address: string;
 
+  // Alasan penolakan saat admin menolak verifikasi
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
