@@ -1,38 +1,84 @@
 import { NextResponse } from 'next/server';
-import * as mysql from 'mysql2/promise';
+import { verifyToken } from '@/lib/auth';
+import { queryDb, getDbConnection } from '@/lib/db';
+
+function getUserFromToken(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  return verifyToken(token);
+}
+
+export async function GET(req: Request) {
+  try {
+    const decoded = getUserFromToken(req);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const userId = decoded.role === 'PPSU' ? decoded.sub : undefined;
+    let sql = `SELECT t.*, z.name as zoneName, u.fullName as assignedToName FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId`;
+    const params: any[] = [];
+
+    if (userId) {
+      sql += ' WHERE t.assignedToId = ?';
+      params.push(userId);
+    }
+
+    sql += ' ORDER BY t.createdAt DESC';
+    const rows: any = await queryDb(sql, params);
+    return NextResponse.json(rows || []);
+  } catch (err: any) {
+    console.error('[GET /api/tasks] error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
+    const decoded = getUserFromToken(req);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const data = await req.json();
-    const conn = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'ppsu_monitoring'
-    });
+    const { title, description, lat, lng, deadline, priority, officerIds, assignedToId, zoneId, address, photoUrl, taskType } = data;
 
-    const { title, description, lat, lng, deadline, priority, officerIds } = data;
-
-    if (!title || !officerIds || officerIds.length === 0) {
-      await conn.end();
-      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'Judul tugas wajib diisi' }, { status: 400 });
     }
 
-    const promises = officerIds.map((userId: number) => {
-      // Create a task for each selected officer
-      return conn.execute(
-        `INSERT INTO tasks (title, description, lat, lng, assignedToId, status, priority, taskType, deadline, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, 'TODO', ?, 'ASSIGNED', ?, NOW(6), NOW(6))`,
-        [title, description || '', lat || null, lng || null, userId, priority || 'MEDIUM', deadline || null]
-      );
-    });
+    const isAssigned = taskType === 'ASSIGNED' || assignedToId != null || (officerIds && officerIds.length > 0);
+    const ids = isAssigned ? (officerIds || [assignedToId]).map((id: any) => Number(id)) : [decoded.sub];
 
-    await Promise.all(promises);
-    await conn.end();
+    const conn = await getDbConnection();
+    const createdTasks: any[] = [];
 
-    return NextResponse.json({ message: 'Tugas berhasil dibuat' }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating tasks:', error);
-    return NextResponse.json({ error: 'Gagal membuat tugas: ' + error.message }, { status: 500 });
+    try {
+      for (const officerId of ids) {
+        const [result]: any = await conn.execute(
+          `INSERT INTO tasks (title, description, lat, lng, assignedToId, zoneId, status, priority, taskType, deadline, photoUrl, address, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), NOW(6))`,
+          [
+            title,
+            description || '',
+            lat || null,
+            lng || null,
+            officerId || null,
+            zoneId || null,
+            isAssigned ? 'TASK_NEW' : 'NOT_STARTED',
+            priority || 'MEDIUM',
+            isAssigned ? 'ASSIGNED' : (taskType || 'SELF'),
+            deadline || null,
+            photoUrl || null,
+            address || null,
+          ]
+        );
+        createdTasks.push({ id: result.insertId, title, status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED' });
+      }
+    } finally {
+      await conn.end();
+    }
+
+    return NextResponse.json(createdTasks.length === 1 ? createdTasks[0] : createdTasks, { status: 201 });
+  } catch (err: any) {
+    console.error('[POST /api/tasks] error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

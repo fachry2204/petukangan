@@ -157,7 +157,7 @@ export default function AdminAttendancePage() {
   const handleApproveIzin = async (id: number, isRequestTable?: boolean) => {
     if (!confirm('Apakah Anda yakin ingin menyetujui pengajuan ini?')) return;
     try {
-      await axios.put(`${apiUrl}/attendance/${id}/status`, {
+      await axios.put(`${apiUrl}/attendance/record/${id}/status`, {
         status: 'APPROVED',
         rejectionReason: null,
         isRequestTable
@@ -189,7 +189,7 @@ export default function AdminAttendancePage() {
 
     try {
       setSubmittingRejection(true);
-      await axios.put(`${apiUrl}/attendance/${selectedRejectionId}/status`, {
+      await axios.put(`${apiUrl}/attendance/record/${selectedRejectionId}/status`, {
         status: 'REJECTED',
         rejectionReason: rejectionReasonText,
         isRequestTable: selectedRejectionIsRequestTable
