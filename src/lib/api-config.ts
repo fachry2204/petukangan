@@ -1,14 +1,19 @@
 // Centralized API URL configuration
-// In production browser, auto-detects the current host so requests go through the same domain
-// Falls back to localhost:3001/api only in SSR/dev when no env var is set
+// Production: uses env var or auto-detects from current domain
+// Dev: falls back to localhost:3001/api
 
 function getApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (typeof window !== 'undefined') {
-    // Browser: use the same origin with /api prefix (relies on reverse proxy or Next.js rewrites)
-    return `${window.location.protocol}//${window.location.host}/api`;
+    const host = window.location.host;
+    // Production domain - backend runs on same domain (Plesk reverse proxy or direct)
+    if (host.includes('petukanganutara.id')) {
+      return `${window.location.protocol}//${host}/api`;
+    }
+    // Local dev / other domains
+    return `${window.location.protocol}//${host}/api`;
   }
   // SSR fallback (dev server)
   return 'http://localhost:3001/api';

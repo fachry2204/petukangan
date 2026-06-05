@@ -47,8 +47,12 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url, true);
       const { pathname } = parsedUrl;
 
-      // Route /api/* and /socket.io/* to NestJS
-      if (pathname.startsWith('/api') || pathname.startsWith('/socket.io')) {
+      // Next.js API routes that should NOT be proxied to backend
+      const nextJsApiRoutes = ['/api/sos', '/api/backup', '/api/monitoring-stats', '/api/upload'];
+      const isNextJsApi = nextJsApiRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+
+      // Route /api/* and /socket.io/* to NestJS (except Next.js API routes)
+      if ((pathname.startsWith('/api') && !isNextJsApi) || pathname.startsWith('/socket.io')) {
         proxy.web(req, res);
       } else {
         // Route everything else to Next.js
