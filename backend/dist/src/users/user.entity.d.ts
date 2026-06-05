@@ -1,0 +1,30 @@
+import { Role } from './role.entity';
+import { Zone } from '../zones/zone.entity';
+export declare class User {
+    id: number;
+    username: string;
+    password: string;
+    fullName: string;
+    role: Role;
+    zone: Zone;
+    gender: string;
+    birthDate: Date;
+    phone: string;
+    address: string;
+    country: string;
+    province: string;
+    city: string;
+    district: string;
+    village: string;
+    postalCode: string;
+    joinDate: Date;
+    photoUrl: string;
+    documents: any;
+    status: string;
+    statusReason: string;
+    statusChangedAt: Date;
+    lastSeen: Date;
+    deviceId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
