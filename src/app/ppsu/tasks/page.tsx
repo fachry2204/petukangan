@@ -203,13 +203,13 @@ export default function PpsuTasksPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-3">
-                      {task.priority === 'SELF' ? (
+                      {task.taskType === 'SELF' ? (
                         <Badge className="bg-orange-50 text-orange-550 border-none text-[9px] font-bold dark:bg-orange-950/20">
                           Tugas Mandiri
                         </Badge>
-                      ) : task.priority !== 'SELF' && (
-                        <Badge className={getPriorityBadge(task.priority)}>
-                          {task.priority}
+                      ) : (
+                        <Badge className="bg-blue-50 text-blue-600 border-none text-[9px] font-bold dark:bg-blue-950/20">
+                          Tugas dari Admin
                         </Badge>
                       )}
                     </TableCell>

@@ -415,7 +415,7 @@ export default function AdminTasksPage() {
 
       {/* View Dialog */}
       <Dialog open={!!viewTask} onOpenChange={(o) => !o && setViewTask(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <ClipboardList className="w-6 h-6 text-orange-500" />
@@ -468,18 +468,29 @@ export default function AdminTasksPage() {
               )}
 
               {/* Info Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Petugas</p>
-                  <p className="font-semibold">{viewTask.assignedTo?.fullName || `Petugas #${viewTask.assignedTo?.id ?? '-'}`}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Petugas Ditugaskan</p>
+                  <div className="flex items-center gap-2">
+                    {viewTask.assignedTo?.photoUrl && (
+                      <img src={viewTask.assignedTo.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    )}
+                    <p className="font-semibold text-zinc-900 dark:text-white">
+                      {viewTask.assignedTo?.fullName || `Petugas #${viewTask.assignedTo?.id ?? '-'}`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deadline</p>
-                  <p className="font-semibold">{viewTask.deadline ? new Date(viewTask.deadline).toLocaleDateString('id-ID') : '—'}</p>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Jenis Tugas</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white">{TASK_TYPE_LABEL[viewTask.taskType || 'ASSIGNED']}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Zona</p>
-                  <p className="font-semibold">{viewTask.zone?.name || '-'}</p>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Deadline</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white">{viewTask.deadline ? new Date(viewTask.deadline).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</p>
+                </div>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Zona</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white">{viewTask.zone?.name || '-'}</p>
                 </div>
                 <div className="col-span-2 md:col-span-3">
                   <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Lokasi</p>
@@ -500,13 +511,13 @@ export default function AdminTasksPage() {
                   </div>
                   {viewTask.address && <p className="text-xs text-zinc-500 mt-0.5">{viewTask.address}</p>}
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Dibuat</p>
-                  <p className="text-xs">{viewTask.createdAt ? new Date(viewTask.createdAt).toLocaleString('id-ID') : '—'}</p>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Dibuat</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white text-xs">{viewTask.createdAt ? new Date(viewTask.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Diperbarui</p>
-                  <p className="text-xs">{viewTask.updatedAt ? new Date(viewTask.updatedAt).toLocaleString('id-ID') : '—'}</p>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">Diperbarui</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white text-xs">{viewTask.updatedAt ? new Date(viewTask.updatedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
                 </div>
               </div>
             </div>

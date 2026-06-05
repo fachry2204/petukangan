@@ -160,6 +160,8 @@ export default function NewTaskPage() {
           lng: location[1],
           deadline: deadline || null,
           priority,
+          taskType: 'ASSIGNED',
+          assignedToId: selectedOfficers[0],
           officerIds: selectedOfficers
         })
       });

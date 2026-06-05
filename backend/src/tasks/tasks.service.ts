@@ -127,14 +127,15 @@ export class TasksService {
       finalPhotoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photoUrl);
     }
 
-    const isAssigned = data.taskType === 'ASSIGNED';
+    const isAssigned = data.taskType === 'ASSIGNED' || data.assignedToId != null;
+    const assignedId = isAssigned ? Number(data.assignedToId || data.officerIds?.[0]) : userId;
     const task = this.taskRepository.create({
       title: data.title,
       description: data.description || '',
       status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED',
-      priority: 'MEDIUM',
-      taskType: data.taskType || 'SELF',
-      assignedTo: { id: userId } as any,
+      priority: data.priority || 'MEDIUM',
+      taskType: isAssigned ? 'ASSIGNED' : (data.taskType || 'SELF'),
+      assignedTo: { id: assignedId } as any,
       zone: data.zoneId ? { id: Number(data.zoneId) } as any : undefined,
       deadline: data.deadline ? new Date(data.deadline) : undefined,
       photoUrl: finalPhotoUrl,
