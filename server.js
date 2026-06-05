@@ -89,6 +89,18 @@ app.prepare().then(() => {
       io.emit('emergencySignal', { ...data, timestamp: Date.now() });
     });
 
+    socket.on('forceLogoutUser', (data) => {
+      if (data && data.userId) {
+        const userIdStr = String(data.userId);
+        const loc = activeLocations.get(userIdStr);
+        if (loc) {
+          activeLocations.delete(userIdStr);
+          io.emit('userOffline', { userId: Number(data.userId) });
+          console.log('[Socket] Force logout user:', data.userId);
+        }
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log('[Socket] Client disconnected:', socket.id);
       for (const [userId, loc] of activeLocations.entries()) {
