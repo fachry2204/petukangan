@@ -22,6 +22,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
+import { useRouter } from 'next/navigation';
 
 interface TaskItem {
   id: number;
@@ -85,6 +86,7 @@ const TASK_TYPE_COLOR: Record<string, string> = {
 const TASK_TYPES = ['ASSIGNED', 'SELF'];
 
 export default function AdminTasksPage() {
+  const router = useRouter();
   const { token } = useAuthStore();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -385,7 +387,7 @@ export default function AdminTasksPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setViewTask(t)}
+                            onClick={() => router.push(`/admin/tasks/${t.id}`)}
                             className="h-8 w-8 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50"
                           >
                             <Eye className="w-4 h-4" />
@@ -393,7 +395,7 @@ export default function AdminTasksPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openEdit(t)}
+                            onClick={() => router.push(`/admin/tasks/edit/${t.id}`)}
                             className="h-8 w-8 rounded-lg text-zinc-400 hover:text-orange-500 hover:bg-orange-50"
                           >
                             <Pencil className="w-4 h-4" />

@@ -354,13 +354,90 @@ export default function PpsuTaskDetailPage() {
       </div>
 
       <div className="p-6 space-y-6 text-left">
-        {/* Description Card */}
+        {/* Info Lengkap Tugas */}
         <Card className="border-none shadow-sm rounded-2xl bg-white dark:bg-zinc-900 overflow-hidden">
-          <CardContent className="p-4 space-y-2">
-            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Deskripsi Tugas</p>
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {task.description || 'Tidak ada deskripsi deskriptif untuk tugas ini.'}
-            </p>
+          <CardContent className="p-5 space-y-4">
+            {/* 1. Tanggal Tugas */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Tanggal Tugas</p>
+              <p className="text-sm font-bold text-zinc-800 dark:text-white">
+                {task.deadline ? new Date(task.deadline).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : new Date(task.createdAt).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+
+            {/* 2. Judul Tugas */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Judul Tugas</p>
+              <p className="text-lg font-black text-zinc-900 dark:text-white leading-tight">{task.title}</p>
+            </div>
+
+            {/* 3. Deskripsi Tugas */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Deskripsi Tugas</p>
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 leading-relaxed bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl">
+                {task.description || 'Tidak ada deskripsi untuk tugas ini.'}
+              </p>
+            </div>
+
+            {/* 4. Prioritas Tugas */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Prioritas Tugas</p>
+              <Badge className={`${
+                task.priority === 'HIGH' ? 'bg-red-100 text-red-700' :
+                task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                task.priority === 'LOW' ? 'bg-blue-100 text-blue-700' :
+                'bg-zinc-100 text-zinc-700'
+              } border-none text-xs font-bold px-3 py-1`}>
+                {task.priority || 'MEDIUM'}
+              </Badge>
+            </div>
+
+            {/* 5. Petugas yang Ditugaskan */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Petugas yang Ditugaskan</p>
+              <div className="flex items-center gap-2">
+                {task.assignedTo?.photoUrl && (
+                  <img src={task.assignedTo.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                )}
+                <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                  {task.assignedTo?.fullName || `Petugas #${task.assignedTo?.id ?? '-'}`}
+                </p>
+              </div>
+            </div>
+
+            {/* 6. Alamat Tugas */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-1">Alamat Tugas</p>
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-white">{task.address || 'Petukangan Utara'}</p>
+                  {task.lat && task.lng && (
+                    <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                      {Number(task.lat).toFixed(6)}, {Number(task.lng).toFixed(6)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 7. Tombol Lihat Lokasi (Google Maps) */}
+            {task.lat && task.lng && (
+              <a
+                href={`https://www.google.com/maps?q=${task.lat},${task.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full"
+              >
+                <Button
+                  type="button"
+                  className="w-full py-5 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <MapPin className="w-5 h-5" />
+                  Lihat Lokasi di Google Maps
+                </Button>
+              </a>
+            )}
           </CardContent>
         </Card>
 

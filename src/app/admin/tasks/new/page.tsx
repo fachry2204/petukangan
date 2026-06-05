@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,10 @@ export default function NewTaskPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState<[number, number] | null>(null);
+  const [address, setAddress] = useState('');
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-6.2312, 106.7718]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [flyTrigger, setFlyTrigger] = useState(0);
   
   const [officers, setOfficers] = useState<any[]>([]);
   const [onlineOfficers, setOnlineOfficers] = useState<any[]>([]);
@@ -135,8 +139,45 @@ export default function NewTaskPage() {
     );
   };
 
-  const handleMapClick = (lat: number, lng: number) => {
+  // Reverse geocoding: klik map → dapat alamat
+  const handleMapClick = async (lat: number, lng: number) => {
     setLocation([lat, lng]);
+    setMapCenter([lat, lng]);
+    setFlyTrigger(v => v + 1);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        setAddress(data.display_name);
+      }
+    } catch (err) {
+      console.error('Reverse geocoding failed:', err);
+    }
+  };
+
+  // Geocoding: cari alamat → pindah map
+  const searchAddress = async () => {
+    if (!address.trim()) return;
+    setIsSearchingAddress(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setLocation([lat, lng]);
+        setMapCenter([lat, lng]);
+        setFlyTrigger(v => v + 1);
+        setAddress(data[0].display_name);
+      } else {
+        alert('Alamat tidak ditemukan. Coba kata kunci lain.');
+      }
+    } catch (err) {
+      console.error('Geocoding failed:', err);
+      alert('Gagal mencari alamat. Periksa koneksi internet.');
+    } finally {
+      setIsSearchingAddress(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -158,6 +199,7 @@ export default function NewTaskPage() {
           description,
           lat: location[0],
           lng: location[1],
+          address,
           deadline: deadline || null,
           priority,
           taskType: 'ASSIGNED',
@@ -359,30 +401,64 @@ export default function NewTaskPage() {
           </CardContent>
         </Card>
 
-        {/* Map */}
+        {/* Alamat Lengkap & Map */}
         <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900 overflow-hidden">
-          <CardHeader className="bg-blue-50 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/30 flex flex-row items-center justify-between">
-            <CardTitle className="text-blue-700 dark:text-blue-400 text-lg">Titik Lokasi (Map)</CardTitle>
-            {location && (
-              <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-md">
-                Koordinat Tersimpan
-              </span>
-            )}
+          <CardHeader className="bg-blue-50 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/30">
+            <CardTitle className="text-blue-700 dark:text-blue-400 text-lg flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Alamat & Lokasi Tugas
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 relative h-[400px] bg-zinc-100">
-            <MapComponent 
-              points={mapPoints} 
-              center={location || [-6.2312, 106.7718]} 
-              zoom={location ? 16 : 14} 
-              onMapClick={handleMapClick}
-            />
-            {!location && (
-              <div className="absolute inset-0 z-[400] pointer-events-none flex items-center justify-center">
-                <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 shadow-xl">
-                  <MapPin className="w-4 h-4 animate-bounce" /> Klik pada peta untuk memilih lokasi tugas
-                </div>
+          <CardContent className="p-4 space-y-3">
+            {/* Alamat Lengkap Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Alamat Lengkap</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ketik alamat lengkap, lalu klik Cari..."
+                  className="flex-1 h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && searchAddress()}
+                />
+                <Button
+                  type="button"
+                  onClick={searchAddress}
+                  disabled={isSearchingAddress || !address.trim()}
+                  className="h-11 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-sm"
+                >
+                  {isSearchingAddress ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  Cari
+                </Button>
               </div>
-            )}
+              <p className="text-[10px] text-zinc-400">
+                Ketik alamat lalu klik <b>Cari</b>, atau langsung <b>klik pada peta</b> untuk memilih lokasi.
+              </p>
+            </div>
+
+            {/* Map */}
+            <div className="relative h-[350px] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100">
+              <MapComponent 
+                points={mapPoints} 
+                center={mapCenter} 
+                zoom={location ? 16 : 14} 
+                onMapClick={handleMapClick}
+                flyTrigger={flyTrigger}
+              />
+              {!location && (
+                <div className="absolute inset-0 z-[400] pointer-events-none flex items-center justify-center">
+                  <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 shadow-xl">
+                    <MapPin className="w-4 h-4 animate-bounce" /> Klik pada peta untuk memilih lokasi
+                  </div>
+                </div>
+              )}
+              {location && (
+                <div className="absolute bottom-3 left-3 z-[400] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 shadow-lg border border-blue-100">
+                  {Number(location[0]).toFixed(6)}, {Number(location[1]).toFixed(6)}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

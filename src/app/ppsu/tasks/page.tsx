@@ -199,6 +199,8 @@ export default function PpsuTasksPage() {
                     <TableCell className="py-3">
                       <Badge className={`${getStatusColor(task.status)} border-none text-[9px] font-black`}>
                         {task.status === 'TASK_NEW' ? 'TUGAS BARU' :
+                         task.status === 'TASK_ACCEPTED' ? 'TUGAS DITERIMA' :
+                         task.status === 'ARRIVED' ? 'SAMPAI DI LOKASI' :
                          task.status === 'NOT_STARTED' ? 'BELUM DIKERJAKAN' :
                          task.status === 'WORKING' ? 'SEDANG DIKERJAKAN' :
                          task.status === 'VERIFY' ? 'MENUNGGU VERIFIKASI' :
