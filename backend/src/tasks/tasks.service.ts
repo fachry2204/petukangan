@@ -51,15 +51,17 @@ export class TasksService {
 
     if (data.photo) {
       photoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photo);
-    } else if (['WORKING', 'VERIFY'].includes(data.status)) {
+    } else if (['ARRIVED', 'NOT_STARTED', 'WORKING', 'VERIFY'].includes(data.status)) {
       throw new BadRequestException('Foto wajib disertakan untuk perubahan status ini');
     }
 
-    // Validate allowed transitions
+    // Validate allowed transitions (new 7-step flow)
     const currentStatus = task.status;
     const newStatus = data.status;
     const allowedTransitions: Record<string, string[]> = {
-      TASK_NEW: ['NOT_STARTED'],
+      TASK_NEW: ['TASK_ACCEPTED'],
+      TASK_ACCEPTED: ['ARRIVED'],
+      ARRIVED: ['NOT_STARTED'],
       NOT_STARTED: ['WORKING'],
       WORKING: ['VERIFY'],
       VERIFY: ['DONE'],
@@ -122,29 +124,34 @@ export class TasksService {
   }
 
   async create(userId: number, data: any) {
-    let finalPhotoUrl = data.photoUrl;
-    if (data.photoUrl && data.photoUrl.startsWith('data:image')) {
-      finalPhotoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photoUrl);
-    }
+    const isAssigned = data.taskType === 'ASSIGNED' || data.assignedToId != null || (data.officerIds && data.officerIds.length > 0);
+    const officerIds = isAssigned ? (data.officerIds || [data.assignedToId]).map((id: any) => Number(id)) : [userId];
 
-    const isAssigned = data.taskType === 'ASSIGNED' || data.assignedToId != null;
-    const assignedId = isAssigned ? Number(data.assignedToId || data.officerIds?.[0]) : userId;
-    const task = this.taskRepository.create({
-      title: data.title,
-      description: data.description || '',
-      status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED',
-      priority: data.priority || 'MEDIUM',
-      taskType: isAssigned ? 'ASSIGNED' : (data.taskType || 'SELF'),
-      assignedTo: { id: assignedId } as any,
-      zone: data.zoneId ? { id: Number(data.zoneId) } as any : undefined,
-      deadline: data.deadline ? new Date(data.deadline) : undefined,
-      photoUrl: finalPhotoUrl,
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address,
-    });
-    const savedTask = await this.taskRepository.save(task);
-    this.trackingGateway.emitTaskChange('create', savedTask);
-    return savedTask;
+    const createdTasks: Task[] = [];
+    for (const officerId of officerIds) {
+      let finalPhotoUrl = data.photoUrl;
+      if (data.photoUrl && data.photoUrl.startsWith('data:image')) {
+        finalPhotoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photoUrl);
+      }
+
+      const task = this.taskRepository.create({
+        title: data.title,
+        description: data.description || '',
+        status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED',
+        priority: data.priority || 'MEDIUM',
+        taskType: isAssigned ? 'ASSIGNED' : (data.taskType || 'SELF'),
+        assignedTo: { id: officerId } as any,
+        zone: data.zoneId ? { id: Number(data.zoneId) } as any : undefined,
+        deadline: data.deadline ? new Date(data.deadline) : undefined,
+        photoUrl: finalPhotoUrl,
+        lat: data.lat,
+        lng: data.lng,
+        address: data.address,
+      });
+      const savedTask = await this.taskRepository.save(task);
+      this.trackingGateway.emitTaskChange('create', savedTask);
+      createdTasks.push(savedTask);
+    }
+    return createdTasks.length === 1 ? createdTasks[0] : createdTasks;
   }
 }

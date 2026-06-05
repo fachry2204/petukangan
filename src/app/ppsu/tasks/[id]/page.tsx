@@ -222,11 +222,18 @@ export default function PpsuTaskDetailPage() {
       return;
     }
 
-    if (['WORKING', 'VERIFY'].includes(newStatus) && !photo) {
+    // Photo required for: ARRIVED, NOT_STARTED, WORKING, VERIFY
+    if (['ARRIVED', 'NOT_STARTED', 'WORKING', 'VERIFY'].includes(newStatus) && !photo) {
+      const labelMap: Record<string, string> = {
+        ARRIVED: 'Sampai Di Lokasi',
+        NOT_STARTED: 'Belum Di Kerjakan',
+        WORKING: 'Mulai Dikerjakan',
+        VERIFY: 'Selesai Mengerjakan',
+      };
       toast({ 
         variant: 'destructive', 
         title: 'Foto Wajib', 
-        description: `Silakan ambil foto untuk status ${newStatus === 'WORKING' ? 'Sedang Dikerjakan' : 'Selesai Dikerjakan'}` 
+        description: `Silakan ambil foto untuk status ${labelMap[newStatus] || newStatus}` 
       });
       return;
     }
@@ -264,9 +271,17 @@ export default function PpsuTaskDetailPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      const statusLabelMap: Record<string, string> = {
+        TASK_ACCEPTED: 'Tugas Diterima',
+        ARRIVED: 'Sampai Di Lokasi',
+        NOT_STARTED: 'Belum Di Kerjakan',
+        WORKING: 'Mulai Dikerjakan',
+        VERIFY: 'Menunggu Verifikasi Admin',
+        DONE: 'Tugas Selesai',
+      };
       toast({ 
         title: 'Status Diperbarui', 
-        description: `Tugas sekarang ${newStatus === 'NOT_STARTED' ? 'Belum Dikerjakan' : newStatus === 'WORKING' ? 'Saat Dikerjakan' : 'Selesai Dikerjakan'}` 
+        description: `Tugas sekarang ${statusLabelMap[newStatus] || newStatus}` 
       });
       router.push('/ppsu/tasks');
     } catch (error: any) {
@@ -285,10 +300,12 @@ export default function PpsuTaskDetailPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'TASK_NEW': return 'TUGAS BARU';
-      case 'NOT_STARTED': return 'BELUM DIKERJAKAN';
-      case 'WORKING': return 'SAAT DIKERJAKAN';
-      case 'VERIFY': return 'SELESAI DIKERJAKAN';
-      case 'DONE': return 'SELESAI';
+      case 'TASK_ACCEPTED': return 'TUGAS DITERIMA';
+      case 'ARRIVED': return 'SAMPAI DI LOKASI';
+      case 'NOT_STARTED': return 'BELUM DI KERJAKAN';
+      case 'WORKING': return 'MULAI DI KERJAKAN';
+      case 'VERIFY': return 'MENUNGGU VERIFIKASI';
+      case 'DONE': return 'TUGAS SELESAI';
       default: return status;
     }
   };
@@ -296,6 +313,8 @@ export default function PpsuTaskDetailPage() {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'TASK_NEW': return 'bg-purple-100 text-purple-600';
+      case 'TASK_ACCEPTED': return 'bg-blue-100 text-blue-600';
+      case 'ARRIVED': return 'bg-indigo-100 text-indigo-600';
       case 'NOT_STARTED': return 'bg-red-100 text-red-600';
       case 'WORKING': return 'bg-orange-100 text-orange-600';
       case 'VERIFY': return 'bg-yellow-100 text-yellow-600';
@@ -348,10 +367,14 @@ export default function PpsuTaskDetailPage() {
         {/* Dynamic Camera capture depending on Status */}
         {task.status !== 'VERIFY' && task.status !== 'DONE' ? (
           <div className="space-y-4">
-            {task.status === 'WORKING' || task.status === 'NOT_STARTED' ? (
+            {/* Photo capture for statuses that require photo */}
+            {['TASK_ACCEPTED', 'ARRIVED', 'NOT_STARTED', 'WORKING'].includes(task.status) ? (
               <>
                 <h3 className="font-black text-base text-zinc-800 dark:text-white uppercase tracking-wider text-[10px] text-zinc-400">
-                  {task.status === 'NOT_STARTED' ? 'Foto Sebelum Mengerjakan Tugas *' : 'Foto Saat Mengerjakan Tugas *'}
+                  {task.status === 'TASK_ACCEPTED' ? 'Foto Sampai Di Lokasi (dengan GPS) *' :
+                   task.status === 'ARRIVED' ? 'Foto Lokasi Belum Di Kerjakan *' :
+                   task.status === 'NOT_STARTED' ? 'Foto Saat Mengerjakan *' :
+                   'Foto Selesai Mengerjakan *'}
                 </h3>
                 
                 <button
@@ -365,7 +388,10 @@ export default function PpsuTaskDetailPage() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50">
                       <img src="/gambar/icon/camera.png" alt="Kamera" className="w-10 h-10 object-contain opacity-40 animate-pulse" />
                       <p className="text-xs text-zinc-500 font-bold text-center px-4">
-                        {task.status === 'NOT_STARTED' ? 'Ambil foto kondisi sebelum mengerjakan tugas' : 'Ambil foto saat sedang mengerjakan tugas'}
+                        {task.status === 'TASK_ACCEPTED' ? 'Ambil foto saat sampai di lokasi tugas' :
+                         task.status === 'ARRIVED' ? 'Ambil foto kondisi lokasi sebelum dikerjakan' :
+                         task.status === 'NOT_STARTED' ? 'Ambil foto saat sedang mengerjakan tugas' :
+                         'Ambil foto hasil tugas yang sudah selesai'}
                       </p>
                       <p className="text-[10px] text-zinc-400 font-semibold">Ketuk untuk membuka kamera</p>
                     </div>
@@ -387,22 +413,40 @@ export default function PpsuTaskDetailPage() {
               </>
             ) : null}
 
-            {/* Active Action Button directly below the photo button */}
+            {/* Active Action Button */}
             <div className="pt-2">
               {task.status === 'TASK_NEW' ? (
                 <Button 
-                  onClick={() => updateStatus('NOT_STARTED')} 
+                  onClick={() => updateStatus('TASK_ACCEPTED')} 
                   disabled={isLoading || isCapturing} 
                   className="w-full py-6 bg-purple-500 hover:bg-purple-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
                   Terima Tugas
                 </Button>
+              ) : task.status === 'TASK_ACCEPTED' ? (
+                <Button 
+                  onClick={() => updateStatus('ARRIVED')} 
+                  disabled={isLoading || isCapturing || !photo} 
+                  className="w-full py-6 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
+                  Sampai Di Lokasi
+                </Button>
+              ) : task.status === 'ARRIVED' ? (
+                <Button 
+                  onClick={() => updateStatus('NOT_STARTED')} 
+                  disabled={isLoading || isCapturing || !photo} 
+                  className="w-full py-6 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                  Upload Foto Lokasi
+                </Button>
               ) : task.status === 'NOT_STARTED' ? (
                 <Button 
                   onClick={() => updateStatus('WORKING')} 
                   disabled={isLoading || isCapturing || !photo} 
-                  className="w-full py-6 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
                   Mulai Dikerjakan
@@ -414,7 +458,7 @@ export default function PpsuTaskDetailPage() {
                   className="w-full py-6 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-green-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                  Selesai Dikerjakan
+                  Selesai Mengerjakan
                 </Button>
               ) : null}
             </div>

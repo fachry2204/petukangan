@@ -43,15 +43,19 @@ interface TaskItem {
 
 const STATUS_LABEL: Record<string, string> = {
   TASK_NEW: 'Tugas Baru',
-  NOT_STARTED: 'Belum Dikerjakan',
-  WORKING: 'Saat Dikerjakan',
-  VERIFY: 'Selesai Dikerjakan',
-  DONE: 'Selesai',
+  TASK_ACCEPTED: 'Tugas Diterima',
+  ARRIVED: 'Sampai Di Lokasi',
+  NOT_STARTED: 'Belum Di Kerjakan',
+  WORKING: 'Mulai Di Kerjakan',
+  VERIFY: 'Menunggu Verifikasi',
+  DONE: 'Tugas Selesai',
   CANCELLED: 'Dibatalkan',
 };
 
 const STATUS_COLOR: Record<string, string> = {
   TASK_NEW: 'bg-purple-100 text-purple-700',
+  TASK_ACCEPTED: 'bg-blue-100 text-blue-700',
+  ARRIVED: 'bg-indigo-100 text-indigo-700',
   NOT_STARTED: 'bg-red-100 text-red-700',
   WORKING: 'bg-orange-100 text-orange-700',
   VERIFY: 'bg-yellow-100 text-yellow-700',

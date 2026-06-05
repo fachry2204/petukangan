@@ -79,6 +79,8 @@ export default function PpsuTasksPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'TASK_NEW': return 'bg-purple-100 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400';
+      case 'TASK_ACCEPTED': return 'bg-blue-100 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400';
+      case 'ARRIVED': return 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400';
       case 'NOT_STARTED': return 'bg-red-100 text-red-600 dark:bg-red-950/20 dark:text-red-400';
       case 'WORKING': return 'bg-orange-100 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400';
       case 'VERIFY': return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950/20 dark:text-yellow-400';
@@ -196,7 +198,8 @@ export default function PpsuTasksPage() {
                     </TableCell>
                     <TableCell className="py-3">
                       <Badge className={`${getStatusColor(task.status)} border-none text-[9px] font-black`}>
-                        {task.status === 'TODO' ? 'MULAI DIKERJAKAN' :
+                        {task.status === 'TASK_NEW' ? 'TUGAS BARU' :
+                         task.status === 'NOT_STARTED' ? 'BELUM DIKERJAKAN' :
                          task.status === 'WORKING' ? 'SEDANG DIKERJAKAN' :
                          task.status === 'VERIFY' ? 'MENUNGGU VERIFIKASI' :
                          task.status === 'DONE' ? 'SELESAI' : task.status}
