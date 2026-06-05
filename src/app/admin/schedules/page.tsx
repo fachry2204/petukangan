@@ -142,7 +142,7 @@ export default function AdminSchedulesPage() {
       });
       // Filter out admin users, keep only PPSU/staff users who are active
       const staffUsers = res.data.filter((u: any) => {
-        const roleName = typeof u.role === 'string' ? u.role : u.role?.name;
+        const roleName = u.roleName || (typeof u.role === 'string' ? u.role : u.role?.name);
         const isPPSUorStaff = roleName === 'PPSU' || roleName === 'STAFF';
 
         // Check if user status is active (default is ACTIVE)
