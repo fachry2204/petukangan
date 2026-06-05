@@ -140,7 +140,7 @@ export default function AdminSosPage() {
         <div>
           <h2 className="text-2xl font-black text-red-600 dark:text-red-500 flex items-center gap-2">
             <AlertTriangle className="w-7 h-7 animate-pulse" />
-            Pusat Komando SOS
+            Monitoring Petugas Dalam Bahaya
           </h2>
           <p className="text-sm text-zinc-500 font-medium mt-1">
             Riwayat dan Pantauan langsung panggilan darurat dari Petugas PPSU
