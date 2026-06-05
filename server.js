@@ -95,9 +95,9 @@ app.prepare().then(() => {
         const loc = activeLocations.get(userIdStr);
         if (loc) {
           activeLocations.delete(userIdStr);
-          io.emit('userOffline', { userId: Number(data.userId) });
-          console.log('[Socket] Force logout user:', data.userId);
         }
+        io.emit('userOffline', { userId: Number(data.userId) });
+        console.log('[Socket] Force logout user:', data.userId);
       }
     });
 
