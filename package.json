@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ./node_modules/next/dist/bin/next dev -H 0.0.0.0 --webpack",
+    "dev": "set NODE_ENV=development && node server.js",
     "build": "node ./node_modules/next/dist/bin/next build",
     "start": "node server.js",
     "lint": "eslint",
