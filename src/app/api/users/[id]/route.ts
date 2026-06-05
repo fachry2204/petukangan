@@ -36,6 +36,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const body = await req.json();
 
+    // Ensure photoUrl column can hold large base64 images
+    try {
+      await queryDb('ALTER TABLE users MODIFY photoUrl LONGTEXT');
+    } catch { /* column may already be LONGTEXT */ }
+
     let roleId: any = undefined;
     if (body.roleName) {
       const roles: any = await queryDb('SELECT id FROM roles WHERE name = ?', [body.roleName]);
