@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Globe, Clock, LogOut, Loader2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
+import { socketUrl } from '@/lib/socket-config';
 import { Button } from '@/components/ui/button';
 
 export default function OnlineOfficersPage() {
@@ -16,7 +17,6 @@ export default function OnlineOfficersPage() {
   useEffect(() => {
     if (!token) return;
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
     const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],

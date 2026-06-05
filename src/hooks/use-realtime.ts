@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
+import { socketUrl } from '@/lib/socket-config';
 
 interface DataChangeEvent {
   entity: string;
@@ -27,8 +28,6 @@ export function useRealtime(
   useEffect(() => {
     if (!token || typeof window === 'undefined') return;
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
-    
     const socket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],

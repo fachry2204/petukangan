@@ -9,6 +9,7 @@ import { ArrowLeft, MapPin, Check, Loader2, Search, X, Calendar } from 'lucide-r
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/store/auth-store';
+import { socketUrl } from '@/lib/socket-config';
 
 
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
@@ -93,8 +94,6 @@ export default function NewTaskPage() {
     let socket: any;
     const setupSocket = async () => {
       const ioModule = await import('socket.io-client');
-      // Gunakan same-origin path agar melewati Next.js rewrite ke backend
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
       socket = ioModule.io(socketUrl, {
         auth: { token },
         transports: ['websocket', 'polling'],

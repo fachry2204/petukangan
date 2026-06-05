@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useRealtime } from '@/hooks/use-realtime';
+import { socketUrl } from '@/lib/socket-config';
 
 interface EmergencySignal {
   id?: number;
@@ -56,7 +57,6 @@ export default function AdminSosPage() {
     fetchHistory();
 
     // 2. Connect to socket server for real-time SOS
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
     const socket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],

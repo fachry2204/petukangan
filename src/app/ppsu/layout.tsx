@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api-config';
+import { socketUrl } from '@/lib/socket-config';
 
 // Map attendance status to a simplified status string for the map marker
 function resolveMapStatus(attendanceStatus: string): string {
@@ -246,7 +247,6 @@ export default function PpsuLayout({
 
     const setupTracking = async () => {
       const ioModule = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
       socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, transports: ['websocket', 'polling'], path: '/socket.io' });
       socketRef.current = socket;
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
+import { socketUrl } from '@/lib/socket-config';
 import { AlertTriangle, MapPin, Navigation, X, Volume2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -106,7 +107,6 @@ export function GlobalSOSAlert() {
     checkSOSStatus();
     const interval = setInterval(checkSOSStatus, 3000);
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
     const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 
     socket.on('connect', () => {

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
 import { apiUrl } from '@/lib/api-config';
+import { socketUrl } from '@/lib/socket-config';
 
 // Dynamic import for Leaflet (No SSR)
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
@@ -107,8 +108,6 @@ function AdminMonitoringContent() {
     fetchOfflineOfficers();
 
     // 4. Setup Socket.io for real-time updates (via same-origin rewrite)
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
-
     console.log('[Admin] Connecting to socket:', socketUrl);
     const socket = io(socketUrl, {
       auth: { token },

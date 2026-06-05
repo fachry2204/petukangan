@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
+import { socketUrl } from '@/lib/socket-config';
 
 const navItems = [
   { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/ppsu/home' },
@@ -32,7 +33,6 @@ export function BottomNav() {
       if (!token || !user) throw new Error('Not authenticated');
 
       const { io } = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
       const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 
       // Validasi GPS tersedia — wajib ada lokasi nyata
