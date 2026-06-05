@@ -16,8 +16,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const rows: any = await queryDb(
-      `SELECT u.id, u.username, u.fullName, u.email, u.phone, u.photoUrl, u.zone, u.gender, u.birthDate, u.address, u.province, u.city, u.district, u.village, u.postalCode, u.status, r.name as roleName
-       FROM users u JOIN roles r ON r.id = u.roleId WHERE u.id = ?`,
+      `SELECT u.id, u.username, u.fullName, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
+       FROM users u LEFT JOIN roles r ON r.id = u.roleId WHERE u.id = ?`,
       [id]
     );
     if (!rows?.[0]) return NextResponse.json({ error: 'User not found' }, { status: 404 });

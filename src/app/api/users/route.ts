@@ -4,20 +4,27 @@ import { queryDb } from '@/lib/db';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
+  console.log('[Auth] Header:', authHeader ? authHeader.substring(0, 50) + '...' : 'NONE');
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
-  return verifyToken(token);
+  console.log('[Auth] Token length:', token.length);
+  const decoded = verifyToken(token);
+  console.log('[Auth] Decoded:', decoded ? 'OK (sub=' + decoded.sub + ')' : 'FAIL');
+  return decoded;
 }
 
 export async function GET(req: Request) {
   try {
+    console.log('[GET /api/users] Incoming request');
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    console.log('[GET /api/users] Fetching users...');
     const rows: any = await queryDb(
-      `SELECT u.id, u.username, u.fullName, u.email, u.phone, u.photoUrl, u.zone, u.gender, u.birthDate, u.address, u.province, u.city, u.district, u.village, u.postalCode, u.status, u.createdAt, u.updatedAt, r.name as roleName
-       FROM users u JOIN roles r ON r.id = u.roleId`
+      `SELECT u.id, u.username, u.fullName, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
+       FROM users u LEFT JOIN roles r ON r.id = u.roleId`
     );
+    console.log('[GET /api/users] Found', rows?.length || 0, 'users');
     return NextResponse.json(rows || []);
   } catch (err: any) {
     console.error('[GET /api/users] error:', err);
