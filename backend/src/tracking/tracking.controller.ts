@@ -56,6 +56,14 @@ export class TrackingController {
     return { users };
   }
 
+  // Get latest locations for all active officers (fallback when socket is unavailable)
+  @Get('active-officers')
+  async getActiveOfficers(@Query('minutes') minutes?: string) {
+    const m = Math.max(1, Math.min(Number(minutes) || 60, 240));
+    const officers = await this.trackingService.getLatestLocations(m);
+    return { count: officers.length, officers };
+  }
+
   // Manual cleanup endpoint (idempotent).
   @Delete('history/old')
   async purgeOld(@Query('minutes') minutes?: string) {

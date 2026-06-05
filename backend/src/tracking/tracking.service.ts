@@ -29,9 +29,38 @@ export class TrackingService {
     return this.gpsRepository.save(tracking);
   }
 
-  async getLatestLocations() {
-    // Logic to get latest location for each active user
-    return [];
+  async getLatestLocations(minutes = 60) {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    // Use raw query for MySQL compatibility: get latest GPS per user within window
+    const rows = await this.gpsRepository.query(
+      `SELECT g.*, u.fullName, u.photoUrl
+       FROM gps_tracking g
+       INNER JOIN (
+         SELECT userId, MAX(timestamp) AS maxTs
+         FROM gps_tracking
+         WHERE timestamp >= ?
+         GROUP BY userId
+       ) latest ON g.userId = latest.userId AND g.timestamp = latest.maxTs
+       LEFT JOIN users u ON u.id = g.userId
+       WHERE g.timestamp >= ?`,
+      [cutoff, cutoff]
+    );
+
+    return rows.map((r: any) => ({
+      userId: Number(r.userId),
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      speed: Number(r.speed) || 0,
+      batteryLevel: Number(r.batteryLevel) || 0,
+      isMock: Boolean(r.isMock),
+      ipAddress: r.ipAddress,
+      wifiName: r.wifiName,
+      provider: r.provider,
+      statusAbsen: r.statusAbsen,
+      timestamp: r.timestamp,
+      fullName: r.fullName || `Petugas ${r.userId}`,
+      photoUrl: r.photoUrl,
+    }));
   }
 
   // Delete GPS rows older than the retention window.

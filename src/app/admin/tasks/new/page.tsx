@@ -60,15 +60,66 @@ export default function NewTaskPage() {
     };
     fetchStaff();
 
+    // Fetch active officers from REST API as fallback/initial data
+    const fetchActiveOfficers = async () => {
+      try {
+        const res = await fetch('/api/tracking/active-officers?minutes=60', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.officers && data.officers.length > 0) {
+            setOnlineOfficers(data.officers.map((o: any) => ({
+              userId: o.userId,
+              fullName: o.fullName,
+              photoUrl: o.photoUrl,
+              lat: o.lat,
+              lng: o.lng,
+              status: o.statusAbsen || 'Online',
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch active officers:', err);
+      }
+    };
+    fetchActiveOfficers();
+
     // Listen to active socket locations to mark online status
     let socket: any;
     const setupSocket = async () => {
       const ioModule = await import('socket.io-client');
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `http://${window.location.hostname}:3001`;
-      socket = ioModule.io(socketUrl);
-      
-      socket.on('activeLocations', (data: any[]) => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${window.location.hostname}:3001`;
+      socket = ioModule.io(socketUrl, {
+        auth: { token },
+        transports: ['websocket', 'polling']
+      });
+
+      socket.on('connect', () => {
+        console.log('[TaskNew] Socket connected');
+        socket.emit('joinAdminRoom');
+      });
+
+      socket.on('activeLocationsSync', (data: any[]) => {
+        console.log('[TaskNew] activeLocationsSync received:', data);
         setOnlineOfficers(data);
+      });
+
+      socket.on('locationUpdated', (data: any) => {
+        setOnlineOfficers(prev => {
+          const existing = prev.findIndex(o => o.userId === data.userId);
+          if (existing > -1) {
+            const updated = [...prev];
+            updated[existing] = { ...updated[existing], ...data };
+            return updated;
+          }
+          return [...prev, data];
+        });
+      });
+
+      socket.on('userOffline', (data: { userId: number }) => {
+        setOnlineOfficers(prev => prev.filter(o => o.userId !== data.userId));
       });
     };
     setupSocket();

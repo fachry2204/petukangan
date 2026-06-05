@@ -29,7 +29,41 @@ function AdminMonitoringContent() {
   const focusUserId = searchParams.get('focus');
 
   useEffect(() => {
-    // 1. Fetch active SOS from API to show SOS markers on map load
+    // 1. Fetch active officers from REST API as initial data / fallback
+    const fetchActiveOfficers = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/tracking/active-officers?minutes=60`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.officers && data.officers.length > 0) {
+            setOfficers(prev => {
+              const newOfficers = [...prev];
+              data.officers.forEach((officer: any) => {
+                const existingIdx = newOfficers.findIndex(o => o.userId === officer.userId);
+                const mapped = {
+                  ...officer,
+                  status: officer.statusAbsen || 'Online',
+                  address: officer.wifiName || officer.provider || 'Lokasi Aktif',
+                };
+                if (existingIdx > -1) {
+                  newOfficers[existingIdx] = { ...newOfficers[existingIdx], ...mapped };
+                } else {
+                  newOfficers.push(mapped);
+                }
+              });
+              return newOfficers;
+            });
+          }
+        }
+      } catch (err) {
+        console.log('[Admin] Failed to fetch active officers via REST:', err);
+      }
+    };
+    fetchActiveOfficers();
+
+    // 2. Fetch active SOS from API to show SOS markers on map load
     const fetchActiveSOS = async () => {
       try {
         const res = await fetch('/api/sos');
@@ -56,7 +90,7 @@ function AdminMonitoringContent() {
     };
     fetchActiveSOS();
 
-    // 2. Fetch offline officers with today's schedules
+    // 3. Fetch offline officers with today's schedules
     const fetchOfflineOfficers = async () => {
       try {
         const res = await fetch(`${apiUrl}/schedules/today/officers`, {
@@ -72,8 +106,7 @@ function AdminMonitoringContent() {
     };
     fetchOfflineOfficers();
 
-    // 3. Setup Socket.io
-    // Auto-detect socket URL from current domain
+    // 4. Setup Socket.io for real-time updates
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const hostname = window.location.hostname;
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${hostname}:3001`;
