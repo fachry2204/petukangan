@@ -35,13 +35,15 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
 
   const fetchUsers = async () => {
+    console.log('[AdminUsers] fetchUsers called. token=', token ? 'exists' : 'missing');
     try {
       const res = await axios.get(`${apiUrl}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('[AdminUsers] API success, count:', res.data?.length);
       setUsers(res.data);
-    } catch (error) {
-      console.error('Failed to fetch users', error);
+    } catch (error: any) {
+      console.error('[AdminUsers] Failed to fetch users', error?.response?.status, error?.response?.data, error?.message);
     }
   };
 
