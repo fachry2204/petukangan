@@ -133,12 +133,13 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.role?.name === 'PPSU' && (
-      u.fullName.toLowerCase().includes(search.toLowerCase()) || 
-      u.username.toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filteredUsers = users.filter(u => {
+    const role = (u.roleName || u.role?.name || '').toUpperCase();
+    return role === 'PPSU' && (
+      (u.fullName || '').toLowerCase().includes(search.toLowerCase()) || 
+      (u.username || '').toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6">
