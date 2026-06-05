@@ -42,25 +42,21 @@ interface TaskItem {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  NEW: 'Baru',
-  TODO: 'Belum Dikerjakan',
-  ON_WAY: 'Menuju Lokasi',
-  BEFORE: 'Foto Sebelum',
-  WORKING: 'Dikerjakan',
+  TASK_NEW: 'Tugas Baru',
+  NOT_STARTED: 'Belum Dikerjakan',
+  WORKING: 'Saat Dikerjakan',
+  VERIFY: 'Selesai Dikerjakan',
   DONE: 'Selesai',
-  VERIFY: 'Verifikasi',
   CANCELLED: 'Dibatalkan',
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  NEW: 'bg-blue-100 text-blue-700',
-  TODO: 'bg-zinc-100 text-zinc-700',
-  ON_WAY: 'bg-amber-100 text-amber-700',
-  BEFORE: 'bg-amber-100 text-amber-700',
+  TASK_NEW: 'bg-purple-100 text-purple-700',
+  NOT_STARTED: 'bg-red-100 text-red-700',
   WORKING: 'bg-orange-100 text-orange-700',
+  VERIFY: 'bg-yellow-100 text-yellow-700',
   DONE: 'bg-green-100 text-green-700',
-  VERIFY: 'bg-purple-100 text-purple-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+  CANCELLED: 'bg-zinc-100 text-zinc-700',
 };
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -102,7 +98,7 @@ export default function AdminTasksPage() {
   const [editTask, setEditTask] = useState<TaskItem | null>(null);
   const [deleteTask, setDeleteTask] = useState<TaskItem | null>(null);
   const [editForm, setEditForm] = useState({
-    title: '', description: '', status: 'TODO', priority: 'MEDIUM', taskType: 'ASSIGNED', deadline: '',
+    title: '', description: '', status: 'NOT_STARTED', priority: 'MEDIUM', taskType: 'ASSIGNED', deadline: '',
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -145,7 +141,7 @@ export default function AdminTasksPage() {
     setEditForm({
       title: t.title || '',
       description: t.description || '',
-      status: t.status || 'TODO',
+      status: t.status || 'NOT_STARTED',
       priority: t.priority || 'MEDIUM',
       taskType: t.taskType || 'ASSIGNED',
       deadline: t.deadline ? new Date(t.deadline).toISOString().slice(0, 10) : '',
@@ -337,7 +333,7 @@ export default function AdminTasksPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((t) => {
-                  const statusKey = t.status || 'TODO';
+                  const statusKey = t.status || 'NOT_STARTED';
                   const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
                   const priorityColor = PRIORITY_COLOR[t.priority || 'MEDIUM'] || 'bg-zinc-100 text-zinc-700';
                   const taskTypeColor = TASK_TYPE_COLOR[t.taskType || 'ASSIGNED'] || 'bg-zinc-100 text-zinc-700';

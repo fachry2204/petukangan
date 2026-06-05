@@ -226,7 +226,7 @@ export default function PpsuTaskDetailPage() {
       toast({ 
         variant: 'destructive', 
         title: 'Foto Wajib', 
-        description: `Silakan ambil foto untuk status ${newStatus === 'WORKING' ? 'Sedang Dikerjakan' : 'Tugas Selesai'}` 
+        description: `Silakan ambil foto untuk status ${newStatus === 'WORKING' ? 'Sedang Dikerjakan' : 'Selesai Dikerjakan'}` 
       });
       return;
     }
@@ -266,7 +266,7 @@ export default function PpsuTaskDetailPage() {
 
       toast({ 
         title: 'Status Diperbarui', 
-        description: `Tugas sekarang ${newStatus === 'WORKING' ? 'Sedang Dikerjakan' : 'Menunggu Verifikasi'}` 
+        description: `Tugas sekarang ${newStatus === 'NOT_STARTED' ? 'Belum Dikerjakan' : newStatus === 'WORKING' ? 'Saat Dikerjakan' : 'Selesai Dikerjakan'}` 
       });
       router.push('/ppsu/tasks');
     } catch (error: any) {
@@ -284,9 +284,10 @@ export default function PpsuTaskDetailPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'TODO': return 'MULAI DIKERJAKAN';
-      case 'WORKING': return 'SEDANG DIKERJAKAN';
-      case 'VERIFY': return 'MENUNGGU VERIFIKASI';
+      case 'TASK_NEW': return 'TUGAS BARU';
+      case 'NOT_STARTED': return 'BELUM DIKERJAKAN';
+      case 'WORKING': return 'SAAT DIKERJAKAN';
+      case 'VERIFY': return 'SELESAI DIKERJAKAN';
       case 'DONE': return 'SELESAI';
       default: return status;
     }
@@ -294,11 +295,12 @@ export default function PpsuTaskDetailPage() {
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'TODO': return 'bg-zinc-100 text-zinc-700';
-      case 'WORKING': return 'bg-orange-100 text-orange-655';
-      case 'VERIFY': return 'bg-yellow-100 text-yellow-650';
+      case 'TASK_NEW': return 'bg-purple-100 text-purple-600';
+      case 'NOT_STARTED': return 'bg-red-100 text-red-600';
+      case 'WORKING': return 'bg-orange-100 text-orange-600';
+      case 'VERIFY': return 'bg-yellow-100 text-yellow-600';
       case 'DONE': return 'bg-green-100 text-green-600';
-      default: return 'bg-blue-100 text-blue-600';
+      default: return 'bg-zinc-100 text-zinc-600';
     }
   };
 
@@ -346,60 +348,73 @@ export default function PpsuTaskDetailPage() {
         {/* Dynamic Camera capture depending on Status */}
         {task.status !== 'VERIFY' && task.status !== 'DONE' ? (
           <div className="space-y-4">
-            <h3 className="font-black text-base text-zinc-800 dark:text-white uppercase tracking-wider text-[10px] text-zinc-400">
-              {task.status === 'TODO' ? 'Foto Sedang Mengerjakan Tugas *' : 'Foto Tugas Selesai *'}
-            </h3>
-            
-            <button
-              type="button"
-              onClick={() => { if (!photo) openCamera(); }}
-              className="relative w-full aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer active:scale-[0.99] transition-transform"
-            >
-              {photo ? (
-                <img src={photo} alt="Task state" className="w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50">
-                  <img src="/gambar/icon/camera.png" alt="Kamera" className="w-10 h-10 object-contain opacity-40 animate-pulse" />
-                  <p className="text-xs text-zinc-500 font-bold text-center px-4">
-                    {task.status === 'TODO' ? 'Ambil foto Anda sedang mengerjakan tugas' : 'Ambil foto bukti tugas selesai'}
-                  </p>
-                  <p className="text-[10px] text-zinc-400 font-semibold">Ketuk untuk membuka kamera</p>
-                </div>
-              )}
-              <canvas ref={canvasRef} className="hidden" />
-            </button>
-
-            {photo && (
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => { setPhoto(null); openCamera(); }} 
-                  className="w-full py-6 rounded-2xl font-bold"
+            {task.status === 'WORKING' || task.status === 'NOT_STARTED' ? (
+              <>
+                <h3 className="font-black text-base text-zinc-800 dark:text-white uppercase tracking-wider text-[10px] text-zinc-400">
+                  {task.status === 'NOT_STARTED' ? 'Foto Sebelum Mengerjakan Tugas *' : 'Foto Saat Mengerjakan Tugas *'}
+                </h3>
+                
+                <button
+                  type="button"
+                  onClick={() => { if (!photo) openCamera(); }}
+                  className="relative w-full aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer active:scale-[0.99] transition-transform"
                 >
-                  Ambil Ulang Foto
-                </Button>
-              </div>
-            )}
+                  {photo ? (
+                    <img src={photo} alt="Task state" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-zinc-50 dark:bg-zinc-900/50">
+                      <img src="/gambar/icon/camera.png" alt="Kamera" className="w-10 h-10 object-contain opacity-40 animate-pulse" />
+                      <p className="text-xs text-zinc-500 font-bold text-center px-4">
+                        {task.status === 'NOT_STARTED' ? 'Ambil foto kondisi sebelum mengerjakan tugas' : 'Ambil foto saat sedang mengerjakan tugas'}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 font-semibold">Ketuk untuk membuka kamera</p>
+                    </div>
+                  )}
+                  <canvas ref={canvasRef} className="hidden" />
+                </button>
+
+                {photo && (
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => { setPhoto(null); openCamera(); }} 
+                      className="w-full py-6 rounded-2xl font-bold"
+                    >
+                      Ambil Ulang Foto
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : null}
 
             {/* Active Action Button directly below the photo button */}
             <div className="pt-2">
-              {task.status === 'TODO' ? (
+              {task.status === 'TASK_NEW' ? (
                 <Button 
-                  onClick={() => updateStatus('WORKING')} 
+                  onClick={() => updateStatus('NOT_STARTED')} 
                   disabled={isLoading || isCapturing} 
-                  className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-6 bg-purple-500 hover:bg-purple-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
-                  Simpan & Mulai Dikerjakan
+                  Terima Tugas
+                </Button>
+              ) : task.status === 'NOT_STARTED' ? (
+                <Button 
+                  onClick={() => updateStatus('WORKING')} 
+                  disabled={isLoading || isCapturing || !photo} 
+                  className="w-full py-6 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+                  Mulai Dikerjakan
                 </Button>
               ) : task.status === 'WORKING' ? (
                 <Button 
                   onClick={() => updateStatus('VERIFY')} 
-                  disabled={isLoading || isCapturing} 
+                  disabled={isLoading || isCapturing || !photo} 
                   className="w-full py-6 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-green-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                  Simpan & Selesaikan Tugas
+                  Selesai Dikerjakan
                 </Button>
               ) : null}
             </div>
@@ -407,12 +422,12 @@ export default function PpsuTaskDetailPage() {
         ) : (
           /* Read-only verification state */
           <div className="space-y-4">
-            <Card className="border-none shadow-sm rounded-3xl bg-yellow-50/70 dark:bg-yellow-950/10 border-2 border-yellow-100/50 dark:border-yellow-950/20 p-5 flex items-start gap-4">
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-650 dark:text-yellow-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <Clock className="w-6 h-6 animate-pulse" />
+            <Card className="border-none shadow-sm rounded-3xl bg-green-50/70 dark:bg-green-950/10 border-2 border-green-100/50 dark:border-green-950/20 p-5 flex items-start gap-4">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-6 h-6 animate-pulse" />
               </div>
               <div className="space-y-1">
-                <h4 className="font-black text-sm text-yellow-800 dark:text-yellow-500 uppercase tracking-wider">Status Tugas Menunggu Verifikasi</h4>
+                <h4 className="font-black text-sm text-green-800 dark:text-green-500 uppercase tracking-wider">Tugas Selesai Dikerjakan</h4>
                 <p className="text-xs font-semibold text-zinc-550 dark:text-zinc-400 leading-relaxed">
                   Tugas telah selesai dikerjakan! Saat ini sedang dalam tahap **verifikasi administrasi** oleh Pimpinan, Staff, dan Administrator kelurahan.
                 </p>

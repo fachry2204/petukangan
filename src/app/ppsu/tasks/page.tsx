@@ -78,11 +78,12 @@ export default function PpsuTasksPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'TODO': return 'bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-300';
+      case 'TASK_NEW': return 'bg-purple-100 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400';
+      case 'NOT_STARTED': return 'bg-red-100 text-red-600 dark:bg-red-950/20 dark:text-red-400';
       case 'WORKING': return 'bg-orange-100 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400';
-      case 'VERIFY': return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-955/20 dark:text-yellow-400';
+      case 'VERIFY': return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950/20 dark:text-yellow-400';
       case 'DONE': return 'bg-green-100 text-green-600 dark:bg-green-950/20 dark:text-green-400';
-      default: return 'bg-blue-100 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400';
+      default: return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300';
     }
   };
 

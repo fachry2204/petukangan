@@ -51,8 +51,21 @@ export class TasksService {
 
     if (data.photo) {
       photoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photo);
-    } else if (['ON_WAY', 'BEFORE', 'WORKING', 'DONE', 'VERIFY'].includes(data.status)) {
+    } else if (['WORKING', 'VERIFY'].includes(data.status)) {
       throw new BadRequestException('Foto wajib disertakan untuk perubahan status ini');
+    }
+
+    // Validate allowed transitions
+    const currentStatus = task.status;
+    const newStatus = data.status;
+    const allowedTransitions: Record<string, string[]> = {
+      TASK_NEW: ['NOT_STARTED'],
+      NOT_STARTED: ['WORKING'],
+      WORKING: ['VERIFY'],
+      VERIFY: ['DONE'],
+    };
+    if (allowedTransitions[currentStatus] && !allowedTransitions[currentStatus].includes(newStatus)) {
+      throw new BadRequestException(`Transisi dari ${currentStatus} ke ${newStatus} tidak diperbolehkan`);
     }
 
     // Create log
@@ -114,10 +127,11 @@ export class TasksService {
       finalPhotoUrl = await this.fileService.saveBase64Image('tugas', userId, data.photoUrl);
     }
 
+    const isAssigned = data.taskType === 'ASSIGNED';
     const task = this.taskRepository.create({
       title: data.title,
       description: data.description || '',
-      status: 'TODO',
+      status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED',
       priority: 'MEDIUM',
       taskType: data.taskType || 'SELF',
       assignedTo: { id: userId } as any,
