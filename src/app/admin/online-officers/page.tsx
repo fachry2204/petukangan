@@ -17,6 +17,27 @@ export default function OnlineOfficersPage() {
   useEffect(() => {
     if (!token) return;
 
+    // 1. Fetch from REST API first (seeded/historical data)
+    const fetchActiveOfficers = async () => {
+      try {
+        const res = await fetch('/api/tracking/active-officers?minutes=60', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.officers && data.officers.length > 0) {
+            setOfficers(data.officers.map((o: any) => ({
+              ...o,
+              gpsStatus: true,
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('[OnlineOfficers] Failed to fetch active officers:', err);
+      }
+    };
+    fetchActiveOfficers();
+
     const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
