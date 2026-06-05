@@ -281,10 +281,10 @@ export default function AdminUsersPage() {
                     <img
                       src={selectedUser.photoUrl}
                       alt={selectedUser.fullName}
-                      className="w-24 h-24 rounded-2xl object-contain border-4 border-white/20 shadow-lg bg-white/10"
+                      className="h-32 w-auto max-w-full rounded-2xl object-contain border-4 border-white/20 shadow-lg bg-white/10"
                     />
                   ) : (
-                    <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-3xl text-white border-2 border-white/20 shadow-lg">
+                    <div className="h-32 w-32 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-3xl text-white border-2 border-white/20 shadow-lg">
                       {selectedUser.fullName.charAt(0)}
                     </div>
                   )}
