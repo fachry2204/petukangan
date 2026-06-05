@@ -149,7 +149,12 @@ function AdminMonitoringContent() {
     });
 
     socket.on('activeLocationsSync', (activeList) => {
-      console.log('[Admin] activeLocationsSync received:', activeList);
+      console.log('[Admin] activeLocationsSync received:', activeList?.length || 0, 'officers');
+      if (activeList && activeList.length > 0) {
+        activeList.forEach((o: any) => {
+          console.log('[Admin] Active officer:', o.userId, o.fullName, 'lat:', o.lat, 'lng:', o.lng);
+        });
+      }
       setOfficers(prev => {
         const newOfficers = [...prev];
         activeList.forEach((active: any) => {
@@ -372,8 +377,9 @@ function AdminMonitoringContent() {
 
             <div className="space-y-1.5">
               {filteredOfficers.filter(o => !o.isSOS).length === 0 ? (
-                <div className="py-6 text-center text-[11px] text-zinc-400 italic">
-                  Belum ada petugas aktif terpantau.
+                <div className="py-6 text-center text-[11px] text-zinc-400">
+                  <p className="font-semibold">Belum ada petugas aktif terpantau.</p>
+                  <p className="mt-1 text-[10px]">Pastikan petugas sudah login di aplikasi PPSU dan memberikan izin GPS.</p>
                 </div>
               ) : (
                 filteredOfficers.filter(o => !o.isSOS).map((o, idx) => (

@@ -150,7 +150,7 @@ export default function PpsuLayout({
       
       const deviceInfo = getDeviceInfo();
       
-      socketRef.current?.emit('updateLocation', {
+      const payload = {
         userId: user.id,
         fullName: user.fullName,
         photoUrl: user.photoUrl,
@@ -162,14 +162,20 @@ export default function PpsuLayout({
         device: deviceInfo.device,
         os: deviceInfo.os,
         provider: deviceInfo.provider,
-      });
+      };
+      
+      console.log('[PPSU] Emitting updateLocation:', payload);
+      socketRef.current?.emit('updateLocation', payload);
     };
 
     const emitHeartbeat = () => {
-      if (!socketRef.current?.connected) return;
+      if (!socketRef.current?.connected) {
+        console.log('[PPSU] Heartbeat skipped - socket not connected');
+        return;
+      }
       const g = lastGpsRef.current;
       const deviceInfo = getDeviceInfo();
-      socketRef.current.emit('updateLocation', {
+      const payload = {
         userId: user.id,
         fullName: user.fullName,
         photoUrl: user.photoUrl,
@@ -181,7 +187,9 @@ export default function PpsuLayout({
         device: deviceInfo.device,
         os: deviceInfo.os,
         provider: deviceInfo.provider,
-      });
+      };
+      console.log('[PPSU] Emitting heartbeat:', payload);
+      socketRef.current.emit('updateLocation', payload);
     };
 
     // Try to detect Capacitor native runtime and start native background
@@ -241,6 +249,18 @@ export default function PpsuLayout({
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || '/';
       socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, transports: ['websocket', 'polling'], path: '/socket.io' });
       socketRef.current = socket;
+
+      socket.on('connect', () => {
+        console.log('[PPSU] Socket connected:', socket.id);
+      });
+
+      socket.on('connect_error', (err: any) => {
+        console.error('[PPSU] Socket connect error:', err.message);
+      });
+
+      socket.on('disconnect', (reason: string) => {
+        console.log('[PPSU] Socket disconnected:', reason);
+      });
 
       const handleConnected = async () => {
         // Prefer native background geolocation when available.
