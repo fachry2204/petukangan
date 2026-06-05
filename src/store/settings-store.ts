@@ -15,6 +15,8 @@ interface SettingsState {
   maintenanceTitle: string;
   maintenanceDesc: string;
 
+  gpsUpdateInterval: number; // detik, interval update lokasi GPS petugas
+
   shifts: any[];
   zones: string[];
 
@@ -35,6 +37,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   maintenanceEnd: '',
   maintenanceTitle: 'Sistem Dalam Perbaikan',
   maintenanceDesc: 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.',
+
+  gpsUpdateInterval: 30, // default 30 detik
 
   shifts: [],
   zones: [],

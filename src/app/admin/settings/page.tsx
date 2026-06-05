@@ -110,6 +110,7 @@ export default function AdminSettingsPage() {
         maintenanceEnd: settings.maintenanceEnd,
         maintenanceTitle: settings.maintenanceTitle,
         maintenanceDesc: settings.maintenanceDesc,
+        gpsUpdateInterval: settings.gpsUpdateInterval,
         shifts: settings.shifts,
         zones: settings.zones,
       }, {
@@ -536,6 +537,53 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* GPS Tracking Update Interval */}
+          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border-l-4 border-l-blue-500">
+            <CardHeader>
+              <CardTitle>Update Riwayat GPS</CardTitle>
+              <CardDescription>Atur interval waktu (dalam detik) untuk update lokasi GPS petugas PPSU ke sistem tracking dan riwayat GPS.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">Interval Update GPS (Detik)</label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      min={5}
+                      max={300}
+                      value={settings.gpsUpdateInterval}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (val >= 5 && val <= 300) {
+                          settings.setSettings({ gpsUpdateInterval: val });
+                        }
+                      }}
+                      className="w-32"
+                    />
+                    <span className="text-sm text-zinc-500 font-medium">detik</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Minimum 5 detik, maksimum 300 detik (5 menit). Semakin pendek interval, semakin real-time tracking-nya tapi semakin boros baterai.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-bold text-sm">{settings.gpsUpdateInterval}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-zinc-700">Interval Saat Ini</p>
+                    <p className="text-xs text-zinc-500">
+                      {settings.gpsUpdateInterval >= 60
+                        ? `${Math.floor(settings.gpsUpdateInterval / 60)} menit ${settings.gpsUpdateInterval % 60} detik`
+                        : `${settings.gpsUpdateInterval} detik`}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
