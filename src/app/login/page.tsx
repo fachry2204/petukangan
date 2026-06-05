@@ -165,7 +165,7 @@ export default function LoginPage() {
       )}
 
       {/* Dark Overlay for better contrast on desktop */}
-      {!isMobile && <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-0" />}
+      {!isMobile && <div className="absolute inset-0 bg-black/50 z-0" />}
 
       <Card className="w-full h-full min-h-screen md:min-h-0 md:h-auto md:max-w-md border-none shadow-none md:shadow-2xl bg-white dark:bg-zinc-900 rounded-none md:rounded-3xl overflow-y-auto md:overflow-hidden relative z-10 flex flex-col justify-center py-10 md:py-0">
 
