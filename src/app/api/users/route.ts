@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { username, password, fullName, email, phone, roleName, zone, gender, birthDate, address, province, city, district, village, postalCode, status } = body;
+    const { username, password, fullName, email, phone, roleName, zone, gender, birthDate, joinDate, address, province, city, district, village, postalCode, status } = body;
 
     if (!username || !password || !fullName) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
@@ -54,9 +54,9 @@ export async function POST(req: Request) {
     const hashed = await hashPassword(password);
 
     await queryDb(
-      `INSERT INTO users (username, password, fullName, email, phone, roleId, zone, gender, birthDate, address, province, city, district, village, postalCode, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NOW(6), NOW(6))`,
-      [username, hashed, fullName, email || null, phone || null, roleId, zone || null, gender || null, birthDate || null, address || null, province || null, city || null, district || null, village || null, postalCode || null]
+      `INSERT INTO users (username, password, fullName, email, phone, roleId, zone, gender, birthDate, joinDate, address, province, city, district, village, postalCode, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NOW(6), NOW(6))`,
+      [username, hashed, fullName, email || null, phone || null, roleId, zone || null, gender || null, birthDate || null, joinDate || null, address || null, province || null, city || null, district || null, village || null, postalCode || null]
     );
 
     return NextResponse.json({ message: 'User berhasil dibuat' }, { status: 201 });

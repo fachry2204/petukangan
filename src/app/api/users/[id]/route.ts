@@ -58,6 +58,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (body.zone !== undefined) { updates.push('zone = ?'); values.push(body.zone); }
     if (body.gender !== undefined) { updates.push('gender = ?'); values.push(body.gender); }
     if (body.birthDate !== undefined) { updates.push('birthDate = ?'); values.push(body.birthDate); }
+    if (body.joinDate !== undefined) { updates.push('joinDate = ?'); values.push(body.joinDate); }
     if (body.address !== undefined) { updates.push('address = ?'); values.push(body.address); }
     if (body.province !== undefined) { updates.push('province = ?'); values.push(body.province); }
     if (body.city !== undefined) { updates.push('city = ?'); values.push(body.city); }
