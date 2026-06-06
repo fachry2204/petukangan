@@ -120,7 +120,25 @@ export default function AdminSchedulesPage() {
       const res = await axios.get(`${apiUrl}/schedules`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSchedules(res.data);
+      const parsedData = (res.data || []).map((schedule: any) => {
+        let assignedUsers = [];
+        if (schedule.assignedUsers) {
+          if (typeof schedule.assignedUsers === 'string') {
+            try {
+              assignedUsers = JSON.parse(schedule.assignedUsers);
+            } catch (e) {
+              console.error('Failed to parse assignedUsers string in frontend:', schedule.assignedUsers, e);
+            }
+          } else if (Array.isArray(schedule.assignedUsers)) {
+            assignedUsers = schedule.assignedUsers;
+          }
+        }
+        return {
+          ...schedule,
+          assignedUsers
+        };
+      });
+      setSchedules(parsedData);
       setError('');
     } catch (err: any) {
       console.error('Failed to load schedules:', err);
@@ -162,13 +180,15 @@ export default function AdminSchedulesPage() {
   };
 
   // Helper to format date in DD/MM/YYYY format
+  // NOTE: Do NOT use new Date(dateStr) here — it converts to local timezone and
+  // causes an off-by-one-day bug (e.g. 2026-06-06 becomes 2026-06-05 in UTC+7).
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+    // dateStr is always YYYY-MM-DD (plain string from backend DATE_FORMAT)
+    const plain = dateStr.split('T')[0]; // strip time if any
+    const parts = plain.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
     return `${day}/${month}/${year}`;
   };
 
@@ -256,13 +276,27 @@ export default function AdminSchedulesPage() {
     
     const datePart = schedule.date ? schedule.date.split('T')[0] : '';
     setTaskDate(datePart);
-    setSelectedStaff(schedule.assignedUsers || []);
+    
+    const parsedStaff = Array.isArray(schedule.assignedUsers) 
+      ? schedule.assignedUsers 
+      : typeof schedule.assignedUsers === 'string' 
+        ? (() => { try { return JSON.parse(schedule.assignedUsers); } catch { return []; } })()
+        : [];
+    setSelectedStaff(parsedStaff);
     setIsAddModalOpen(true);
   };
 
   // Trigger to open modal in read-only view mode
   const handleViewClick = (schedule: ScheduleItem) => {
-    setViewingSchedule(schedule);
+    const parsedSchedule = {
+      ...schedule,
+      assignedUsers: Array.isArray(schedule.assignedUsers) 
+        ? schedule.assignedUsers 
+        : typeof schedule.assignedUsers === 'string' 
+          ? (() => { try { return JSON.parse(schedule.assignedUsers); } catch { return []; } })()
+          : []
+    };
+    setViewingSchedule(parsedSchedule);
     setIsViewModalOpen(true);
   };
 
@@ -336,11 +370,13 @@ export default function AdminSchedulesPage() {
         timeRange,
         zone: selectedZone,
         date: taskDate,
+        // Only store minimal user info — DO NOT include base64 photoUrl here
+        // as it would make the JSON too large for the database column.
+        // The photo is fetched dynamically by joining with the users table on GET.
         assignedUsers: selectedStaff.map(s => ({
           id: s.id,
           username: s.username,
           fullName: s.fullName,
-          photoUrl: s.photoUrl
         })),
         status
       };

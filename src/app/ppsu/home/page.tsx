@@ -147,9 +147,16 @@ export default function PpsuHomePage() {
       const resSchedules = await axios.get(`${apiUrl}/schedules`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const mySchedules = resSchedules.data.filter((s: any) => 
-        s.assignedUsers?.some((au: any) => au.id === user.id)
-      );
+      const mySchedules = (resSchedules.data || [])
+        .map((s: any) => {
+          let assignedUsers = s.assignedUsers;
+          if (typeof assignedUsers === 'string') {
+            try { assignedUsers = JSON.parse(assignedUsers); } catch { assignedUsers = []; }
+          }
+          if (!Array.isArray(assignedUsers)) assignedUsers = [];
+          return { ...s, assignedUsers };
+        })
+        .filter((s: any) => s.assignedUsers.some((au: any) => au.id === user.id));
       setAllSchedules(mySchedules);
 
       // Match today's schedule

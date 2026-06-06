@@ -422,7 +422,7 @@ export default function AdminUsersPage() {
                             return docs.map((doc: any, i: number) => (
                               <a 
                                 key={i} 
-                                href={doc.url} 
+                                href={doc.base64 || doc.url || '#'} 
                                 target="_blank" 
                                 rel="noreferrer"
                                 className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100/50 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:border-zinc-800 transition-all group"

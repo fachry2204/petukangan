@@ -49,24 +49,24 @@ export default function PpsuLayout({
   // Fetch today's attendance status so we can include it in location updates
   useEffect(() => {
     if (!token) return;
-    fetch(`${apiUrl}/attendance/today`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.status) {
-          attendanceStatusRef.current = resolveMapStatus(data.status);
-        }
-      })
-      .catch(() => {});
 
-    // Also re-check periodically in case the user absen within the same session
-    const interval = setInterval(() => {
-      fetch(`${apiUrl}/attendance/today`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
+    let abortController: AbortController | null = null;
+
+    const checkAttendance = async () => {
+      // Batalkan request sebelumnya jika ada
+      if (abortController) {
+        abortController.abort();
+      }
+
+      abortController = new AbortController();
+
+      try {
+        const res = await fetch(`${apiUrl}/attendance/today`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abortController.signal
+        });
+        if (res.ok) {
+          const data = await res.json();
           if (data?.status) {
             const resolved = resolveMapStatus(data.status);
             attendanceStatusRef.current = resolved;
@@ -86,11 +86,25 @@ export default function PpsuLayout({
               });
             }
           }
-        })
-        .catch(() => {});
-    }, 30000); // every 30 seconds
+        }
+      } catch (err: any) {
+        // Abaikan error yang disebabkan oleh abort
+        if (err.name !== 'AbortError') {
+          console.warn('[PPSU] Attendance check error:', err);
+        }
+      }
+    };
 
-    return () => clearInterval(interval);
+    checkAttendance();
+    // Also re-check periodically in case the user absen within the same session
+    const interval = setInterval(checkAttendance, 30000); // every 30 seconds
+
+    return () => {
+      clearInterval(interval);
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, [token, user]);
 
   useEffect(() => {
@@ -250,6 +264,8 @@ export default function PpsuLayout({
       }
     };
 
+    let safeguardTimeout: any = null;
+
     const setupTracking = async () => {
       const ioModule = await import('socket.io-client');
       socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, transports: ['websocket', 'polling'], path: '/socket.io' });
@@ -257,6 +273,8 @@ export default function PpsuLayout({
 
       socket.on('connect', () => {
         console.log('[PPSU] Socket connected:', socket.id);
+        // Force immediate emission with current/last known location on connection
+        emitHeartbeat();
       });
 
       socket.on('connect_error', (err: any) => {
@@ -266,83 +284,6 @@ export default function PpsuLayout({
       socket.on('disconnect', (reason: string) => {
         console.log('[PPSU] Socket disconnected:', reason);
       });
-
-      const handleConnected = async () => {
-        // Auto-dismiss GPS modal if permission already granted (avoids flash)
-        try {
-          if (navigator.permissions) {
-            const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-            if (perm.state === 'granted') {
-              setGpsModalVisible(false);
-              setIsRequestingGps(false);
-            }
-          }
-        } catch (_) { /* permissions API not supported — modal auto-dismisses on first fix */ }
-
-        // Prefer native background geolocation when available.
-        const usedNative = await startNativeBackgroundTracking();
-        if (usedNative) {
-          // Heartbeat still useful to keep marker fresh when device is static.
-          heartbeatInterval = setInterval(emitHeartbeat, 8000);
-          return;
-        }
-
-        if (!navigator.geolocation) {
-          setGpsStatusMessage('GPS tidak didukung di perangkat ini.');
-          setIsRequestingGps(false);
-          return;
-        }
-
-        const sendLocation = (pos: GeolocationPosition) => {
-          setGpsModalVisible(false);
-          setIsRequestingGps(false);
-          emitWithGps(pos);
-        };
-
-        const handleGpsError = (err: any) => {
-          console.warn('GPS Error:', err);
-          // If we still have a previous fix, keep showing the marker via heartbeat.
-          if (lastGpsRef.current) {
-            emitHeartbeat();
-            return;
-          }
-          let errMsg = 'Gagal mendapatkan lokasi. Pastikan GPS aktif.';
-          if (err.code === 1) errMsg = 'Akses lokasi ditolak. Izinkan di pengaturan browser.';
-          if (err.code === 2) errMsg = 'Sinyal GPS tidak ditemukan. Cari area terbuka.';
-          if (err.code === 3) errMsg = 'Pencarian lokasi timeout. Coba lagi.';
-          setGpsStatusMessage(errMsg);
-          setGpsModalVisible(true);
-          setIsRequestingGps(false);
-        };
-
-        watchId = navigator.geolocation.watchPosition(
-          sendLocation,
-          handleGpsError,
-          { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-        );
-
-        // Periodic active poll — many devices throttle watchPosition when the
-        // user is stationary, which causes the admin marker to look "stale".
-        // We force a getCurrentPosition every 10s and always emit.
-        pollInterval = setInterval(() => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => emitWithGps(pos),
-            () => emitHeartbeat(), // fallback: re-emit last known GPS
-            { enableHighAccuracy: true, maximumAge: 8000, timeout: 12000 },
-          );
-        }, 10000);
-
-        // Lightweight heartbeat every 8s using last known GPS, so the admin
-        // map always shows the marker as alive even if the OS hasn't returned
-        // a new fix yet.
-        heartbeatInterval = setInterval(emitHeartbeat, 8000);
-      };
-
-      if (socket.connected) {
-        handleConnected();
-      } else {
-        socket.on('connect', handleConnected);
-      }
 
       // Re-emit immediately whenever the socket reconnects.
       socket.on('reconnect', () => emitHeartbeat());
@@ -354,7 +295,90 @@ export default function PpsuLayout({
       });
     };
 
+    const startGpsTracking = async () => {
+      // Auto-dismiss GPS modal if permission already granted (avoids flash)
+      try {
+        if (navigator.permissions) {
+          const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          if (perm.state === 'granted') {
+            setGpsModalVisible(false);
+            setIsRequestingGps(false);
+          }
+        }
+      } catch (_) { /* permissions API not supported — modal auto-dismisses on first fix */ }
+
+      // Prefer native background geolocation when available.
+      const usedNative = await startNativeBackgroundTracking();
+      if (usedNative) {
+        // Heartbeat still useful to keep marker fresh when device is static.
+        heartbeatInterval = setInterval(emitHeartbeat, 8000);
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        setGpsStatusMessage('GPS tidak didukung di perangkat ini.');
+        setIsRequestingGps(false);
+        return;
+      }
+
+      const sendLocation = (pos: GeolocationPosition) => {
+        if (safeguardTimeout) clearTimeout(safeguardTimeout);
+        setGpsModalVisible(false);
+        setIsRequestingGps(false);
+        emitWithGps(pos);
+      };
+
+      const handleGpsError = (err: any) => {
+        console.warn('GPS Error:', err);
+        // If we still have a previous fix, keep showing the marker via heartbeat.
+        if (lastGpsRef.current) {
+          emitHeartbeat();
+          return;
+        }
+        if (safeguardTimeout) clearTimeout(safeguardTimeout);
+        let errMsg = 'Gagal mendapatkan lokasi. Pastikan GPS aktif.';
+        if (err.code === 1) errMsg = 'Akses lokasi ditolak. Izinkan di pengaturan browser.';
+        if (err.code === 2) errMsg = 'Sinyal GPS tidak ditemukan. Cari area terbuka.';
+        if (err.code === 3) errMsg = 'Pencarian lokasi timeout. Coba lagi.';
+        setGpsStatusMessage(errMsg);
+        setGpsModalVisible(true);
+        setIsRequestingGps(false);
+      };
+
+      // Safeguard: if GPS takes more than 6 seconds to return first position,
+      // enable the retry button so the user is not stuck in "MEMPROSES..."
+      safeguardTimeout = setTimeout(() => {
+        if (!lastGpsRef.current) {
+          setIsRequestingGps(false);
+          setGpsStatusMessage('Pencarian lokasi awal memakan waktu lama. Pastikan GPS menyala dan izinkan akses lokasi.');
+        }
+      }, 6000);
+
+      watchId = navigator.geolocation.watchPosition(
+        sendLocation,
+        handleGpsError,
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+      );
+
+      // Periodic active poll — many devices throttle watchPosition when the
+      // user is stationary, which causes the admin marker to look "stale".
+      // We force a getCurrentPosition every 10s and always emit.
+      pollInterval = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => emitWithGps(pos),
+          () => emitHeartbeat(), // fallback: re-emit last known GPS
+          { enableHighAccuracy: true, maximumAge: 8000, timeout: 12000 },
+        );
+      }, 10000);
+
+      // Lightweight heartbeat every 8s using last known GPS, so the admin
+      // map always shows the marker as alive even if the OS hasn't returned
+      // a new fix yet.
+      heartbeatInterval = setInterval(emitHeartbeat, 8000);
+    };
+
     setupTracking();
+    startGpsTracking();
     acquireWakeLock();
 
     // When the tab becomes visible again (user came back from another app /
@@ -378,6 +402,7 @@ export default function PpsuLayout({
       if (watchId !== undefined && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchId);
       }
+      if (safeguardTimeout) clearTimeout(safeguardTimeout);
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       if (pollInterval) clearInterval(pollInterval);
       if (nativeWatcherId && BackgroundGeolocation) {
@@ -400,6 +425,11 @@ export default function PpsuLayout({
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        lastGpsRef.current = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          timestamp: Date.now(),
+        };
         setGpsModalVisible(false);
         setIsRequestingGps(false);
         if (socketRef.current && user) {

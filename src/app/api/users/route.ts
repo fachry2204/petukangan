@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { username, password, fullName, email, phone, roleName, zone, gender, birthDate, joinDate, address, province, city, district, village, postalCode, status } = body;
+    const { username, password, fullName, email, phone, roleName, zoneId, gender, birthDate, joinDate, address, country, province, city, district, village, postalCode, photoUrl, documents, status } = body;
 
     if (!username || !password || !fullName) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
@@ -52,16 +52,60 @@ export async function POST(req: Request) {
       if (roles?.[0]) roleId = roles[0].id;
     }
 
+    // Auto-generate sequential ID for PPSU
+    let finalUsername = username;
+    if (roleName === 'PPSU') {
+      try {
+        const lastUsers: any = await queryDb(
+          `SELECT username FROM users WHERE username REGEXP '^PPSU[0-9]+$' ORDER BY CAST(SUBSTRING(username, 5) AS UNSIGNED) DESC LIMIT 1`
+        );
+        let nextId = 1;
+        if (lastUsers && lastUsers.length > 0) {
+          const match = lastUsers[0].username.match(/^PPSU(\d+)$/i);
+          if (match) {
+            nextId = parseInt(match[1], 10) + 1;
+          }
+        }
+        finalUsername = `PPSU${nextId.toString().padStart(3, '0')}`;
+      } catch (err) {
+        console.error('Failed to generate sequential ID:', err);
+        // Fallback if regex fails on older MySQL versions
+        finalUsername = `PPSU${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      }
+    }
+
     const hashed = await hashPassword(password);
+    const docsString = documents ? JSON.stringify(documents) : null;
 
     await queryDb(
-      `INSERT INTO users (username, password, fullName, email, phone, roleId, zone, gender, birthDate, joinDate, address, province, city, district, village, postalCode, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NOW(6), NOW(6))`,
-      [username, hashed, fullName, email || null, phone || null, roleId, zone || null, gender || null, birthDate || null, joinDate || null, address || null, province || null, city || null, district || null, village || null, postalCode || null]
+      `INSERT INTO users (username, password, fullName, email, phone, roleId, zoneId, gender, birthDate, joinDate, address, country, province, city, district, village, postalCode, photoUrl, documents, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), NOW(6))`,
+      [
+        finalUsername, 
+        hashed, 
+        fullName, 
+        email || null, 
+        phone || null, 
+        roleId, 
+        zoneId || null, 
+        gender || null, 
+        birthDate || null, 
+        joinDate || null, 
+        address || null, 
+        country || null,
+        province || null, 
+        city || null, 
+        district || null, 
+        village || null, 
+        postalCode || null,
+        photoUrl || null,
+        docsString,
+        status || 'ACTIVE'
+      ]
     );
 
-    emitUserChange('create', { username, fullName });
-    return NextResponse.json({ message: 'User berhasil dibuat' }, { status: 201 });
+    emitUserChange('create', { username: finalUsername, fullName });
+    return NextResponse.json({ message: 'User berhasil dibuat', username: finalUsername }, { status: 201 });
   } catch (err: any) {
     console.error('[POST /api/users] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -75,10 +75,20 @@ export function GlobalSOSAlert() {
   useEffect(() => {
     if (!token) return;
 
+    let abortController: AbortController | null = null;
+
     const checkSOSStatus = async () => {
+      // Batalkan request sebelumnya jika ada
+      if (abortController) {
+        abortController.abort();
+      }
+
+      abortController = new AbortController();
+
       try {
         const res = await fetch('/api/sos', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abortController.signal
         });
         if (res.ok) {
           const data = await res.json();
@@ -102,7 +112,10 @@ export function GlobalSOSAlert() {
           }
         }
       } catch (err: any) {
-        console.warn('[SOS] Polling error:', err?.message || String(err));
+        // Abaikan error yang disebabkan oleh abort
+        if (err.name !== 'AbortError') {
+          console.warn('[SOS] Polling error:', err?.message || String(err));
+        }
       }
     };
 
@@ -125,6 +138,9 @@ export function GlobalSOSAlert() {
 
     return () => {
       clearInterval(interval);
+      if (abortController) {
+        abortController.abort();
+      }
       socket.disconnect();
       stopAlarm();
     };

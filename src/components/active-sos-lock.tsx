@@ -26,9 +26,20 @@ export function ActiveSOSLock() {
   useEffect(() => {
     if (!user) return;
 
+    let abortController: AbortController | null = null;
+
     const checkSOSStatus = async () => {
+      // Batalkan request sebelumnya jika ada
+      if (abortController) {
+        abortController.abort();
+      }
+
+      abortController = new AbortController();
+
       try {
-        const res = await fetch('/api/sos');
+        const res = await fetch('/api/sos', {
+          signal: abortController.signal
+        });
         if (res.ok) {
           const data = await res.json();
           // Cari sinyal terakhir dari user ini yang BELUM SELESAI
@@ -46,14 +57,22 @@ export function ActiveSOSLock() {
             }
           }
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        // Abaikan error yang disebabkan oleh abort
+        if (err.name !== 'AbortError') {
+          console.error(err);
+        }
       }
     };
 
     checkSOSStatus();
     const interval = setInterval(checkSOSStatus, 3000); // Poll setiap 3 detik
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, [user]);
 
   if (!activeSOS && !isResolved) return null;

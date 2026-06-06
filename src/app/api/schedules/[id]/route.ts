@@ -18,9 +18,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const data = await req.json();
 
+    // Strip photoUrl before saving to keep the JSON payload small.
+    // Photos are re-joined from the users table on GET.
+    const slimUsers = (data.assignedUsers || []).map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      fullName: u.fullName,
+    }));
+
     await queryDb(
       `UPDATE schedules SET shiftName=?, timeRange=?, zone=?, date=?, assignedUsers=?, status=?, updatedAt=NOW(6) WHERE id=?`,
-      [data.shiftName, data.timeRange, data.zone || null, data.date, JSON.stringify(data.assignedUsers || []), data.status || 'ACTIVE', Number(id)]
+      [data.shiftName, data.timeRange, data.zone || null, data.date, JSON.stringify(slimUsers), data.status || 'ACTIVE', Number(id)]
     );
 
     emitScheduleChange('update', { id: Number(id), ...data });

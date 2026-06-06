@@ -105,15 +105,15 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         
         const user = res.data;
         
-        // Convert dates from YYYY-MM-DD to DD/MM/YYYY
-        const formatDate = (dateStr: string) => {
+        // Convert dates from YYYY-MM-DD to standard ISO to prepopulate input[type="date"]
+        const formatDateForInput = (dateStr: string) => {
           if (!dateStr) return '';
           const d = new Date(dateStr);
           if (isNaN(d.getTime())) return '';
           const dd = String(d.getDate()).padStart(2, '0');
           const mm = String(d.getMonth() + 1).padStart(2, '0');
           const yyyy = d.getFullYear();
-          return `${dd}/${mm}/${yyyy}`;
+          return `${yyyy}-${mm}-${dd}`;
         };
 
         // Format phone to 0... instead of 62... for editing convenience
@@ -126,10 +126,10 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
           username: user.username || '',
           fullName: user.fullName || '',
           gender: user.gender || 'Laki-laki',
-          birthDate: formatDate(user.birthDate),
+          birthDate: formatDateForInput(user.birthDate),
           phone: phoneFormatted,
           address: user.address || '',
-          joinDate: formatDate(user.joinDate),
+          joinDate: formatDateForInput(user.joinDate),
           photoUrl: user.photoUrl || '',
           country: user.country || 'Indonesia',
           province: user.province || '',
@@ -327,21 +327,14 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         formattedPhone = '62' + formattedPhone.substring(1);
       }
 
-      // Convert DD/MM/YYYY to YYYY-MM-DD for backend
-      const parseDate = (d: string) => {
-        if (!d) return null;
-        const parts = d.split('/');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        return d;
-      };
-
+      // Since we use type="date", the value is already YYYY-MM-DD
       await axios.put(`${apiUrl}/users/${id}`, {
         fullName: formData.fullName,
         gender: formData.gender,
-        birthDate: parseDate(formData.birthDate),
+        birthDate: formData.birthDate || null,
         phone: formattedPhone,
         address: formData.address,
-        joinDate: parseDate(formData.joinDate),
+        joinDate: formData.joinDate || null,
         photoUrl: formData.photoUrl,
         documents: formData.documents,
         country: formData.country,
@@ -415,13 +408,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="space-y-3">
                 <Label className="text-base">Tanggal Lahir *</Label>
-                <Input type="text" placeholder="DD/MM/YYYY" required value={formData.birthDate} onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  let formatted = val;
-                  if (val.length > 2) formatted = val.slice(0, 2) + '/' + val.slice(2);
-                  if (val.length > 4) formatted = formatted.slice(0, 5) + '/' + val.slice(4, 8);
-                  setFormData({...formData, birthDate: formatted});
-                }} className="rounded-xl h-14 text-base px-4" maxLength={10} />
+                <Input type="date" required value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="rounded-xl h-14 text-base px-4" />
               </div>
               <div className="space-y-3">
                 <Label className="text-base">No Handphone *</Label>
@@ -429,13 +416,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="space-y-3">
                 <Label className="text-base">Tanggal Bergabung *</Label>
-                <Input type="text" placeholder="DD/MM/YYYY" required value={formData.joinDate} onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  let formatted = val;
-                  if (val.length > 2) formatted = val.slice(0, 2) + '/' + val.slice(2);
-                  if (val.length > 4) formatted = formatted.slice(0, 5) + '/' + val.slice(4, 8);
-                  setFormData({...formData, joinDate: formatted});
-                }} className="rounded-xl h-14 text-base px-4" maxLength={10} />
+                <Input type="date" required value={formData.joinDate} onChange={e => setFormData({...formData, joinDate: e.target.value})} className="rounded-xl h-14 text-base px-4" />
               </div>
 
               {/* DYNAMIC REGION SELECTION BASED ON EM-SIFA REGION API */}

@@ -33,9 +33,16 @@ export default function PpsuSchedulePage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       // Filter schedules to only show this officer's schedules
-      const mySchedules = res.data.filter((s: any) => 
-        s.assignedUsers?.some((au: any) => au.id === user.id)
-      );
+      const mySchedules = (res.data || [])
+        .map((s: any) => {
+          let assignedUsers = s.assignedUsers;
+          if (typeof assignedUsers === 'string') {
+            try { assignedUsers = JSON.parse(assignedUsers); } catch { assignedUsers = []; }
+          }
+          if (!Array.isArray(assignedUsers)) assignedUsers = [];
+          return { ...s, assignedUsers };
+        })
+        .filter((s: any) => s.assignedUsers.some((au: any) => au.id === user.id));
       
       // Sort schedules chronologically ascending (Monday -> Sunday)
       mySchedules.sort((a: any, b: any) => {

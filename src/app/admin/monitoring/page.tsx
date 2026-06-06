@@ -30,11 +30,14 @@ function AdminMonitoringContent() {
   const focusUserId = searchParams.get('focus');
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     // 1. Fetch active officers from REST API as initial data / fallback
     const fetchActiveOfficers = async () => {
       try {
         const res = await fetch(`${apiUrl}/tracking/active-officers?minutes=60`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abortController.signal
         });
         if (res.ok) {
           const data = await res.json();
@@ -58,8 +61,10 @@ function AdminMonitoringContent() {
             });
           }
         }
-      } catch (err) {
-        console.log('[Admin] Failed to fetch active officers via REST:', err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.log('[Admin] Failed to fetch active officers via REST:', err);
+        }
       }
     };
     fetchActiveOfficers();
@@ -67,7 +72,9 @@ function AdminMonitoringContent() {
     // 2. Fetch active SOS from API to show SOS markers on map load
     const fetchActiveSOS = async () => {
       try {
-        const res = await fetch('/api/sos');
+        const res = await fetch('/api/sos', {
+          signal: abortController.signal
+        });
         if (res.ok) {
           const data = await res.json();
           const activeSOS = data.filter((s: any) => s.status !== 'SELESAI');
@@ -87,7 +94,11 @@ function AdminMonitoringContent() {
             });
           }
         }
-      } catch (err) {}
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.log('[Admin] Failed to fetch SOS:', err);
+        }
+      }
     };
     fetchActiveSOS();
 
@@ -95,14 +106,17 @@ function AdminMonitoringContent() {
     const fetchOfflineOfficers = async () => {
       try {
         const res = await fetch(`${apiUrl}/schedules/today/officers`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abortController.signal
         });
         if (res.ok) {
           const data = await res.json();
           setOfflineOfficers(data || []);
         }
-      } catch (err) {
-        console.log('Failed to fetch offline officers:', err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.log('Failed to fetch offline officers:', err);
+        }
       }
     };
     fetchOfflineOfficers();
@@ -201,6 +215,7 @@ function AdminMonitoringContent() {
     });
 
     return () => {
+      abortController.abort();
       socket.disconnect();
     };
   }, [token]);

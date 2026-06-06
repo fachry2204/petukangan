@@ -12,7 +12,9 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl } from "@/lib/api-config";
+import { DatePicker } from "@/components/date-picker";
+import { format } from "date-fns";
 
 export default function AddPetugasPage() {
   const router = useRouter();
@@ -22,11 +24,12 @@ export default function AddPetugasPage() {
 
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
     gender: 'Laki-laki',
-    birthDate: '',
+    birthDate: null as Date | null,
     phone: '',
     address: '',
-    joinDate: '',
+    joinDate: null as Date | null,
     status: 'ACTIVE',
     photoUrl: '',
     country: 'Indonesia',
@@ -159,12 +162,20 @@ export default function AddPetugasPage() {
     }
   };
 
-  const handlePhotoUpload = (e: any) => {
+  const handlePhotoUpload = async (e: any) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData({ ...formData, photoUrl: reader.result as string });
-      reader.readAsDataURL(file);
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      try {
+        const res = await axios.post('/api/upload', uploadData);
+        if (res.data.success) {
+          setFormData({ ...formData, photoUrl: res.data.url });
+        }
+      } catch (err) {
+        console.error('Failed to upload photo', err);
+        toast({ title: 'Gagal', description: 'Gagal mengunggah foto profil', variant: 'destructive' });
+      }
     }
   };
 
@@ -201,21 +212,54 @@ export default function AddPetugasPage() {
     setFormData({ ...formData, documents: newDocs });
   };
 
-  const updateDocumentFile = (index: number, file: File) => {
+  const updateDocumentFile = async (index: number, file: File) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData(prev => {
-        const newDocs = [...prev.documents];
-        newDocs[index].base64 = reader.result as string;
-        newDocs[index].fileName = file.name;
-        newDocs[index].progress = 0;
-        newDocs[index].isUploaded = false;
-        return { ...prev, documents: newDocs };
+
+    // Reset progress
+    setFormData(prev => {
+      const newDocs = [...prev.documents];
+      newDocs[index].fileName = file.name;
+      newDocs[index].progress = 0;
+      newDocs[index].isUploaded = false;
+      return { ...prev, documents: newDocs };
+    });
+
+    // Create FormData for upload
+    const uploadData = new FormData();
+    uploadData.append('file', file);
+
+    try {
+      // Simulate real progress with axios
+      const response = await axios.post('/api/upload', uploadData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setFormData(prev => {
+              const newDocs = [...prev.documents];
+              if (newDocs[index]) {
+                newDocs[index].progress = percentCompleted;
+              }
+              return { ...prev, documents: newDocs };
+            });
+          }
+        }
       });
-      simulateUpload(index);
-    };
-    reader.readAsDataURL(file);
+
+      if (response.data.success) {
+        setFormData(prev => {
+          const newDocs = [...prev.documents];
+          if (newDocs[index]) {
+            newDocs[index].base64 = response.data.url; // Save the URL instead of base64
+            newDocs[index].isUploaded = true;
+            newDocs[index].progress = 100;
+          }
+          return { ...prev, documents: newDocs };
+        });
+      }
+    } catch (error) {
+      console.error('Failed to upload document', error);
+      toast({ title: 'Gagal', description: 'Gagal mengunggah dokumen pendukung', variant: 'destructive' });
+    }
   };
 
   const updateDocumentDescription = (index: number, desc: string) => {
@@ -233,18 +277,20 @@ export default function AddPetugasPage() {
         formattedPhone = '62' + formattedPhone.substring(1);
       }
 
-      // Convert DD/MM/YYYY to YYYY-MM-DD for backend
-      const parseDate = (d: string) => {
-        if (!d) return null;
-        const parts = d.split('/');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        return d;
-      };
+      // Format dates to YYYY-MM-DD for API
+      const formattedBirthDate = formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : null;
+      const formattedJoinDate = formData.joinDate ? format(formData.joinDate, 'yyyy-MM-dd') : null;
+
+      // Generate username and set default password
+      const generatedUsername = `ppsu-${formData.fullName.toLowerCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 10000)}`;
+      const defaultPassword = '1234';
 
       await axios.post(`${apiUrl}/users`, {
         ...formData,
-        birthDate: parseDate(formData.birthDate),
-        joinDate: parseDate(formData.joinDate),
+        username: generatedUsername,
+        password: defaultPassword,
+        birthDate: formattedBirthDate,
+        joinDate: formattedJoinDate,
         phone: formattedPhone,
         roleName: 'PPSU',
       }, {
@@ -293,6 +339,10 @@ export default function AddPetugasPage() {
                 <Input required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} placeholder="Nama Lengkap" className="rounded-xl h-14 text-base" />
               </div>
               <div className="space-y-3">
+                <Label className="text-base">Email *</Label>
+                <Input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" className="rounded-xl h-14 text-base" />
+              </div>
+              <div className="space-y-3">
                 <Label className="text-base">Jenis Kelamin</Label>
                 <select 
                   className="flex h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -305,13 +355,11 @@ export default function AddPetugasPage() {
               </div>
               <div className="space-y-3">
                 <Label className="text-base">Tanggal Lahir *</Label>
-                <Input type="text" placeholder="DD/MM/YYYY" required value={formData.birthDate} onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  let formatted = val;
-                  if (val.length > 2) formatted = val.slice(0, 2) + '/' + val.slice(2);
-                  if (val.length > 4) formatted = formatted.slice(0, 5) + '/' + val.slice(4, 8);
-                  setFormData({...formData, birthDate: formatted});
-                }} className="rounded-xl h-14 text-base px-4" maxLength={10} />
+                <DatePicker
+                  date={formData.birthDate}
+                  onSelect={(date) => setFormData({...formData, birthDate: date})}
+                  placeholder="Pilih tanggal lahir"
+                />
               </div>
               <div className="space-y-3">
                 <Label className="text-base">No Handphone *</Label>
@@ -319,13 +367,11 @@ export default function AddPetugasPage() {
               </div>
               <div className="space-y-3">
                 <Label className="text-base">Tanggal Bergabung *</Label>
-                <Input type="text" placeholder="DD/MM/YYYY" required value={formData.joinDate} onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  let formatted = val;
-                  if (val.length > 2) formatted = val.slice(0, 2) + '/' + val.slice(2);
-                  if (val.length > 4) formatted = formatted.slice(0, 5) + '/' + val.slice(4, 8);
-                  setFormData({...formData, joinDate: formatted});
-                }} className="rounded-xl h-14 text-base px-4" maxLength={10} />
+                <DatePicker
+                  date={formData.joinDate}
+                  onSelect={(date) => setFormData({...formData, joinDate: date})}
+                  placeholder="Pilih tanggal bergabung"
+                />
               </div>
 
               {/* DYNAMIC REGION SELECTION BASED ON EM-SIFA REGION API */}
