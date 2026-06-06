@@ -335,7 +335,7 @@ export default function AdminSettingsPage() {
                   </div>
                   
                   {/* Input to Add Shift */}
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start gap-2">
                     <Input 
                       type="text" 
                       placeholder="Nama (contoh: Shift 1)" 
@@ -367,21 +367,21 @@ export default function AdminSettingsPage() {
                         }
                       }}
                     />
-                    <div className="flex gap-2">
-                      <div className="flex items-center gap-1 bg-white border border-zinc-200 dark:border-zinc-800 rounded-xl px-2">
-                        <span className="text-[10px] font-bold text-zinc-400">Mulai</span>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1 bg-white border border-zinc-200 dark:border-zinc-800 rounded-xl px-2 shrink-0">
+                        <span className="text-[10px] font-bold text-zinc-400 shrink-0">Mulai</span>
                         <Input
                           type="time"
                           id="new-shift-time-input"
                           defaultValue="08:00"
-                          className="border-none w-[120px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[130px] shrink-0 p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
-                        <span className="text-[10px] font-bold text-zinc-400 border-l pl-1">Selesai</span>
+                        <span className="text-[10px] font-bold text-zinc-400 border-l pl-1 shrink-0">Selesai</span>
                         <Input
                           type="time"
                           id="new-shift-endtime-input"
                           defaultValue="16:00"
-                          className="border-none w-[120px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[130px] shrink-0 p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
                       </div>
                       <Button
