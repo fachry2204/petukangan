@@ -11,7 +11,6 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { Input } from '@/components/ui/input';
-import { TimeInput24 } from '@/components/ui/time-input-24';
 import { apiUrl } from '@/lib/api-config';
 
 export default function AdminSettingsPage() {
@@ -369,20 +368,20 @@ export default function AdminSettingsPage() {
                       }}
                     />
                     <div className="flex gap-2">
-                      <div className="flex items-center gap-1 bg-white dark:bg-transparent border border-zinc-200 dark:border-zinc-800 rounded-xl px-2 h-9">
+                      <div className="flex items-center gap-1 bg-white border border-zinc-200 dark:border-zinc-800 rounded-xl px-2">
                         <span className="text-[10px] font-bold text-zinc-400">Mulai</span>
-                        <TimeInput24
+                        <Input
+                          type="time"
                           id="new-shift-time-input"
                           defaultValue="08:00"
-                          ariaLabel="Waktu mulai shift"
-                          className="border-none w-14 text-center p-0 h-9 bg-transparent outline-none focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[120px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
                         <span className="text-[10px] font-bold text-zinc-400 border-l pl-1">Selesai</span>
-                        <TimeInput24
+                        <Input
+                          type="time"
                           id="new-shift-endtime-input"
                           defaultValue="16:00"
-                          ariaLabel="Waktu selesai shift"
-                          className="border-none w-14 text-center p-0 h-9 bg-transparent outline-none focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[120px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
                       </div>
                       <Button
