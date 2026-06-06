@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken, hashPassword } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { emitUserChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
       [username, hashed, fullName, email || null, phone || null, roleId, zone || null, gender || null, birthDate || null, joinDate || null, address || null, province || null, city || null, district || null, village || null, postalCode || null]
     );
 
+    emitUserChange('create', { username, fullName });
     return NextResponse.json({ message: 'User berhasil dibuat' }, { status: 201 });
   } catch (err: any) {
     console.error('[POST /api/users] error:', err);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { emitAttendanceChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -50,6 +51,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Data absensi tidak ditemukan' }, { status: 404 });
     }
 
+    emitAttendanceChange('update', { id: Number(id), status, isRequestTable });
     return NextResponse.json({ message: 'Status absensi diupdate' });
   } catch (err: any) {
     console.error('[PUT /api/attendance/record/:id/status] error:', err);

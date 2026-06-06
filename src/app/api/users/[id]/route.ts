@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken, hashPassword } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { emitUserChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -76,6 +77,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     values.push(id);
     await queryDb(`UPDATE users SET ${updates.join(', ')}, updatedAt = NOW(6) WHERE id = ?`, values);
 
+    emitUserChange('update', { id: Number(id) });
     return NextResponse.json({ message: 'User berhasil diupdate' });
   } catch (err: any) {
     console.error('[PUT /api/users/:id] error:', err);
@@ -90,6 +92,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const { id } = await params;
     await queryDb('DELETE FROM users WHERE id = ?', [id]);
+    emitUserChange('delete', { id: Number(id) });
     return NextResponse.json({ message: 'User berhasil dihapus' });
   } catch (err: any) {
     console.error('[DELETE /api/users/:id] error:', err);

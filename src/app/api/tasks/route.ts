@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb, getDbConnection } from '@/lib/db';
+import { emitTaskChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -70,7 +71,9 @@ export async function POST(req: Request) {
             address || null,
           ]
         );
-        createdTasks.push({ id: result.insertId, title, status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED' });
+        const task = { id: result.insertId, title, status: isAssigned ? 'TASK_NEW' : 'NOT_STARTED' };
+        createdTasks.push(task);
+        emitTaskChange('create', task);
       }
     } finally {
       await conn.end();

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb, getDbConnection } from '@/lib/db';
+import { emitTaskChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -72,6 +73,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       );
     }
 
+    emitTaskChange('update', { id: Number(id), ...body });
     return NextResponse.json({ message: 'Tugas berhasil diupdate' });
   } catch (err: any) {
     console.error('[PUT /api/tasks/:id] error:', err);
@@ -87,6 +89,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const { id } = await params;
     await queryDb('DELETE FROM task_logs WHERE taskId = ?', [id]);
     await queryDb('DELETE FROM tasks WHERE id = ?', [id]);
+    emitTaskChange('delete', { id: Number(id) });
     return NextResponse.json({ id: Number(id), deleted: true });
   } catch (err: any) {
     console.error('[DELETE /api/tasks/:id] error:', err);

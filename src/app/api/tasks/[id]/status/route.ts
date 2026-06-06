@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb, getDbConnection } from '@/lib/db';
+import { emitTaskChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -67,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         [status, id]
       );
 
+      emitTaskChange('update', { id: Number(id), status });
       return NextResponse.json({ message: 'Status tugas berhasil diupdate', status });
     } finally {
       await conn.end();

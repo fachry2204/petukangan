@@ -14,12 +14,11 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = 'd:\\xampp\\htdocs\\petukangan\\public\\uploads';
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Generate unique file name
     const ext = path.extname(file.name) || '.png';
     const uniqueName = `upload-${Date.now()}${ext}`;
     const filePath = path.join(uploadsDir, uniqueName);
