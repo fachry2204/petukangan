@@ -253,39 +253,32 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handlePhotoUpload = (e: any) => {
+  const handlePhotoUpload = async (e: any) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData({ ...formData, photoUrl: reader.result as string });
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const simulateUpload = (index: number) => {
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 10;
-      setFormData(prev => {
-        const newDocs = [...prev.documents];
-        if (newDocs[index]) {
-          newDocs[index].progress = Math.min(currentProgress, 100);
-          if (currentProgress >= 100) {
-            newDocs[index].isUploaded = true;
-            clearInterval(interval);
-          }
-        } else {
-          clearInterval(interval);
+      try {
+        const formDataPayload = new FormData();
+        formDataPayload.append('file', file);
+        formDataPayload.append('type', 'petugas');
+        
+        const res = await axios.post(`${apiUrl}/upload`, formDataPayload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.data.success) {
+          setFormData(prev => ({ ...prev, photoUrl: res.data.url }));
         }
-        return { ...prev, documents: newDocs };
-      });
-    }, 150);
+      } catch (err) {
+        console.error('Error uploading photo', err);
+        toast({ title: 'Gagal Upload Foto', description: 'Gagal mengunggah foto petugas', variant: 'destructive' });
+      }
+    }
   };
 
   const addDocumentField = () => {
     setFormData({
       ...formData,
-      documents: [...formData.documents, { base64: '', description: '', fileName: '', progress: 0, isUploaded: false }]
+      documents: [...formData.documents, { base64: '', description: '', fileName: '', progress: 0, isUploaded: false, url: '' }]
     });
   };
 
@@ -295,21 +288,55 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
     setFormData({ ...formData, documents: newDocs });
   };
 
-  const updateDocumentFile = (index: number, file: File) => {
+  const updateDocumentFile = async (index: number, file: File) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    try {
       setFormData(prev => {
         const newDocs = [...prev.documents];
-        newDocs[index].base64 = reader.result as string;
         newDocs[index].fileName = file.name;
+        newDocs[index].progress = 10;
+        newDocs[index].isUploaded = false;
+        return { ...prev, documents: newDocs };
+      });
+
+      const formDataPayload = new FormData();
+      formDataPayload.append('file', file);
+      formDataPayload.append('type', 'petugas');
+      
+      const res = await axios.post(`${apiUrl}/upload`, formDataPayload, {
+        headers: { Authorization: `Bearer ${token}` },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setFormData(prev => {
+              const newDocs = [...prev.documents];
+              newDocs[index].progress = percentCompleted;
+              return { ...prev, documents: newDocs };
+            });
+          }
+        }
+      });
+      
+      if (res.data.success) {
+        setFormData(prev => {
+          const newDocs = [...prev.documents];
+          newDocs[index].url = res.data.url;
+          newDocs[index].base64 = '';
+          newDocs[index].progress = 100;
+          newDocs[index].isUploaded = true;
+          return { ...prev, documents: newDocs };
+        });
+      }
+    } catch (err) {
+      console.error('Error uploading document', err);
+      toast({ title: 'Gagal Upload', description: `Gagal mengunggah dokumen ${file.name}`, variant: 'destructive' });
+      setFormData(prev => {
+        const newDocs = [...prev.documents];
         newDocs[index].progress = 0;
         newDocs[index].isUploaded = false;
         return { ...prev, documents: newDocs };
       });
-      simulateUpload(index);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const updateDocumentDescription = (index: number, desc: string) => {

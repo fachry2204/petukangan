@@ -336,15 +336,29 @@ export default function PpsuCreateTaskPage() {
     await startCamera({ deviceId: devices[nextIndex].deviceId });
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
       if (context) {
         canvasRef.current.width = videoRef.current.videoWidth;
         canvasRef.current.height = videoRef.current.videoHeight;
         context.drawImage(videoRef.current, 0, 0);
-        const dataUrl = canvasRef.current.toDataURL('image/jpeg');
-        setPhoto(dataUrl);
+
+        // Upload to our API instead of using base64
+        const blob = await new Promise<Blob>((resolve) => {
+          canvasRef.current.toBlob(resolve, 'image/jpeg', 0.9);
+        });
+        const formData = new FormData();
+        formData.append('file', blob, `task-${Date.now()}.jpg`);
+        formData.append('type', 'tugas');
+
+        const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (uploadRes.data.success) {
+          setPhoto(uploadRes.data.url);
+        }
         stopCamera();
       }
     }

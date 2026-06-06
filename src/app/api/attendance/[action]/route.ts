@@ -37,11 +37,10 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
     const conn = await getDbConnection();
     try {
       // Check if there is an approved request today (in Asia/Jakarta timezone!)
-    const todayJakarta = new Date();
-    // Adjust to WIB (UTC+7)
-    todayJakarta.setMinutes(todayJakarta.getMinutes() + todayJakarta.getTimezoneOffset() + 420);
-    todayJakarta.setHours(0, 0, 0, 0);
-    const todayStr = todayJakarta.toISOString().split('T')[0];
+      const now = new Date();
+      const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // add 7 hours
+      wibTime.setUTCHours(0, 0, 0, 0);
+      const todayStr = wibTime.toISOString().split('T')[0];
 
       const [requests]: any = await conn.execute(
         `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) = ? AND status = 'APPROVED' ORDER BY id DESC LIMIT 1`,

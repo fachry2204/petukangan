@@ -387,7 +387,7 @@ export default function PpsuAttendancePage() {
   };
 
   // Capture Photo action
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current && location) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -425,12 +425,40 @@ export default function PpsuAttendancePage() {
         // Draw Watermark
         drawWatermark(canvas, timestamp, coordsStr, address);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        setPhoto(dataUrl);
-
         // Stop camera stream & close view overlay
         stopCameraStream();
         setIsCameraOpen(false);
+        
+        setIsLoading(true);
+        try {
+          // Convert canvas to Blob and upload to our API
+          const blob = await new Promise<Blob>((resolve) => {
+            canvas.toBlob(resolve, 'image/jpeg', 0.9);
+          });
+          const formData = new FormData();
+          formData.append('file', blob, `attendance-${Date.now()}.jpg`);
+          formData.append('type', 'absensi'); // Set type to absensi
+          
+          const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (uploadRes.data.success) {
+            setPhoto(uploadRes.data.url);
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (err) {
+          console.error('Error uploading photo:', err);
+          toast({
+            variant: 'destructive',
+            title: 'Upload Foto Gagal',
+            description: 'Gagal mengupload foto, silakan coba lagi'
+          });
+          startAttendanceFlow(); // Retake photo
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };

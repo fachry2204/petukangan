@@ -167,8 +167,11 @@ export default function AddPetugasPage() {
     if (file) {
       const uploadData = new FormData();
       uploadData.append('file', file);
+      uploadData.append('type', 'petugas');
       try {
-        const res = await axios.post('/api/upload', uploadData);
+        const res = await axios.post('/api/upload', uploadData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (res.data.success) {
           setFormData({ ...formData, photoUrl: res.data.url });
         }
@@ -227,10 +230,12 @@ export default function AddPetugasPage() {
     // Create FormData for upload
     const uploadData = new FormData();
     uploadData.append('file', file);
+    uploadData.append('type', 'petugas');
 
     try {
       // Simulate real progress with axios
       const response = await axios.post('/api/upload', uploadData, {
+        headers: { Authorization: `Bearer ${token}` },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);

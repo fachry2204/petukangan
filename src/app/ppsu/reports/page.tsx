@@ -257,7 +257,7 @@ export default function PpsuReportPage() {
     if (line && lineCount < 2) ctx.fillText(line, textX, y);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const v = videoRef.current;
     const c = canvasRef.current;
@@ -280,8 +280,36 @@ export default function PpsuReportPage() {
 
     drawWatermark(ctx, c.width, c.height);
 
-    setPhotos((prev) => [...prev, c.toDataURL('image/jpeg', 0.9)]);
-    closeCamera();
+    setIsLoading(true);
+    try {
+      // Convert canvas to blob and upload
+      const blob = await new Promise<Blob>((resolve) => {
+        c.toBlob(resolve, 'image/jpeg', 0.9);
+      });
+      const formData = new FormData();
+      formData.append('file', blob, `report-${Date.now()}.jpg`);
+      formData.append('type', 'laporan'); // Set type to laporan
+      
+      const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (uploadRes.data.success) {
+        setPhotos((prev) => [...prev, uploadRes.data.url]);
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Foto Gagal',
+        description: 'Gagal mengupload foto, silakan coba lagi'
+      });
+    } finally {
+      setIsLoading(false);
+      closeCamera();
+    }
   };
 
   const removePhoto = (idx: number) => {

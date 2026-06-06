@@ -16,10 +16,10 @@ export async function GET(req: Request) {
 
     const userId = decoded.sub;
     // Adjust to WIB (UTC+7) for correct "today" in Jakarta timezone
-    const todayJakarta = new Date();
-    todayJakarta.setMinutes(todayJakarta.getMinutes() + todayJakarta.getTimezoneOffset() + 420);
-    todayJakarta.setHours(0, 0, 0, 0);
-    const todayStr = todayJakarta.toISOString().split('T')[0];
+    const now = new Date();
+    const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // tambahkan 7 jam ke UTC time
+    wibTime.setUTCHours(0, 0, 0, 0);
+    const todayStr = wibTime.toISOString().split('T')[0];
 
     // Check approved request
     const requests: any = await queryDb(

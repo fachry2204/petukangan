@@ -111,28 +111,34 @@ export default function PpsuProfilePage() {
     if (!file) return;
 
     setIsPhotoLoading(true);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result as string;
+    
+    try {
+      const formDataPayload = new FormData();
+      formDataPayload.append('file', file);
+      formDataPayload.append('type', 'petugas');
+      
+      const uploadRes = await axios.post(`${apiUrl}/upload`, formDataPayload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (uploadRes.data.success) {
         await axios.put(
           `${apiUrl}/users/${user.id}`,
-          { photoUrl: base64Data },
+          { photoUrl: uploadRes.data.url },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         toast({ title: 'Foto Profil Diperbarui', description: 'Foto profil Anda berhasil diunggah.' });
         await refreshUserSession();
-      } catch (err: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Gagal Mengunggah Foto',
-          description: err.response?.data?.message || 'Terjadi kesalahan saat mengunggah foto.'
-        });
-      } finally {
-        setIsPhotoLoading(false);
       }
-    };
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Mengunggah Foto',
+        description: err.response?.data?.message || 'Terjadi kesalahan saat mengunggah foto.'
+      });
+    } finally {
+      setIsPhotoLoading(false);
+    }
   };
 
   const handleUpdatePhone = async (e: React.FormEvent) => {

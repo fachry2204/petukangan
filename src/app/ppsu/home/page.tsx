@@ -269,14 +269,26 @@ export default function PpsuHomePage() {
     setIsIzinModalOpen(true);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSuratDokter(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        setIsSubmittingIzin(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'izin'); // Set type to izin
+        const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (uploadRes.data.success) {
+          setSuratDokter(uploadRes.data.url);
+        }
+      } catch (err) {
+        console.error('Error uploading file:', err);
+        alert('Gagal mengupload file');
+      } finally {
+        setIsSubmittingIzin(false);
+      }
     }
   };
 
