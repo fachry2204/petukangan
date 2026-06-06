@@ -42,7 +42,9 @@ const ppsuMenuItems = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const { isCollapsed, setCollapsed } = useSidebarStore();
-  const settings = useSettingsStore();
+  const logoUrl = useSettingsStore(state => state.logoUrl);
+  const systemName = useSettingsStore(state => state.systemName);
+  const systemDescription = useSettingsStore(state => state.systemDescription);
 
   return (
     <aside 
@@ -61,7 +63,7 @@ export function AdminSidebar() {
         <div className="flex items-center gap-3">
           <div className="shrink-0 bg-zinc-50 border border-zinc-100 rounded-xl p-1 shadow-sm">
             <img 
-              src={settings.logoUrl || "/logodki.png"} 
+              src={logoUrl || '/logodki.png'} 
               alt="Logo" 
               className="object-contain w-7 h-7" 
             />
@@ -70,8 +72,8 @@ export function AdminSidebar() {
             "flex flex-col transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
             isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[200px]"
           )}>
-            <span className="text-xl font-black tracking-tight leading-tight text-zinc-900">{settings.systemName || "SIPETUT"}</span>
-            <span className="text-[10px] text-zinc-400 font-medium mt-0.5 uppercase tracking-wider">{settings.systemDescription.slice(0,25)}</span>
+            <span className="text-xl font-black tracking-tight leading-tight text-zinc-90">{systemName || "SIPETUT"}</span>
+            <span className="text-[10px] text-zinc-400 font-medium mt-0.5 uppercase tracking-widest">{(systemDescription || "Monitoring & Management System").slice(0,25)}</span>
           </div>
         </div>
       </div>

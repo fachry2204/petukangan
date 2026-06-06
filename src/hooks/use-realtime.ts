@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
 import { socketUrl } from '@/lib/socket-config';
@@ -25,8 +25,14 @@ export function useRealtime(
     onDataChangeRef.current = onDataChange;
   }, [onDataChange]);
 
+  // Memoize entities so we don't create new array every time
+  const memoizedEntities = useMemo(() => entities, [entities?.join(',')]);
+
   useEffect(() => {
     if (!token || typeof window === 'undefined') return;
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
 
     const socket = io(socketUrl, {
       auth: { token },
@@ -77,8 +83,8 @@ export function useRealtime(
       console.log('[Realtime] Data change received:', event);
       
       // Filter by entities if specified
-      if (entities && entities.length > 0) {
-        if (!entities.includes(event.entity)) {
+      if (memoizedEntities && memoizedEntities.length > 0) {
+        if (!memoizedEntities.includes(event.entity)) {
           return;
         }
       }
@@ -90,7 +96,7 @@ export function useRealtime(
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [token, entities?.join(',')]);
+  }, [token, memoizedEntities]);
 
   const emit = useCallback((event: string, data?: any) => {
     socketRef.current?.emit(event, data);
@@ -104,12 +110,18 @@ export function useRealtimeEntity(
   entity: string,
   onChange?: (action: 'create' | 'update' | 'delete', data: any) => void
 ) {
+  // Memoize entities array to prevent re-renders
+  const entities = useMemo(() => [entity], [entity]);
+  const memoizedOnChange = useCallback((action: 'create' | 'update' | 'delete', data: any) => {
+    onChange?.(action, data);
+  }, [onChange]);
+
   return useRealtime(
-    (event) => {
+    useCallback((event) => {
       if (event.entity === entity) {
-        onChange?.(event.action, event.data);
+        memoizedOnChange(event.action, event.data);
       }
-    },
-    [entity]
+    }, [entity, memoizedOnChange]),
+    entities
   );
 }

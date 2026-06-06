@@ -8,7 +8,10 @@ import axios from 'axios';
 import { apiUrl } from '@/lib/api-config';
 
 // Dynamic Axios request interceptor to automatically adapt to localhost or local Wi-Fi IP address
-if (typeof window !== 'undefined') {
+// Only add interceptor once!
+let interceptorAdded = false;
+if (typeof window !== 'undefined' && !interceptorAdded) {
+  interceptorAdded = true;
   axios.interceptors.request.use((config) => {
     if (config.url) {
       const currentHost = window.location.hostname;
@@ -23,7 +26,14 @@ if (typeof window !== 'undefined') {
 }
 
 export default function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const settings = useSettingsStore();
+  const setSettings = useSettingsStore(state => state.setSettings);
+  const logoUrl = useSettingsStore(state => state.logoUrl);
+  const systemName = useSettingsStore(state => state.systemName);
+  const mainColor = useSettingsStore(state => state.mainColor);
+  const maintenanceActive = useSettingsStore(state => state.maintenanceActive);
+  const maintenanceTitle = useSettingsStore(state => state.maintenanceTitle);
+  const maintenanceDesc = useSettingsStore(state => state.maintenanceDesc);
+  const maintenanceEnd = useSettingsStore(state => state.maintenanceEnd);
   const { user, logout } = useAuthStore();
   const pathname = usePathname();
 
@@ -32,18 +42,18 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     const fetchSettings = async () => {
       try {
         const res = await axios.get(`${apiUrl}/settings`);
-        settings.setSettings(res.data);
+        setSettings(res.data);
       } catch (err) {
         console.error('Failed to load database settings:', err);
       }
     };
     fetchSettings();
-  }, []);
+  }, [setSettings]);
 
   // Handle Favicon Dynamic Injection — safely update ONLY our custom favicon link
   // Never remove React-managed head nodes (causes null.removeChild crash in React 19)
   useEffect(() => {
-    if (!settings.logoUrl) return;
+    if (!logoUrl) return;
 
     // Find or create our OWN custom favicon link, identified by a unique ID.
     // We NEVER touch any other link elements in the head.
@@ -56,27 +66,27 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
       document.head.appendChild(customFavicon);
     }
 
-    customFavicon.href = settings.logoUrl;
-    if (settings.logoUrl.endsWith('.png')) {
+    customFavicon.href = logoUrl;
+    if (logoUrl.endsWith('.png')) {
       customFavicon.type = 'image/png';
-    } else if (settings.logoUrl.endsWith('.jpg') || settings.logoUrl.endsWith('.jpeg')) {
+    } else if (logoUrl.endsWith('.jpg') || logoUrl.endsWith('.jpeg')) {
       customFavicon.type = 'image/jpeg';
-    } else if (settings.logoUrl.endsWith('.svg')) {
+    } else if (logoUrl.endsWith('.svg')) {
       customFavicon.type = 'image/svg+xml';
     } else {
       customFavicon.type = 'image/x-icon';
     }
 
     // Update document title (safe — React 19 doesn't manage this imperatively)
-    if (settings.systemName) {
-      document.title = settings.systemName;
+    if (systemName) {
+      document.title = systemName;
     }
-  }, [settings.logoUrl, settings.systemName]);
+  }, [logoUrl, systemName]);
 
   // Role bisa berupa object { name: 'ADMIN' } atau string 'ADMIN'
   const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
   const isAdmin = userRole === 'ADMIN';
-  const isMaintenanceMode = settings.maintenanceActive && !isAdmin;
+  const isMaintenanceMode = maintenanceActive && !isAdmin;
 
   if (isMaintenanceMode && !pathname.startsWith('/login')) {
     return (
@@ -92,19 +102,19 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-0" />
 
         <style dangerouslySetInnerHTML={{__html: `
-          .theme-bg { background-color: ${settings.mainColor} !important; }
-          .theme-text { color: ${settings.mainColor} !important; }
+          .theme-bg { background-color: ${mainColor} !important; }
+          .theme-text { color: ${mainColor} !important; }
         `}} />
         <div className="max-w-lg w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden text-center p-12 relative z-10 border border-white/10">
-          <img src={settings.logoUrl || '/logodki.png'} alt="Logo" className="w-24 h-24 mx-auto mb-8 object-contain" />
-          <h1 className="text-3xl font-black text-zinc-900 mb-4">{settings.maintenanceTitle}</h1>
-          <p className="text-zinc-600 mb-8 leading-relaxed">{settings.maintenanceDesc}</p>
+          <img src={logoUrl || '/logodki.png'} alt="Logo" className="w-24 h-24 mx-auto mb-8 object-contain" />
+          <h1 className="text-3xl font-black text-zinc-90 mb-4">{maintenanceTitle || 'Sistem Dalam Perbaikan'}</h1>
+          <p className="text-zinc-60 mb-8 leading-relaxed">{maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.'}</p>
           
-          {settings.maintenanceEnd && (
+          {maintenanceEnd && (
             <div className="bg-orange-50 theme-bg/10 rounded-2xl p-6 border border-orange-100">
               <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-2">Perkiraan Selesai</p>
               <p className="text-xl font-bold theme-text text-orange-600">
-                {new Date(settings.maintenanceEnd).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
+                {new Date(maintenanceEnd).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
               </p>
             </div>
           )}
@@ -133,19 +143,19 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     <>
       <style dangerouslySetInnerHTML={{__html: `
         :root {
-          --primary: ${settings.mainColor};
+          --primary: ${mainColor};
         }
         .bg-orange-500, .bg-orange-600, .hover\\:bg-orange-600:hover, .data-\\[state\\=active\\]\\:bg-orange-500[data-state="active"] { 
-          background-color: ${settings.mainColor} !important; 
+          background-color: ${mainColor} !important; 
         }
         .text-orange-500, .text-orange-600, .hover\\:text-orange-500:hover { 
-          color: ${settings.mainColor} !important; 
+          color: ${mainColor} !important; 
         }
         .border-orange-500, .border-orange-200 { 
-          border-color: ${settings.mainColor} !important; 
+          border-color: ${mainColor} !important; 
         }
         .ring-orange-500, .focus\\:ring-orange-500:focus { 
-          --tw-ring-color: ${settings.mainColor} !important; 
+          --tw-ring-color: ${mainColor} !important; 
         }
       `}} />
       {children}

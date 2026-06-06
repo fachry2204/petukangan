@@ -143,11 +143,11 @@ export default function AdminAttendancePage() {
 
   const getScheduleForUser = (userId: number, timestamp: string) => {
     if (!timestamp || !userId || !schedules.length) return null;
-    // Extract date in YYYY-MM-DD format
-    const dateStr = timestamp.split('T')[0];
+    // Extract date in YYYY-MM-DD format using local time
+    const dateStr = getLocalDateString(timestamp);
     
     return schedules.find(s => {
-      const sDateStr = s.date ? s.date.split('T')[0] : '';
+      const sDateStr = s.date ? getLocalDateString(s.date) : '';
       if (sDateStr !== dateStr) return false;
       return s.assignedUsers?.some((u: any) => u.id === userId);
     });
@@ -204,6 +204,17 @@ export default function AdminAttendancePage() {
     } finally {
       setSubmittingRejection(false);
     }
+  };
+
+  // Helper to get YYYY-MM-DD date string in local time
+  const getLocalDateString = (dateStr: string | Date) => {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')
+    ].join('-');
   };
 
   // Helper format time
@@ -1175,15 +1186,38 @@ export default function AdminAttendancePage() {
             <div className="p-6 space-y-4">
               <div className="w-full h-64 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 relative z-0">
                 <MapComponent 
+                  key={selectedMapItem.id || Date.now()}
                   center={[Number(selectedMapItem.lat) || -6.229728, Number(selectedMapItem.lng) || 106.747136]} 
                   zoom={15}
-                  points={[{
-                    lat: Number(selectedMapItem.lat) || -6.229728,
-                    lng: Number(selectedMapItem.lng) || 106.747136,
-                    name: selectedMapItem.user?.fullName || 'Petugas',
-                    status: getTypeText(selectedMapItem.type)
-                  }]}
+                  flyTrigger={Date.now()}
+                  points={(selectedMapItem.records || [selectedMapItem]).map((rec: any, idx: number) => ({
+                    id: rec.id || `point-${idx}`,
+                    lat: Number(rec.lat),
+                    lng: Number(rec.lng),
+                    name: rec.user?.fullName || 'Petugas',
+                    fullName: rec.user?.fullName || 'Petugas',
+                    photoUrl: rec.photoUrl || rec.user?.photoUrl,
+                    status: getTypeText(rec.type),
+                    address: rec.address,
+                    type: rec.type
+                  })).filter((p: any) => p.lat && p.lng)}
                 />
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 justify-center text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Absen Masuk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Istirahat</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Absen Pulang</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -1367,7 +1401,9 @@ export default function AdminAttendancePage() {
                                         lat: Number(rec.lat) || -6.229728,
                                         lng: Number(rec.lng) || 106.747136,
                                         name: rec.user?.fullName || 'Petugas',
-                                        status: getTypeText(rec.type)
+                                        photoUrl: rec.photoUrl || rec.user?.photoUrl,
+                                        status: getTypeText(rec.type),
+                                        type: rec.type
                                       }]}
                                     />
                                   </div>

@@ -16,7 +16,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { logout } = useAuthStore();
-  const { isCollapsed } = useSidebarStore();
+  const isCollapsed = useSidebarStore(state => state.isCollapsed);
 
   const handleLogout = () => {
     logout();

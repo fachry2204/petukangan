@@ -107,6 +107,22 @@ export default function PpsuHomePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to get YYYY-MM-DD date string in local time
+  const getLocalDateString = (dateStr: string | Date) => {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    if (isNaN(date.getTime())) return '';
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')
+    ].join('-');
+  };
+
+  // Helper function to get current Jakarta local date string (YYYY-MM-DD)
+  const getJakartaTodayString = () => {
+    return getLocalDateString(new Date());
+  };
+
   // Greeting helper
   const getGreeting = () => {
     const hours = new Date().getHours();
@@ -165,9 +181,9 @@ export default function PpsuHomePage() {
       setAllSchedules(mySchedules);
 
       // Match today's schedule
-      const localTodayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      const localTodayStr = getJakartaTodayString();
       const todaySched = mySchedules.find((s: any) => {
-        const sDateStr = s.date ? s.date.split('T')[0] : '';
+        const sDateStr = s.date ? getLocalDateString(s.date) : '';
         return sDateStr === localTodayStr;
       });
       setTodaySchedule(todaySched || null);
@@ -203,15 +219,15 @@ export default function PpsuHomePage() {
 
       // Total Tidak Masuk (Monthly): Scheduled days in past of this month with no check-in
       const pastMonthSchedules = currentMonthSchedules.filter((s: any) => {
-        const sDateStr = s.date ? s.date.split('T')[0] : '';
+        const sDateStr = s.date ? getLocalDateString(s.date) : '';
         return sDateStr < localTodayStr;
       });
       
       let absentCount = 0;
       pastMonthSchedules.forEach((ps: any) => {
-        const psDateStr = ps.date ? ps.date.split('T')[0] : '';
+        const psDateStr = ps.date ? getLocalDateString(ps.date) : '';
         const hadAtt = thisMonthAttendance.some((a: any) => {
-          const aDateStr = a.timestamp ? new Date(a.timestamp).toISOString().split('T')[0] : '';
+          const aDateStr = a.timestamp ? getLocalDateString(a.timestamp) : '';
           return aDateStr === psDateStr && (a.type === 'IN' || a.type === 'PERMIT');
         });
         if (!hadAtt) absentCount++;
@@ -443,7 +459,7 @@ export default function PpsuHomePage() {
   // Generate Current Week's Schedules (Monday to Sunday)
   const getWeekSchedules = () => {
     const current = new Date();
-    const currentDay = current.getDay();
+    const currentDay = current.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     const diffToMonday = current.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
     
     const weekDays = [];
@@ -451,9 +467,19 @@ export default function PpsuHomePage() {
     const monthsIndo = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
     for (let i = 0; i < 7; i++) {
-      const nextDate = new Date(current);
-      nextDate.setDate(diffToMonday + i);
-      const dateStr = nextDate.toISOString().split('T')[0];
+      // Create date as local time only
+      const nextDate = new Date(
+        current.getFullYear(), 
+        current.getMonth(), 
+        diffToMonday + i
+      );
+      
+      // Get local date string (YYYY-MM-DD)
+      const dateStr = [
+        nextDate.getFullYear(),
+        String(nextDate.getMonth() + 1).padStart(2, '0'),
+        String(nextDate.getDate()).padStart(2, '0')
+      ].join('-');
       
       const matchedSched = allSchedules.find((s: any) => {
         const sDateStr = s.date ? s.date.split('T')[0] : '';
@@ -867,7 +893,7 @@ export default function PpsuHomePage() {
               <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/40">
                 {weekSchedules.map((ws: any, idx: number) => {
                   const hasSched = !!ws.schedule;
-                  const isToday = ws.dateStr === new Date().toISOString().split('T')[0];
+                  const isToday = ws.dateStr === getJakartaTodayString();
                   
                   return (
                     <tr 

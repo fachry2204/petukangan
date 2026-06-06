@@ -220,7 +220,13 @@ export default function AdminUsersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-zinc-500 text-sm">
-                      {user.joinDate ? new Date(user.joinDate).toLocaleDateString('id-ID') : '-'}
+                      {user.joinDate ? (() => {
+                        const d = new Date(user.joinDate);
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yyyy = d.getFullYear();
+                        return `${dd}-${mm}-${yyyy}`;
+                      })() : '-'}
                     </TableCell>
                     <TableCell>
                       <select
@@ -390,7 +396,7 @@ export default function AdminUsersPage() {
                             const day = String(d.getDate()).padStart(2, '0');
                             const month = String(d.getMonth() + 1).padStart(2, '0');
                             const year = d.getFullYear();
-                            return `${day}/${month}/${year}`;
+                            return `${day}-${month}-${year}`;
                           })()}
                         </p>
                       </div>

@@ -125,9 +125,13 @@ export default function PpsuAttendancePage() {
   // Reverse Geocoding via OpenStreetMap Nominatim
   const getAddressFromCoords = async (lat: number, lng: number): Promise<string> => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for geocoding
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
+        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' },
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await response.json();
       return data.display_name || `Lokasi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
@@ -151,7 +155,8 @@ export default function PpsuAttendancePage() {
       const gpsPos: any = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 30000, // 30 seconds (increase from 10s)
+          maximumAge: 10000 // Allow up to 10 second old position
         });
       });
 
@@ -231,7 +236,8 @@ export default function PpsuAttendancePage() {
       const gpsPos: any = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 30000, // 30 seconds
+          maximumAge: 10000
         });
       });
 
@@ -255,7 +261,10 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: resolvedAddress,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000 // 30 second timeout
+        }
       );
 
       setSuccessModalData({
@@ -432,8 +441,14 @@ export default function PpsuAttendancePage() {
         setIsLoading(true);
         try {
           // Convert canvas to Blob and upload to our API
-          const blob = await new Promise<Blob>((resolve) => {
-            canvas.toBlob(resolve, 'image/jpeg', 0.9);
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blobResult) => {
+              if (blobResult) {
+                resolve(blobResult);
+              } else {
+                reject(new Error('Failed to convert canvas to blob'));
+              }
+            }, 'image/jpeg', 0.9);
           });
           const formData = new FormData();
           formData.append('file', blob, `attendance-${Date.now()}.jpg`);
@@ -486,7 +501,10 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: address,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000 // 30 second timeout
+        }
       );
 
       setSuccessModalData({

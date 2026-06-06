@@ -6,19 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  User, 
-  Phone, 
-  Lock, 
-  LogOut, 
-  Camera, 
-  Loader2, 
-  CheckCircle2, 
-  MapPin, 
-  Clock, 
-  Calendar, 
-  KeyRound, 
-  Briefcase 
+import {
+  User,
+  Phone,
+  Lock,
+  LogOut,
+  Camera,
+  Loader2,
+  CheckCircle2,
+  MapPin,
+  Clock,
+  Calendar,
+  KeyRound,
+  Briefcase,
+  Eye,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -35,6 +39,10 @@ export default function PpsuProfilePage() {
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceMonth, setAttendanceMonth] = useState(new Date().getMonth());
+  const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
   // Form states
   const [newPhone, setNewPhone] = useState('');
@@ -63,8 +71,8 @@ export default function PpsuProfilePage() {
       const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
       // Fetch Absensi
-      const resAtt = await axios.get(`${apiUrl}/attendance`, { headers: { Authorization: `Bearer ${token}` } });
-      const thisMonthAttendance = resAtt.data.filter((a: any) => {
+      const resAtt = await axios.get(`${apiUrl}/attendance/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const thisMonthAttendance = (resAtt.data || []).filter((a: any) => {
         const d = new Date(a.timestamp);
         return d >= firstDayOfMonth && d <= lastDayOfMonth;
       });
@@ -80,6 +88,70 @@ export default function PpsuProfilePage() {
       setStats({ absenMasuk: hadirCount, totalTugas: thisMonthTasks.length });
     } catch (err) {
       console.error('Failed to fetch performance stats:', err);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const getMonthName = (month: number) => {
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return months[month];
+  };
+
+  const fetchAttendanceData = async () => {
+    try {
+      const firstDayOfMonth = new Date(attendanceYear, attendanceMonth, 1);
+      const lastDayOfMonth = new Date(attendanceYear, attendanceMonth + 1, 0, 23, 59, 59);
+
+      // Fetch all attendance
+      const resAtt = await axios.get(`${apiUrl}/attendance/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const monthAttendance = (resAtt.data || []).filter((a: any) => {
+        const d = new Date(a.timestamp);
+        return d >= firstDayOfMonth && d <= lastDayOfMonth;
+      });
+
+      // Group by date
+      const groupedByDate: { [key: string]: any[] } = {};
+      monthAttendance.forEach((a: any) => {
+        const date = new Date(a.timestamp);
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        if (!groupedByDate[dateStr]) {
+          groupedByDate[dateStr] = [];
+        }
+        groupedByDate[dateStr].push(a);
+      });
+
+      // Build the data array for each day of the month
+      const daysInMonth = lastDayOfMonth.getDate();
+      const data = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateStr = `${attendanceYear}-${String(attendanceMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const dayAttendance = groupedByDate[dateStr] || [];
+        
+        const inRecord = dayAttendance.find((a: any) => a.type === 'IN');
+        const breakRecord = dayAttendance.find((a: any) => a.type === 'BREAK');
+        const endBreakRecord = dayAttendance.find((a: any) => a.type === 'END_BREAK');
+        const outRecord = dayAttendance.find((a: any) => a.type === 'OUT');
+        const izinRecord = dayAttendance.find((a: any) => a.type === 'IZIN' || a.type === 'SAKIT');
+        
+        data.push({
+          date: dateStr,
+          day: i,
+          in: inRecord,
+          break: breakRecord,
+          endBreak: endBreakRecord,
+          out: outRecord,
+          izin: izinRecord,
+          isEmpty: dayAttendance.length === 0
+        });
+      }
+
+      setAttendanceData(data);
+    } catch (err) {
+      console.error('Failed to fetch attendance data:', err);
     }
   };
 
@@ -300,6 +372,20 @@ export default function PpsuProfilePage() {
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">Tugas Selesai</p>
             </div>
           </div>
+
+          {/* Lihat Absensi Button */}
+          <div className="p-4 pt-0">
+            <Button
+              onClick={() => {
+                setShowAttendanceModal(true);
+                fetchAttendanceData();
+              }}
+              className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-600/20"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Lihat Riwayat Absensi
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -518,6 +604,148 @@ export default function PpsuProfilePage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Riwayat Absensi */}
+        {showAttendanceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-155 max-w-2xl w-full my-4">
+              {/* Header Modal */}
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 p-6">
+                <div>
+                  <h3 className="text-lg font-black text-zinc-900 dark:text-white mb-1 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-orange-600" />
+                    Riwayat Absensi
+                  </h3>
+                  <p className="text-[10px] font-bold text-zinc-400">
+                    {getMonthName(attendanceMonth)} {attendanceYear}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="w-9 h-9 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Month/Year Filter */}
+              <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center justify-center gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      let newMonth = attendanceMonth - 1;
+                      let newYear = attendanceYear;
+                      if (newMonth < 0) {
+                        newMonth = 11;
+                        newYear--;
+                      }
+                      setAttendanceMonth(newMonth);
+                      setAttendanceYear(newYear);
+                      fetchAttendanceData();
+                    }}
+                    className="h-10 w-10 rounded-full"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                      {getMonthName(attendanceMonth)} {attendanceYear}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      let newMonth = attendanceMonth + 1;
+                      let newYear = attendanceYear;
+                      if (newMonth > 11) {
+                        newMonth = 0;
+                        newYear++;
+                      }
+                      setAttendanceMonth(newMonth);
+                      setAttendanceYear(newYear);
+                      fetchAttendanceData();
+                    }}
+                    className="h-10 w-10 rounded-full"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Attendance List */}
+              <div className="p-4 max-h-[500px] overflow-y-auto">
+                <div className="space-y-2">
+                  {attendanceData.map((day) => (
+                    <div
+                      key={day.date}
+                      className={`p-3 rounded-xl border ${
+                        day.izin
+                          ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/30'
+                          : day.isEmpty
+                          ? 'bg-zinc-50 dark:bg-zinc-850/50 border-zinc-100 dark:border-zinc-800'
+                          : 'bg-zinc-50 dark:bg-zinc-850/30 border-zinc-100 dark:border-zinc-800'
+                    }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                          {String(day.day)} {getMonthName(attendanceMonth)} {attendanceYear}
+                        </span>
+                        {day.izin ? (
+                          <Badge className="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-none">
+                            {day.izin.type === 'SAKIT' ? 'Sakit' : 'Izin'}
+                          </Badge>
+                        ) : day.isEmpty ? (
+                          <Badge className="bg-zinc-100 text-zinc-500 border-none">
+                            Tidak Absen
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {!day.izin && !day.isEmpty && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                              Absen Masuk: {day.in ? formatTime(day.in.timestamp) : '-'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                              Istirahat: {day.break ? formatTime(day.break.timestamp) : '-'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                              Kembali Bekerja: {day.endBreak ? formatTime(day.endBreak.timestamp) : '-'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                              Absen Pulang: {day.out ? formatTime(day.out.timestamp) : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-zinc-100 dark:border-zinc-800 p-4">
+                <Button
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="w-full h-12 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold rounded-xl"
+                >
+                  Tutup
+                </Button>
+              </div>
             </div>
           </div>
         )}

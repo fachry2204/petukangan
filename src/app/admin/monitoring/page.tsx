@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, MapPin, AlertTriangle, Activity, Search, Eye, EyeOff } from 'lucide-react';
@@ -25,6 +25,7 @@ function AdminMonitoringContent() {
   const [activeCenter, setActiveCenter] = useState<[number, number] | null>(null);
   const [activeZoom, setActiveZoom] = useState<number>(12);
   const { token } = useAuthStore();
+  const socketRef = useRef<any>(null);
 
   const searchParams = useSearchParams();
   const focusUserId = searchParams.get('focus');
@@ -121,26 +122,29 @@ function AdminMonitoringContent() {
     };
     fetchOfflineOfficers();
 
-    // 4. Setup Socket.io for real-time updates (via same-origin rewrite)
-    console.log('[Admin] Connecting to socket:', socketUrl);
-    const socket = io(socketUrl, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      path: '/socket.io'
-    });
+    // 4. Setup Socket.io for real-time updates (via same-origin rewrite) only once
+    if (!socketRef.current) {
+      console.log('[Admin] Connecting to socket:', socketUrl);
+      const socket = io(socketUrl, {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+        path: '/socket.io'
+      });
 
-    socket.on('connect', () => {
-      console.log('[Admin] Connected to Tracking System, socket ID:', socket.id);
-      socket.emit('joinAdminRoom');
-    });
+      socketRef.current = socket;
 
-    socket.on('connect_error', (error) => {
-      console.error('[Admin] Socket connection error:', error);
-    });
+      socket.on('connect', () => {
+        console.log('[Admin] Connected to Tracking System, socket ID:', socket.id);
+        socket.emit('joinAdminRoom');
+      });
 
-    socket.on('disconnect', (reason) => {
-      console.log('[Admin] Socket disconnected:', reason);
-    });
+      socket.on('connect_error', (error) => {
+        console.error('[Admin] Socket connection error:', error);
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('[Admin] Socket disconnected:', reason);
+      });
 
     socket.on('locationUpdated', (data) => {
       console.log('[Admin] locationUpdated received:', data);
@@ -203,30 +207,30 @@ function AdminMonitoringContent() {
 
     socket.on('emergencySignal', (data) => {
       setOfficers(prev => {
-        const existing = prev.findIndex(o => o.userId === data.userId);
+        const existingIdx = prev.findIndex(o => o.userId === data.userId);
         const newData = { ...data, status: 'DARURAT', isSOS: true };
-        if (existing > -1) {
+        if (existingIdx > -1) {
           const updated = [...prev];
-          updated[existing] = { ...updated[existing], ...newData };
+          updated[existingIdx] = { ...updated[existingIdx], ...newData };
           return updated;
         }
         return [...prev, newData];
       });
     });
+    }
 
     return () => {
       abortController.abort();
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [token]);
 
   // Separate live officers from SOS-only officers
   const liveOfficers = officers.filter(o => !o.isSOS);
   const sosOfficers = officers.filter(o => o.isSOS);
-
-  // Debug: log officers state
-  console.log('[Admin] Officers state:', officers);
-  console.log('[Admin] Officers with valid GPS:', officers.filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0));
 
   // Convert officers to map points — only include those with valid GPS coordinates
   // Exclude officers who have checked out (Pulang)

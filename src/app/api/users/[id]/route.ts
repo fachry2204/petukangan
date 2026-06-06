@@ -54,7 +54,11 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     if (body.email !== undefined) { updates.push('email = ?'); values.push(body.email); }
     if (body.phone !== undefined) { updates.push('phone = ?'); values.push(body.phone); }
     if (body.photoUrl !== undefined) { updates.push('photoUrl = ?'); values.push(body.photoUrl); }
-    if (body.zone !== undefined) { updates.push('zone = ?'); values.push(body.zone); }
+    if (body.zoneId !== undefined) { updates.push('zoneId = ?'); values.push(body.zoneId); }
+    if (body.documents !== undefined) { 
+      updates.push('documents = ?'); 
+      values.push(body.documents ? JSON.stringify(body.documents) : null); 
+    }
     if (body.gender !== undefined) { updates.push('gender = ?'); values.push(body.gender); }
     if (body.birthDate !== undefined) { updates.push('birthDate = ?'); values.push(body.birthDate); }
     if (body.joinDate !== undefined) { updates.push('joinDate = ?'); values.push(body.joinDate); }
@@ -64,6 +68,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     if (body.district !== undefined) { updates.push('district = ?'); values.push(body.district); }
     if (body.village !== undefined) { updates.push('village = ?'); values.push(body.village); }
     if (body.postalCode !== undefined) { updates.push('postalCode = ?'); values.push(body.postalCode); }
+    if (body.country !== undefined) { updates.push('country = ?'); values.push(body.country); }
     if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
     if (roleId !== undefined) { updates.push('roleId = ?'); values.push(roleId); }
     if (body.password) { updates.push('password = ?'); values.push(await hashPassword(body.password)); }
