@@ -45,7 +45,10 @@ export async function GET() {
     return NextResponse.json({ selesai, laporan, absen, totalPpsu });
   } catch (err: any) {
     console.error('[monitoring-stats] DB Error:', err.message);
-    return NextResponse.json({ selesai: 0, laporan: 0, absen: 0, totalPpsu: 0 });
+    return NextResponse.json(
+      { error: 'Failed to fetch monitoring stats', details: err.message },
+      { status: 500 }
+    );
   } finally {
     if (conn) await conn.end();
   }

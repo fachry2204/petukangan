@@ -87,7 +87,9 @@ function AdminMonitoringContent() {
             });
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('[Admin] Failed to fetch active SOS signals:', err);
+      }
     };
     fetchActiveSOS();
 

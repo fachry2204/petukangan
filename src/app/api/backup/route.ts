@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       });
     }
   } catch (error: any) {
-    console.error('[Backup] Error:', error.message);
+    console.error('[POST /api/backup] error:', error.stack || error.message);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

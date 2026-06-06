@@ -37,17 +37,19 @@ export default function AdminSosPage() {
   const fetchHistory = async () => {
     try {
       const res = await fetch('/api/sos');
-      if (res.ok) {
-        const data = await res.json();
-        // Transform timestamp string from DB to milliseconds for date-fns
-        const parsedData = data.map((d: any) => ({
-          ...d,
-          timestamp: new Date(d.timestamp).getTime()
-        }));
-        setSignals(parsedData);
+      if (!res.ok) {
+        console.error('[SOS] Failed to fetch history, status:', res.status);
+        return;
       }
+      const data = await res.json();
+      // Transform timestamp string from DB to milliseconds for date-fns
+      const parsedData = data.map((d: any) => ({
+        ...d,
+        timestamp: new Date(d.timestamp).getTime()
+      }));
+      setSignals(parsedData);
     } catch (err) {
-      console.error('Failed to load SOS history', err);
+      console.error('[SOS] Failed to load SOS history:', err);
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +72,10 @@ export default function AdminSosPage() {
     socket.on('emergencySignal', (data: EmergencySignal) => {
       try {
         const audio = new Audio('/ting.mp3'); 
-        audio.play().catch(e => console.log('Audio autoplay blocked', e));
-      } catch (err) {}
+        audio.play().catch(e => console.warn('[SOS] Audio autoplay blocked:', e));
+      } catch (err) {
+        console.warn('[SOS] Failed to create audio notification:', err);
+      }
 
       setSignals(prev => {
         // Update existing if already in list
@@ -98,6 +102,9 @@ export default function AdminSosPage() {
   }, ['sos', 'emergency']);
 
   const updateStatus = async (userId: string | number, newStatus: EmergencySignal['status']) => {
+    // Save previous state for rollback
+    const previousSignals = [...signals];
+
     // 1. Update on screen immediately for fast feedback
     setSignals(prev => 
       prev.map(s => s.userId === userId ? { ...s, status: newStatus } : s)
@@ -105,13 +112,18 @@ export default function AdminSosPage() {
 
     // 2. Update to Database
     try {
-      await fetch('/api/sos', {
+      const res = await fetch('/api/sos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, status: newStatus })
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server responded with ${res.status}`);
+      }
     } catch (error) {
-      console.error('Failed to sync status to database:', error);
+      console.error('[SOS] Failed to sync status to database:', error);
+      setSignals(previousSignals);
     }
   };
 

@@ -195,7 +195,9 @@ export default function PpsuTaskDetailPage() {
           const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
           if (videoRef.current) videoRef.current.srcObject = stream;
           setIsCapturing(true);
-        } catch (_) { /* swallow */ }
+        } catch (retryErr) {
+          console.warn('[Tasks] Camera fallback with facingMode also failed:', retryErr);
+        }
       }
     }
   };
