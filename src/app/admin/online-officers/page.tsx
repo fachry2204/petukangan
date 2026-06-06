@@ -18,11 +18,14 @@ export default function OnlineOfficersPage() {
   useEffect(() => {
     if (!token) return;
 
+    const controller = new AbortController();
+
     // 1. Fetch from REST API first (seeded/historical data)
     const fetchActiveOfficers = async () => {
       try {
         const res = await fetch('/api/tracking/active-officers?minutes=60', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal
         });
         if (res.ok) {
           const data = await res.json();
@@ -33,8 +36,10 @@ export default function OnlineOfficersPage() {
             })));
           }
         }
-      } catch (err) {
-        console.error('[OnlineOfficers] Failed to fetch active officers:', err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('[OnlineOfficers] Failed to fetch active officers:', err);
+        }
       }
     };
     fetchActiveOfficers();
@@ -95,6 +100,7 @@ export default function OnlineOfficersPage() {
     });
 
     return () => {
+      controller.abort();
       newSocket.disconnect();
     };
   }, [token]);

@@ -65,45 +65,57 @@ export default function GPSHistoryPage() {
   const itemsPerPage = 20;
 
   // Fetch GPS history
-  const fetchGPSHistory = async () => {
+  const fetchGPSHistory = async (signal?: AbortSignal) => {
     if (!token) return;
     setLoading(true);
     try {
       const userIdParam = selectedUser !== 'all' ? `&userId=${selectedUser}` : '';
       const res = await axios.get(
         `${apiUrl}/tracking/gps-history?startDate=${startDate}&endDate=${endDate}${userIdParam}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          signal
+        }
       );
       setGpsPoints(res.data.points || []);
-    } catch (error) {
-      console.error('Failed to fetch GPS history:', error);
-      toast({ title: 'Error', description: 'Gagal memuat riwayat GPS', variant: 'destructive' });
+    } catch (error: any) {
+      if (!axios.isCancel(error)) {
+        console.error('Failed to fetch GPS history:', error);
+        toast({ title: 'Error', description: 'Gagal memuat riwayat GPS', variant: 'destructive' });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   // Fetch all users for filter
-  const fetchAllUsers = async () => {
+  const fetchAllUsers = async (signal?: AbortSignal) => {
     if (!token) return;
     try {
       const res = await axios.get(
         `${apiUrl}/users`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          signal
+        }
       );
       const allUsers = (res.data || []).map((u: any) => ({
         userId: u.id,
         fullName: u.fullName || `Petugas ${u.id}`,
       }));
       setUsers(allUsers);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
+    } catch (error: any) {
+      if (!axios.isCancel(error)) {
+        console.error('Failed to fetch users:', error);
+      }
     }
   };
 
   useEffect(() => {
-    fetchGPSHistory();
-    fetchAllUsers();
+    const controller = new AbortController();
+    fetchGPSHistory(controller.signal);
+    fetchAllUsers(controller.signal);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, startDate, endDate, selectedUser]);
 

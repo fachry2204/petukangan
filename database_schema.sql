@@ -62,7 +62,7 @@ CREATE TABLE attendance (
     lat DECIMAL(10, 8) NOT NULL,
     lng DECIMAL(11, 8) NOT NULL,
     address TEXT,
-    photo_url VARCHAR(255),
+    photo_url LONGTEXT,
     device_info JSON,
     is_mock BOOLEAN DEFAULT FALSE,
     status ENUM('VALID', 'INVALID', 'PENDING_APPROVAL') DEFAULT 'VALID',
@@ -75,7 +75,7 @@ CREATE TABLE attendance_requests (
     user_id INT NOT NULL,
     type ENUM('IN', 'OUT') NOT NULL,
     reason TEXT,
-    photo_url VARCHAR(255),
+    photo_url LONGTEXT,
     lat DECIMAL(10, 8),
     lng DECIMAL(11, 8),
     status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
@@ -109,7 +109,7 @@ CREATE TABLE task_logs (
     lat DECIMAL(10, 8),
     lng DECIMAL(11, 8),
     address TEXT,
-    photo_url VARCHAR(255),
+    photo_url LONGTEXT,
     note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (task_id) REFERENCES tasks(id)
@@ -136,7 +136,7 @@ CREATE TABLE reports (
 CREATE TABLE report_photos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     report_id INT NOT NULL,
-    photo_url VARCHAR(255) NOT NULL,
+    photo_url LONGTEXT NOT NULL,
     FOREIGN KEY (report_id) REFERENCES reports(id)
 );
 

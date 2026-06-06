@@ -34,9 +34,9 @@ export default function AdminSosPage() {
   const { token } = useAuthStore();
   const router = useRouter();
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/sos');
+      const res = await fetch('/api/sos', { signal });
       if (res.ok) {
         const data = await res.json();
         // Transform timestamp string from DB to milliseconds for date-fns
@@ -46,15 +46,18 @@ export default function AdminSosPage() {
         }));
         setSignals(parsedData);
       }
-    } catch (err) {
-      console.error('Failed to load SOS history', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Failed to load SOS history', err);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    const controller = new AbortController();
+    fetchHistory(controller.signal);
 
     // 2. Connect to socket server for real-time SOS
     const socket = io(socketUrl, {
@@ -86,6 +89,7 @@ export default function AdminSosPage() {
     });
 
     return () => {
+      controller.abort();
       socket.disconnect();
     };
   }, [token]);

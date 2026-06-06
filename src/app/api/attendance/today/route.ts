@@ -15,9 +15,11 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = decoded.sub;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    // Adjust to WIB (UTC+7) for correct "today" in Jakarta timezone
+    const todayJakarta = new Date();
+    todayJakarta.setMinutes(todayJakarta.getMinutes() + todayJakarta.getTimezoneOffset() + 420);
+    todayJakarta.setHours(0, 0, 0, 0);
+    const todayStr = todayJakarta.toISOString().split('T')[0];
 
     // Check approved request
     const requests: any = await queryDb(
@@ -46,17 +48,28 @@ export async function GET(req: Request) {
     const hasBreak = records.some((r: any) => r.type === 'BREAK');
     const hasEndBreak = records.some((r: any) => r.type === 'END_BREAK');
     const hasOut = records.some((r: any) => r.type === 'OUT');
-    const hasPermit = records.some((r: any) => r.type === 'PERMIT');
-    const hasEarlyOut = records.some((r: any) => r.type === 'EARLY_OUT');
+    const permitRecord = records.find((r: any) => r.type === 'PERMIT');
+    const earlyOutRecord = records.find((r: any) => r.type === 'EARLY_OUT');
+    const hasPermit = !!permitRecord;
+    const hasEarlyOut = !!earlyOutRecord;
 
     let status = 'Belum Absen';
+    let izinStatus = null; // 'PENDING', 'APPROVED', 'REJECTED'
+    let izinType = null; // 'PERMIT', 'EARLY_OUT'
+
     if (hasPendingRequest) status = 'Menunggu Diterima';
     else if (hasPermit) {
-      const p = records.find((r: any) => r.type === 'PERMIT');
-      status = p && p.status === 'REJECTED' ? 'Belum Absen' : 'Izin Tidak Masuk';
+      izinStatus = permitRecord.status;
+      izinType = 'PERMIT';
+      if (permitRecord.status === 'REJECTED') {
+        status = 'Belum Absen';
+      } else {
+        status = 'Izin Tidak Masuk';
+      }
     } else if (hasEarlyOut) {
-      const eo = records.find((r: any) => r.type === 'EARLY_OUT');
-      if (eo && eo.status === 'REJECTED') {
+      izinStatus = earlyOutRecord.status;
+      izinType = 'EARLY_OUT';
+      if (earlyOutRecord.status === 'REJECTED') {
         if (hasEndBreak) status = 'Selesai Istirahat';
         else if (hasBreak) status = 'Absen Istirahat';
         else status = 'Sudah Absen';
@@ -68,7 +81,14 @@ export async function GET(req: Request) {
     else if (hasBreak) status = 'Absen Istirahat';
     else if (hasIn) status = 'Sudah Absen';
 
-    return NextResponse.json({ status, records, hasApprovedRequest: !!hasApprovedRequest, rejectedRequest });
+    return NextResponse.json({ 
+      status, 
+      records, 
+      hasApprovedRequest: !!hasApprovedRequest, 
+      rejectedRequest,
+      izinStatus,
+      izinType
+    });
   } catch (err: any) {
     console.error('[GET /api/attendance/today] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

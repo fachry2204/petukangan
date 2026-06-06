@@ -9,12 +9,11 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     const rows: any = await queryDb(
       `SELECT r.*, u.fullName as userName FROM reports r JOIN users u ON u.id = r.userId WHERE r.id = ?`,
       [id]

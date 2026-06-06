@@ -15,21 +15,26 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const regular: any = await queryDb(
-      `SELECT a.*, u.fullName as userName, u.photoUrl as userPhoto FROM attendance a JOIN users u ON u.id = a.userId ORDER BY a.timestamp DESC`
+      `SELECT a.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM attendance a JOIN users u ON u.id = a.userId ORDER BY a.timestamp DESC`
     );
 
     const lembur: any = await queryDb(
-      `SELECT l.*, u.fullName as userName, u.photoUrl as userPhoto FROM lembur l JOIN users u ON u.id = l.userId ORDER BY l.timestamp DESC`
+      `SELECT l.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM lembur l JOIN users u ON u.id = l.userId ORDER BY l.timestamp DESC`
     );
 
     const requests: any = await queryDb(
-      `SELECT r.*, u.fullName as userName, u.photoUrl as userPhoto FROM attendance_requests r JOIN users u ON u.id = r.userId ORDER BY r.timestamp DESC`
+      `SELECT r.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM attendance_requests r JOIN users u ON u.id = r.userId ORDER BY r.timestamp DESC`
     );
 
     const mappedRequests = (requests || []).map((req: any) => ({
       id: req.id,
       userId: req.userId,
-      userName: req.userName,
+      user: {
+        id: req.userId,
+        fullName: req.fullName,
+        username: req.username,
+        photoUrl: req.photoUrl
+      },
       type: 'IN',
       timestamp: req.timestamp,
       lat: req.lat,
@@ -45,8 +50,26 @@ export async function GET(req: Request) {
       isRequestTable: true,
     }));
 
-    const recordsMapped = (regular || []).map((r: any) => ({ ...r, isLembur: false }));
-    const lemburMapped = (lembur || []).map((l: any) => ({ ...l, isLembur: true }));
+    const recordsMapped = (regular || []).map((r: any) => ({ 
+      ...r, 
+      isLembur: false,
+      user: {
+        id: r.userId,
+        fullName: r.fullName,
+        username: r.username,
+        photoUrl: r.photoUrl
+      }
+    }));
+    const lemburMapped = (lembur || []).map((l: any) => ({ 
+      ...l, 
+      isLembur: true,
+      user: {
+        id: l.userId,
+        fullName: l.fullName,
+        username: l.username,
+        photoUrl: l.photoUrl
+      }
+    }));
 
     const merged = [...recordsMapped, ...lemburMapped, ...mappedRequests];
     merged.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

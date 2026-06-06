@@ -10,12 +10,11 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     const tasks: any = await queryDb(
       `SELECT t.*, z.name as zoneName, u.fullName as assignedToName FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId WHERE t.id = ?`,
       [id]
@@ -34,12 +33,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     const body = await req.json();
 
     const updates: string[] = [];
@@ -81,12 +79,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     await queryDb('DELETE FROM task_logs WHERE taskId = ?', [id]);
     await queryDb('DELETE FROM tasks WHERE id = ?', [id]);
     emitTaskChange('delete', { id: Number(id) });

@@ -10,12 +10,11 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     const data = await req.json();
 
     // Strip photoUrl before saving to keep the JSON payload small.
@@ -39,12 +38,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     await queryDb('DELETE FROM schedules WHERE id = ?', [Number(id)]);
     emitScheduleChange('delete', { id: Number(id) });
     return NextResponse.json({ message: 'Jadwal berhasil dihapus' });

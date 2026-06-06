@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
   });
   const [activities, setActivities] = useState<any[]>([]);
 
-  const fetchStats = async () => {
+  const fetchStats = async (signal?: AbortSignal) => {
     if (!token) return;
     try {
       // Use Promise.all with individual try-catch for each request
@@ -47,29 +47,38 @@ export default function AdminDashboardPage() {
 
       try {
         const usersRes = await axios.get(`${apiUrl}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         });
         usersData = usersRes.data || [];
-      } catch (e) {
-        console.error('Failed to fetch users:', e);
+      } catch (e: any) {
+        if (!axios.isCancel(e)) {
+          console.error('Failed to fetch users:', e);
+        }
       }
 
       try {
         const tasksRes = await axios.get(`${apiUrl}/tasks`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         });
         tasksData = tasksRes.data || [];
-      } catch (e) {
-        console.error('Failed to fetch tasks:', e);
+      } catch (e: any) {
+        if (!axios.isCancel(e)) {
+          console.error('Failed to fetch tasks:', e);
+        }
       }
 
       try {
         const reportsRes = await axios.get(`${apiUrl}/reports`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal
         });
         reportsData = reportsRes.data || [];
-      } catch (e) {
-        console.error('Failed to fetch reports:', e);
+      } catch (e: any) {
+        if (!axios.isCancel(e)) {
+          console.error('Failed to fetch reports:', e);
+        }
       }
 
       const ppsuUsers = usersData.filter((u: any) => (u.role?.name || u.roleName) === 'PPSU');
@@ -135,16 +144,18 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     if (token) {
-      fetchStats();
+      fetchStats(controller.signal);
     }
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // Realtime updates for dashboard stats
   useRealtime((event) => {
     if (['user', 'task', 'report', 'attendance'].includes(event.entity)) {
-      fetchStats();
+      fetchStats(); // This one doesn't necessarily need a long-lived signal as it's a one-off update
     }
   }, ['user', 'task', 'report', 'attendance']);
 

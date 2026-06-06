@@ -10,12 +10,11 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { id } = await params;
     const body = await req.json();
     const { status, rejectionReason, isRequestTable } = body;
 

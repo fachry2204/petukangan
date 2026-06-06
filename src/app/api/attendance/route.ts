@@ -15,9 +15,11 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = decoded.sub;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    // Adjust to WIB (UTC+7) for correct "today" in Jakarta timezone
+    const todayJakarta = new Date();
+    todayJakarta.setMinutes(todayJakarta.getMinutes() + todayJakarta.getTimezoneOffset() + 420);
+    todayJakarta.setHours(0, 0, 0, 0);
+    const todayStr = todayJakarta.toISOString().split('T')[0];
 
     // Get today's attendance records
     const regular: any = await queryDb(

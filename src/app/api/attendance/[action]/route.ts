@@ -10,12 +10,13 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
-export async function POST(req: Request, { params }: { params: Promise<{ action: string }> }) {
+export async function POST(req: Request, context: { params: Promise<{ action: string }> }) {
+  let actionStr = 'unknown';
   try {
+    const { action } = await context.params;
+    actionStr = action;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { action } = await params;
     const data = await req.json();
     const userId = decoded.sub;
 
@@ -35,10 +36,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
 
     const conn = await getDbConnection();
     try {
-      // Check if there is an approved request today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
+      // Check if there is an approved request today (in Asia/Jakarta timezone!)
+    const todayJakarta = new Date();
+    // Adjust to WIB (UTC+7)
+    todayJakarta.setMinutes(todayJakarta.getMinutes() + todayJakarta.getTimezoneOffset() + 420);
+    todayJakarta.setHours(0, 0, 0, 0);
+    const todayStr = todayJakarta.toISOString().split('T')[0];
 
       const [requests]: any = await conn.execute(
         `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) = ? AND status = 'APPROVED' ORDER BY id DESC LIMIT 1`,
@@ -57,12 +60,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
         [
           userId,
           type,
-          data.lat || null,
-          data.lng || null,
+          data.lat != null ? data.lat : 0, // if null/undefined use 0 instead of null to avoid NOT NULL error
+          data.lng != null ? data.lng : 0,
           data.address || (type === 'PERMIT' ? 'Pengajuan Izin Tidak Masuk' : 'Pengajuan Pulang Awal'),
           data.photoUrl || null,
           data.deviceInfo || null,
-          data.isMock || false,
+          data.isMock != null ? data.isMock : false,
           status,
           data.reason || null,
         ]
@@ -74,7 +77,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
       await conn.end();
     }
   } catch (err: any) {
-    console.error(`[POST /api/attendance/${(await params).action}] error:`, err);
+    console.error(`[POST /api/attendance/${actionStr}] error:`, err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -46,6 +46,9 @@ export default function PpsuHomePage() {
     poinPerforma: 98,
   });
 
+  const [todayIzinStatus, setTodayIzinStatus] = useState<string | null>(null);
+  const [todayIzinType, setTodayIzinType] = useState<string | null>(null);
+
   const [isIzinModalOpen, setIsIzinModalOpen] = useState(false);
   const [izinType, setIzinType] = useState<'PERMIT' | 'EARLY_OUT'>('PERMIT');
   const [izinCategory, setIzinCategory] = useState('Sakit');
@@ -133,6 +136,8 @@ export default function PpsuHomePage() {
       });
       setAttendanceStatus(resAtt.data.status || 'Belum Absen');
       setHasApprovedRequest(!!resAtt.data.hasApprovedRequest);
+      setTodayIzinStatus(resAtt.data.izinStatus || null);
+      setTodayIzinType(resAtt.data.izinType || null);
       
       // Get rejected request details
       if (resAtt.data.rejectedRequest) {
@@ -473,7 +478,19 @@ export default function PpsuHomePage() {
 
   const weekSchedules = getWeekSchedules();
 
-  const getCardTheme = (status: string) => {
+  const getCardTheme = (status: string, izinStatus: string | null) => {
+    if (izinStatus === 'PENDING') {
+      return {
+        cardBg: 'bg-gradient-to-br from-zinc-400 to-zinc-600',
+        btnText: 'text-zinc-500'
+      };
+    }
+    if (izinStatus === 'APPROVED') {
+      return {
+        cardBg: 'bg-gradient-to-br from-yellow-400 to-amber-500',
+        btnText: 'text-yellow-700'
+      };
+    }
     switch (status) {
       case 'Belum Absen':
         return {
@@ -516,7 +533,7 @@ export default function PpsuHomePage() {
     }
   };
 
-  const cardTheme = getCardTheme(attendanceStatus);
+  const cardTheme = getCardTheme(attendanceStatus, todayIzinStatus);
 
   return (
     <div className="p-6 space-y-6">
@@ -673,9 +690,29 @@ export default function PpsuHomePage() {
                   Permintaan Absen Masuk (Lembur)
                 </Button>
               </div>
-            ) : ['Izin Tidak Masuk', 'Pulang Awal'].includes(attendanceStatus) ? (
-              <Button disabled className="w-full mt-4 bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
-                {attendanceStatus === 'Izin Tidak Masuk' ? 'Hari Ini Izin Tidak Masuk' : 'Hari Ini Pulang Awal'}
+            ) : ['Izin Tidak Masuk', 'Pulang Awal'].includes(attendanceStatus) || todayIzinStatus ? (
+              <Button disabled className={`w-full mt-4 border rounded-2xl font-black py-5 text-sm cursor-not-allowed flex items-center justify-center gap-1.5 ${
+                todayIzinStatus === 'PENDING' 
+                  ? 'bg-white/10 text-white/80 border-white/20 animate-pulse' 
+                  : todayIzinStatus === 'APPROVED' 
+                    ? 'bg-white/30 text-white border-white/40' 
+                    : 'bg-white/20 text-white border-white/25'
+              }`}>
+                {todayIzinStatus === 'PENDING' ? (
+                  <>
+                    <Clock className="w-4.5 h-4.5" />
+                    Status Izin Sedang Dalam Peninjauan Admin ⏳
+                  </>
+                ) : todayIzinStatus === 'APPROVED' ? (
+                  <>
+                    <CheckCircle2 className="w-4.5 h-4.5" />
+                    Izin Absen Anda Telah Diterima Admin ✅
+                  </>
+                ) : (
+                  <>
+                    {attendanceStatus === 'Izin Tidak Masuk' ? 'Hari Ini Izin Tidak Masuk' : 'Hari Ini Pulang Awal'}
+                  </>
+                )}
               </Button>
             ) : (
               <div className="flex gap-2.5 mt-4">
