@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 const STATUS_LABEL: Record<string, string> = {
   TASK_NEW: 'Tugas Baru',
@@ -49,7 +49,7 @@ export default function AdminTaskEditPage() {
   const fetchTask = async () => {
     try {
       const res = await axios.get(`${apiUrl}/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       const t = res.data;
       setForm({
@@ -85,7 +85,7 @@ export default function AdminTaskEditPage() {
         priority: form.priority,
         taskType: form.taskType,
         deadline: form.deadline || null,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      }, { headers: authHeaders(token) });
       toast({ title: 'Berhasil', description: 'Tugas berhasil diperbarui' });
       router.push(`/admin/tasks/${id}`);
     } catch (err: any) {

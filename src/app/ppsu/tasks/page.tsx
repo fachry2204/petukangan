@@ -19,7 +19,7 @@ import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
 import {
   Table,
@@ -50,7 +50,7 @@ export default function PpsuTasksPage() {
     try {
       setIsLoading(true);
       const res = await axios.get(`${apiUrl}/tasks`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setTasks(res.data);
     } catch (error) {
@@ -64,7 +64,7 @@ export default function PpsuTasksPage() {
     const fetchStatus = async () => {
       try {
         const res = await axios.get(`${apiUrl}/attendance/today`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         setAttendanceStatus(res.data.status || 'Belum Absen');
       } catch (err) {

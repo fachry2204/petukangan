@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { 
   Users, FileText, Clock, Search, MapPin, 
   CheckCircle2, XCircle, AlertTriangle, RefreshCw, 
@@ -109,10 +109,10 @@ export default function AdminAttendancePage() {
       setLoading(true);
       const [attRes, schedRes] = await Promise.all([
         axios.get(`${apiUrl}/attendance/admin`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         }),
         axios.get(`${apiUrl}/schedules`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         }).catch(err => {
           console.error('Failed to load schedules, using empty array', err);
           return { data: [] };
@@ -162,7 +162,7 @@ export default function AdminAttendancePage() {
         rejectionReason: null,
         isRequestTable
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       fetchAttendance();
     } catch (err) {
@@ -194,7 +194,7 @@ export default function AdminAttendancePage() {
         rejectionReason: rejectionReasonText,
         isRequestTable: selectedRejectionIsRequestTable
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setSelectedRejectionId(null);
       fetchAttendance();

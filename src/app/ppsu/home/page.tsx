@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function PpsuHomePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -120,7 +120,7 @@ export default function PpsuHomePage() {
       // Auto sync user details to update photoUrl / phone / zone etc in the local store
       try {
         const resUser = await axios.get(`${apiUrl}/users/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         setAuth(resUser.data, token!);
       } catch (err) {
@@ -129,7 +129,7 @@ export default function PpsuHomePage() {
       
       // 1. Fetch Today's Attendance Status
       const resAtt = await axios.get(`${apiUrl}/attendance/today`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setAttendanceStatus(resAtt.data.status || 'Belum Absen');
       setHasApprovedRequest(!!resAtt.data.hasApprovedRequest);
@@ -145,7 +145,7 @@ export default function PpsuHomePage() {
 
       // 2. Fetch Active Schedules
       const resSchedules = await axios.get(`${apiUrl}/schedules`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       const mySchedules = resSchedules.data.filter((s: any) => 
         s.assignedUsers?.some((au: any) => au.id === user.id)
@@ -162,7 +162,7 @@ export default function PpsuHomePage() {
 
       // 3. Fetch All Attendance
       const resAllAtt = await axios.get(`${apiUrl}/attendance/my`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       const myAttendance = Array.isArray(resAllAtt.data) ? resAllAtt.data : [];
 
@@ -207,7 +207,7 @@ export default function PpsuHomePage() {
 
       // 4. Fetch Tasks Count (Filtered Monthly)
       const resTasks = await axios.get(`${apiUrl}/tasks`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       const userTasks = resTasks.data || [];
       const thisMonthTasks = userTasks.filter((t: any) => {
@@ -220,7 +220,7 @@ export default function PpsuHomePage() {
       let reportsCount = 0;
       try {
         const resReports = await axios.get(`${apiUrl}/reports`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         const allReports = resReports.data || [];
         const userReports = allReports.filter((r: any) => r.user?.id === user.id);
@@ -301,7 +301,7 @@ export default function PpsuHomePage() {
           reason: `Kategori: ${izinCategory} | Alasan: ${izinReason}`,
           clientTimestamp: new Date().toISOString()
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       setIsIzinModalOpen(false);
@@ -362,7 +362,7 @@ export default function PpsuHomePage() {
           reason: requestReason,
           clientTimestamp: Date.now()
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       setIsRequestAbsenModalOpen(false);

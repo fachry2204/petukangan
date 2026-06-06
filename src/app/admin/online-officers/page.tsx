@@ -7,7 +7,7 @@ import { MapPin, Globe, Clock, LogOut, Loader2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
 import { socketUrl } from '@/lib/socket-config';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { Button } from '@/components/ui/button';
 
 export default function OnlineOfficersPage() {
@@ -22,7 +22,7 @@ export default function OnlineOfficersPage() {
     const fetchActiveOfficers = async () => {
       try {
         const res = await fetch('/api/tracking/active-officers?minutes=60', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         if (res.ok) {
           const data = await res.json();
@@ -113,7 +113,7 @@ export default function OnlineOfficersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...authHeaders(token),
         },
         body: JSON.stringify({ userId }),
       });

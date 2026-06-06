@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
 // Map attendance status to a simplified status string for the map marker
@@ -50,7 +50,7 @@ export default function PpsuLayout({
   useEffect(() => {
     if (!token) return;
     fetch(`${apiUrl}/attendance/today`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: authHeaders(token)
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
@@ -63,7 +63,7 @@ export default function PpsuLayout({
     // Also re-check periodically in case the user absen within the same session
     const interval = setInterval(() => {
       fetch(`${apiUrl}/attendance/today`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       })
         .then(r => r.ok ? r.json() : null)
         .then(data => {

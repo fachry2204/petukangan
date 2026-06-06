@@ -20,7 +20,7 @@ import {
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
 
 export default function PpsuTaskDetailPage() {
@@ -45,7 +45,7 @@ export default function PpsuTaskDetailPage() {
   const fetchTask = async () => {
     try {
       const res = await axios.get(`${apiUrl}/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setTask(res.data);
     } catch (error) {
@@ -57,7 +57,7 @@ export default function PpsuTaskDetailPage() {
     const fetchStatus = async () => {
       try {
         const res = await axios.get(`${apiUrl}/attendance/today`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         setAttendanceStatus(res.data.status || 'Belum Absen');
       } catch (err) {
@@ -299,7 +299,7 @@ export default function PpsuTaskDetailPage() {
           address: task.address || 'Lokasi Tugas',
           note: `Update status ke ${newStatus}`
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       const statusLabelMap: Record<string, string> = {

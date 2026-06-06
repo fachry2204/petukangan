@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { 
   Plus, Search, Filter, Clock, MapPin, Users, Calendar as CalendarIcon, 
   Trash2, X, AlertCircle, RefreshCw, CheckCircle2, Eye, Edit2 
@@ -118,7 +118,7 @@ export default function AdminSchedulesPage() {
     try {
       setLoading(true);
       const res = await axios.get(`${apiUrl}/schedules`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setSchedules(res.data);
       setError('');
@@ -138,7 +138,7 @@ export default function AdminSchedulesPage() {
   const fetchStaff = async () => {
     try {
       const res = await axios.get(`${apiUrl}/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       // Filter out admin users, keep only PPSU/staff users who are active
       const staffUsers = res.data.filter((u: any) => {
@@ -347,11 +347,11 @@ export default function AdminSchedulesPage() {
 
       if (editingScheduleId !== null) {
         await axios.put(`${apiUrl}/schedules/${editingScheduleId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
       } else {
         await axios.post(`${apiUrl}/schedules`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
       }
 
@@ -376,7 +376,7 @@ export default function AdminSchedulesPage() {
     if (!confirm('Apakah Anda yakin ingin menghapus jadwal petugas ini?')) return;
     try {
       await axios.delete(`${apiUrl}/schedules/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       fetchSchedules();
     } catch (err) {

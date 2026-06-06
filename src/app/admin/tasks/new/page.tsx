@@ -9,6 +9,7 @@ import { ArrowLeft, MapPin, Check, Loader2, Search, X, Calendar } from 'lucide-r
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/store/auth-store';
+import { authHeaders } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
 
@@ -50,7 +51,7 @@ export default function NewTaskPage() {
       try {
         setIsLoading(true);
         const res = await fetch('/api/users', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         if (res.ok) {
           const data = await res.json();
@@ -69,7 +70,7 @@ export default function NewTaskPage() {
     const fetchActiveOfficers = async () => {
       try {
         const res = await fetch('/api/tracking/active-officers?minutes=60', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         if (res.ok) {
           const data = await res.json();
@@ -192,7 +193,7 @@ export default function NewTaskPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          ...authHeaders(token),
         },
         body: JSON.stringify({
           title,

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
 // Dynamic import for Leaflet (No SSR)
@@ -34,7 +34,7 @@ function AdminMonitoringContent() {
     const fetchActiveOfficers = async () => {
       try {
         const res = await fetch(`${apiUrl}/tracking/active-officers?minutes=60`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         if (res.ok) {
           const data = await res.json();
@@ -95,7 +95,7 @@ function AdminMonitoringContent() {
     const fetchOfflineOfficers = async () => {
       try {
         const res = await fetch(`${apiUrl}/schedules/today/officers`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         if (res.ok) {
           const data = await res.json();

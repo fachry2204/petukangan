@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtime } from '@/hooks/use-realtime';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -38,7 +38,7 @@ export default function AdminUsersPage() {
     console.log('[AdminUsers] fetchUsers called. token=', token ? 'exists' : 'missing');
     try {
       const res = await axios.get(`${apiUrl}/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       console.log('[AdminUsers] API success, count:', res.data?.length);
       setUsers(res.data);
@@ -67,7 +67,7 @@ export default function AdminUsersPage() {
     setIsDeleting(true);
     try {
       await axios.delete(`${apiUrl}/users/${selectedUserForDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       toast({ title: 'Berhasil', description: 'Data Petugas berhasil dihapus' });
       setIsDeleteOpen(false);
@@ -105,7 +105,7 @@ export default function AdminUsersPage() {
         statusReason: reason || null,
         statusChangedAt: changedAt
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       
       toast({ title: 'Berhasil', description: 'Status petugas berhasil diperbarui' });

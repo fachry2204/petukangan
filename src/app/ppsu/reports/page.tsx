@@ -13,7 +13,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import dynamic from 'next/dynamic';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 // Dynamic import for MapComponent (No SSR)
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
@@ -319,7 +319,7 @@ export default function PpsuReportPage() {
           lng: lng ?? null,
           address: address || 'Lokasi Kejadian',
         },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: authHeaders(token) },
       );
 
       toast({ title: 'Laporan Terkirim', description: 'Terima kasih atas laporan Anda' });

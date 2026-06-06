@@ -16,7 +16,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 
 export default function PpsuSchedulePage() {
@@ -30,7 +30,7 @@ export default function PpsuSchedulePage() {
     try {
       setLoading(true);
       const res = await axios.get(`${apiUrl}/schedules`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       // Filter schedules to only show this officer's schedules
       const mySchedules = res.data.filter((s: any) => 
