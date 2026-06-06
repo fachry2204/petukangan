@@ -340,7 +340,7 @@ export default function AdminSettingsPage() {
                       type="text" 
                       placeholder="Nama (contoh: Shift 1)" 
                       id="new-shift-name-input"
-                      className="rounded-xl border-zinc-200 dark:border-zinc-800 flex-1"
+                      className="rounded-xl border-zinc-200 dark:border-zinc-800 w-full sm:w-40 shrink-0"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -375,7 +375,7 @@ export default function AdminSettingsPage() {
                           id="new-shift-time-input"
                           defaultValue="08:00"
                           lang="id-ID"
-                          className="border-none w-20 text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[112px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
                         <span className="text-[10px] font-bold text-zinc-400 border-l pl-1">Selesai</span>
                         <Input
@@ -383,7 +383,7 @@ export default function AdminSettingsPage() {
                           id="new-shift-endtime-input"
                           defaultValue="16:00"
                           lang="id-ID"
-                          className="border-none w-20 text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
+                          className="border-none w-[112px] text-center p-0 h-9 focus-visible:ring-0 shadow-none text-sm"
                         />
                       </div>
                       <Button
