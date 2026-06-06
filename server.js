@@ -88,7 +88,9 @@ app.prepare().then(async () => {
   const io = new Server(server, {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
-    cors: { origin: '*' },
+    cors: {
+      origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : false,
+    },
     maxHttpBufferSize: 5e6,
   });
 

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as archiver from 'archiver';
+import { verifyToken } from '@/lib/auth';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 const PROJECT_ROOT = process.cwd();
 
@@ -20,6 +21,14 @@ function getDbCredentials() {
 }
 
 export async function POST(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const decoded = verifyToken(authHeader.slice(7));
+  if (!decoded || decoded.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   try {
     const { type } = await request.json();
     const backupDir = path.join(PROJECT_ROOT, 'public', 'backup');
@@ -35,11 +44,12 @@ export async function POST(request: Request) {
       const fileName = `backup-database-${dateStr}.sql`;
       const outputPath = path.join(backupDir, fileName);
 
-      const passArg = db.password ? `-p"${db.password}"` : '';
-      const cmd = `mysqldump -h ${db.host} -P ${db.port} -u ${db.user} ${passArg} ${db.database} > "${outputPath}"`;
-      
+      const args = ['-h', db.host, '-P', db.port, '-u', db.user];
+      if (db.password) args.push(`-p${db.password}`);
+      args.push('--result-file=' + outputPath, db.database);
+
       try {
-        await execAsync(cmd);
+        await execFileAsync('mysqldump', args);
       } catch (err: any) {
         console.error('mysqldump failed:', err.message);
         const fallbackContent = `-- SQL Dump\n-- Generated on ${new Date().toISOString()}\n\nCREATE DATABASE IF NOT EXISTS \`${db.database}\`;\nUSE \`${db.database}\`;\n\n-- mysqldump command failed, please run manually\n`;

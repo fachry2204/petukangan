@@ -35,6 +35,12 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# sensitive test/debug files
+test-login.json
+test-verify.js
+fresh-login.json
+login-response.json
+
 # vercel
 .vercel
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import mysql from 'mysql2/promise';
+import { verifyToken } from '@/lib/auth';
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -9,7 +10,13 @@ const dbConfig = {
   database: process.env.DB_NAME || 'ppsu_monitoring',
 };
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const decoded = verifyToken(authHeader.slice(7));
+  if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   let conn;
   try {
     conn = await mysql.createConnection(dbConfig);
