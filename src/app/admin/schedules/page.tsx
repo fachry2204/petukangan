@@ -800,7 +800,7 @@ export default function AdminSchedulesPage() {
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                       <Input 
                         type="text"
-                        placeholder="Ketik NIK atau Nama petugas..."
+                        placeholder="Ketik ID Petugas atau Nama petugas..."
                         value={staffSearch}
                         onChange={(e) => setStaffSearch(e.target.value)}
                         className="pl-11 rounded-2xl h-11 border-zinc-200 focus-visible:ring-orange-500"
@@ -825,7 +825,7 @@ export default function AdminSchedulesPage() {
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="font-bold text-sm text-zinc-800 dark:text-zinc-200 truncate">{staff.fullName}</p>
-                                  <p className="text-xs text-zinc-400">NIK: {staff.username}</p>
+                                  <p className="text-xs text-zinc-400">ID: {staff.username}</p>
                                 </div>
                               </button>
                             ))
@@ -860,7 +860,7 @@ export default function AdminSchedulesPage() {
                             />
                             <div className="flex-1 min-w-0 pr-6">
                               <p className="font-extrabold text-sm text-zinc-800 dark:text-zinc-100 truncate leading-snug">{staff.fullName}</p>
-                              <p className="text-xs text-zinc-400 font-semibold mt-0.5">NIK: {staff.username}</p>
+                              <p className="text-xs text-zinc-400 font-semibold mt-0.5">ID: {staff.username}</p>
                               <span className="inline-block text-[10px] text-orange-600 dark:text-orange-400 font-extrabold bg-orange-50 dark:bg-orange-950/20 border border-orange-100/30 rounded-md px-1.5 py-0.5 mt-1">
                                 PETUGAS PPSU
                               </span>
@@ -999,7 +999,7 @@ export default function AdminSchedulesPage() {
                       />
                       <div>
                         <p className="font-extrabold text-sm text-zinc-800 dark:text-zinc-100 leading-snug">{staff.fullName}</p>
-                        <p className="text-xs text-zinc-400 font-semibold mt-0.5">NIK: {staff.username}</p>
+                        <p className="text-xs text-zinc-400 font-semibold mt-0.5">ID: {staff.username}</p>
                         <span className="inline-block text-[10px] text-orange-650 dark:text-orange-400 font-extrabold bg-orange-50 dark:bg-orange-950/20 border border-orange-100/30 rounded-md px-1.5 py-0.5 mt-1">
                           PETUGAS PPSU
                         </span>

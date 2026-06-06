@@ -77,7 +77,9 @@ export function GlobalSOSAlert() {
 
     const checkSOSStatus = async () => {
       try {
-        const res = await fetch('/api/sos');
+        const res = await fetch('/api/sos', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (res.ok) {
           const data = await res.json();
           const active = data.find((s: any) => s.status !== 'SELESAI');
@@ -99,8 +101,8 @@ export function GlobalSOSAlert() {
             }
           }
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        console.warn('[SOS] Polling error:', err?.message || String(err));
       }
     };
 
