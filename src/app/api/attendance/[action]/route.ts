@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getDbConnection } from '@/lib/db';
+import { emitAttendanceChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -67,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
         ]
       );
 
+      emitAttendanceChange('create', { userId, type, status });
       return NextResponse.json({ message: 'Absensi berhasil disimpan', type, status });
     } finally {
       await conn.end();

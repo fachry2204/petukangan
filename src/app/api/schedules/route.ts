@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { emitScheduleChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
        VALUES (?, ?, ?, ?, ?, ?, NOW(6), NOW(6))`,
       [data.shiftName, data.timeRange, data.zone || null, data.date, JSON.stringify(data.assignedUsers || []), data.status || 'ACTIVE']
     );
+    emitScheduleChange('create', data);
     return NextResponse.json({ message: 'Jadwal berhasil dibuat' }, { status: 201 });
   } catch (err: any) {
     console.error('[POST /api/schedules] error:', err);

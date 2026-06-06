@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { emitScheduleChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -22,6 +23,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       [data.shiftName, data.timeRange, data.zone || null, data.date, JSON.stringify(data.assignedUsers || []), data.status || 'ACTIVE', Number(id)]
     );
 
+    emitScheduleChange('update', { id: Number(id), ...data });
     return NextResponse.json({ message: 'Jadwal berhasil diperbarui' });
   } catch (err: any) {
     console.error('[PUT /api/schedules/:id] error:', err);
@@ -36,7 +38,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const { id } = await params;
     await queryDb('DELETE FROM schedules WHERE id = ?', [Number(id)]);
-
+    emitScheduleChange('delete', { id: Number(id) });
     return NextResponse.json({ message: 'Jadwal berhasil dihapus' });
   } catch (err: any) {
     console.error('[DELETE /api/schedules/:id] error:', err);

@@ -3,8 +3,6 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 
-// Env vars should be loaded by the shell or OS
-
 const dev = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
 
@@ -14,7 +12,7 @@ const handle = app.getRequestHandler();
 // In-memory active locations for GPS tracking
 const activeLocations = new Map();
 
-// MySQL connection pool for socket.io
+// MySQL connection pool (shared between socket.io and auto-migration)
 let dbPool = null;
 try {
   const mysql = require('mysql2/promise');
@@ -25,14 +23,62 @@ try {
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'ppsu_monitoring',
     waitForConnections: true,
-    connectionLimit: 5,
+    connectionLimit: 10,
   });
-  console.log('[Socket] MySQL pool ready');
+  console.log('[Server] MySQL pool ready');
 } catch (e) {
-  console.log('[Socket] MySQL not available:', e.message);
+  console.log('[Server] MySQL not available:', e.message);
 }
 
-app.prepare().then(() => {
+// Auto-migration: ensure required tables exist
+async function runAutoMigration() {
+  if (!dbPool) return;
+  try {
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS sos_signals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        full_name VARCHAR(100),
+        date_sos DATE,
+        time_sos TIME,
+        lat DECIMAL(10, 8),
+        lng DECIMAL(11, 8),
+        address TEXT,
+        map_link TEXT,
+        status ENUM('DARURAT', 'PETUGAS MELUNCUR', 'SELESAI') DEFAULT 'DARURAT',
+        resolved_by INT,
+        resolved_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS gps_tracking (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        lat DECIMAL(10,8) NOT NULL,
+        lng DECIMAL(11,8) NOT NULL,
+        speed DECIMAL(5,2) DEFAULT NULL,
+        batteryLevel INT DEFAULT NULL,
+        isMock TINYINT(1) DEFAULT 0,
+        ipAddress VARCHAR(45) DEFAULT NULL,
+        wifiName VARCHAR(100) DEFAULT NULL,
+        provider VARCHAR(50) DEFAULT NULL,
+        statusAbsen VARCHAR(30) DEFAULT NULL,
+        timestamp DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+        INDEX idx_userId (userId),
+        INDEX idx_timestamp (timestamp)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('[Server] Auto-migration completed');
+  } catch (err) {
+    console.error('[Server] Auto-migration skipped:', err.message);
+  }
+}
+
+app.prepare().then(async () => {
+  // Run auto-migration before starting server
+  await runAutoMigration();
+
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
     handle(req, res, parsedUrl);
@@ -43,18 +89,59 @@ app.prepare().then(() => {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
     cors: { origin: '*' },
+    maxHttpBufferSize: 5e6,
   });
+
+  // Expose io globally so Next.js API routes can emit realtime events
+  global.io = io;
+  global.activeLocations = activeLocations;
 
   io.on('connection', (socket) => {
     console.log('[Socket] Client connected:', socket.id);
 
+    // Store auth info from handshake
+    const auth = socket.handshake.auth || {};
+    if (auth.userId) {
+      activeLocations.set(String(auth.userId), {
+        userId: auth.userId,
+        fullName: auth.fullName || auth.username || 'Unknown',
+        photoUrl: auth.photoUrl || null,
+        lat: null,
+        lng: null,
+        gpsStatus: false,
+        timestamp: Date.now(),
+        socketId: socket.id,
+        device: socket.handshake.headers['user-agent'] || 'Unknown',
+      });
+      io.emit('userOnline', { userId: auth.userId, fullName: auth.fullName });
+    }
+
     socket.on('updateLocation', async (data) => {
       if (data && data.userId) {
-        activeLocations.set(String(data.userId), { ...data, socketId: socket.id, lastSeen: Date.now() });
-        socket.broadcast.emit('locationUpdated', data);
-        
-        // Also save to database for history
-        if (dbPool) {
+        const prev = activeLocations.get(String(data.userId)) || {};
+        const hasNewCoords = data.lat != null && data.lng != null;
+
+        const locationData = {
+          userId: data.userId,
+          fullName: data.fullName ?? prev.fullName,
+          photoUrl: data.photoUrl ?? prev.photoUrl,
+          status: data.status || prev.status || 'Online',
+          lat: hasNewCoords ? data.lat : prev.lat ?? null,
+          lng: hasNewCoords ? data.lng : prev.lng ?? null,
+          gpsStatus: hasNewCoords ? !!data.gpsStatus : prev.gpsStatus ?? false,
+          timestamp: data.timestamp || Date.now(),
+          device: data.device || prev.device || 'Unknown',
+          os: data.os || prev.os || 'Unknown',
+          provider: data.provider || prev.provider || '',
+          socketId: socket.id,
+          lastSeen: Date.now(),
+        };
+
+        activeLocations.set(String(data.userId), locationData);
+        io.emit('locationUpdated', locationData);
+
+        // Save to database for history
+        if (dbPool && hasNewCoords) {
           try {
             await dbPool.execute(
               `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, timestamp)
@@ -69,6 +156,7 @@ app.prepare().then(() => {
     });
 
     socket.on('joinAdminRoom', () => {
+      socket.join('admin-room');
       const list = Array.from(activeLocations.values()).map((l) => ({
         userId: l.userId,
         fullName: l.fullName,
@@ -86,7 +174,26 @@ app.prepare().then(() => {
     });
 
     socket.on('emergencySignal', (data) => {
-      io.emit('emergencySignal', { ...data, timestamp: Date.now() });
+      const dateObj = new Date(data.timestamp || Date.now());
+      const gmt7Date = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000));
+      const dateSos = gmt7Date.toISOString().split('T')[0];
+      const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
+      const mapLink = `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`;
+
+      io.emit('emergencySignal', {
+        userId: data.userId,
+        fullName: data.fullName,
+        photoUrl: data.photoUrl,
+        phone: data.phone,
+        lat: data.lat,
+        lng: data.lng,
+        address: data.address,
+        dateSos,
+        timeSos,
+        mapLink,
+        status: 'DARURAT',
+        timestamp: data.timestamp || Date.now(),
+      });
     });
 
     socket.on('forceLogoutUser', async (data) => {
@@ -94,16 +201,24 @@ app.prepare().then(() => {
         const userIdStr = String(data.userId);
         const userIdNum = Number(data.userId);
 
-        // Remove from memory
-        if (activeLocations.has(userIdStr)) {
-          activeLocations.delete(userIdStr);
+        // Find and disconnect the target socket
+        for (const [uid, loc] of activeLocations.entries()) {
+          if (uid === userIdStr && loc.socketId) {
+            const targetSocket = io.sockets.sockets.get(loc.socketId);
+            if (targetSocket) {
+              targetSocket.emit('forceLogout');
+              targetSocket.disconnect();
+            }
+            break;
+          }
         }
 
-        // Also remove from database so they don't reappear on refresh
+        activeLocations.delete(userIdStr);
+
+        // Remove from database
         if (dbPool) {
           try {
             await dbPool.execute('DELETE FROM gps_tracking WHERE userId = ?', [userIdNum]);
-            console.log('[Socket] Deleted GPS records for user:', userIdNum);
           } catch (dbErr) {
             console.error('[Socket] Failed to delete GPS records:', dbErr);
           }
@@ -126,9 +241,8 @@ app.prepare().then(() => {
     });
   });
 
-  server.listen(port, (err) => {
-    if (err) throw err;
-    console.log(`> Full-stack Next.js ready on port ${port}`);
+  server.listen(port, () => {
+    console.log(`> Next.js full-stack ready on http://localhost:${port}`);
   });
 }).catch((err) => {
   console.error('Fatal Error during Next.js app.prepare():', err);

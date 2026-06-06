@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb, getDbConnection } from '@/lib/db';
+import { emitReportChange } from '@/lib/socket-emit';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
         }
       }
 
+      emitReportChange('create', { id: reportId });
       return NextResponse.json({ id: reportId, message: 'Laporan berhasil dibuat' }, { status: 201 });
     } finally {
       await conn.end();
