@@ -96,6 +96,11 @@ export default function PpsuLayout({
   useEffect(() => {
     if (!token || !user || typeof window === 'undefined') return;
 
+    // Show GPS activation prompt immediately after login
+    setGpsModalVisible(true);
+    setIsRequestingGps(true);
+    setGpsStatusMessage('Mengaktifkan GPS untuk Live Tracking...');
+
     let watchId: number;
     let socket: any;
     let heartbeatInterval: any;
@@ -263,6 +268,17 @@ export default function PpsuLayout({
       });
 
       const handleConnected = async () => {
+        // Auto-dismiss GPS modal if permission already granted (avoids flash)
+        try {
+          if (navigator.permissions) {
+            const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+            if (perm.state === 'granted') {
+              setGpsModalVisible(false);
+              setIsRequestingGps(false);
+            }
+          }
+        } catch (_) { /* permissions API not supported — modal auto-dismisses on first fix */ }
+
         // Prefer native background geolocation when available.
         const usedNative = await startNativeBackgroundTracking();
         if (usedNative) {
