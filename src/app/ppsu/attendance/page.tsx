@@ -16,7 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
@@ -255,7 +255,7 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: resolvedAddress,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       setSuccessModalData({
@@ -279,7 +279,7 @@ export default function PpsuAttendancePage() {
     try {
       const res = await axios.get(
         `${apiUrl}/attendance/today`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
       const status = res.data.status || 'Belum Absen';
       setAttendanceStatus(status);
@@ -458,7 +458,7 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: address,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       setSuccessModalData({

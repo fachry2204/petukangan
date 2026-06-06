@@ -24,7 +24,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function PpsuProfilePage() {
   const { user, token, setAuth, logout } = useAuthStore();
@@ -46,7 +46,7 @@ export default function PpsuProfilePage() {
   const refreshUserSession = async () => {
     try {
       const res = await axios.get(`${apiUrl}/users/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setAuth(res.data, token!);
     } catch (err) {
@@ -63,7 +63,7 @@ export default function PpsuProfilePage() {
       const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
       // Fetch Absensi
-      const resAtt = await axios.get(`${apiUrl}/attendance`, { headers: { Authorization: `Bearer ${token}` } });
+      const resAtt = await axios.get(`${apiUrl}/attendance`, { headers: authHeaders(token) });
       const thisMonthAttendance = resAtt.data.filter((a: any) => {
         const d = new Date(a.timestamp);
         return d >= firstDayOfMonth && d <= lastDayOfMonth;
@@ -71,7 +71,7 @@ export default function PpsuProfilePage() {
       const hadirCount = thisMonthAttendance.filter((a: any) => a.type === 'IN').length;
 
       // Fetch Tugas
-      const resTasks = await axios.get(`${apiUrl}/tasks`, { headers: { Authorization: `Bearer ${token}` } });
+      const resTasks = await axios.get(`${apiUrl}/tasks`, { headers: authHeaders(token) });
       const thisMonthTasks = (resTasks.data || []).filter((t: any) => {
         const d = new Date(t.createdAt);
         return d >= firstDayOfMonth && d <= lastDayOfMonth;
@@ -119,7 +119,7 @@ export default function PpsuProfilePage() {
         await axios.put(
           `${apiUrl}/users/${user.id}`,
           { photoUrl: base64Data },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: authHeaders(token) }
         );
         toast({ title: 'Foto Profil Diperbarui', description: 'Foto profil Anda berhasil diunggah.' });
         await refreshUserSession();
@@ -144,7 +144,7 @@ export default function PpsuProfilePage() {
       await axios.put(
         `${apiUrl}/users/${user.id}`,
         { phone: newPhone },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
       toast({ title: 'Nomor Telepon Diperbarui', description: 'Nomor telepon Anda berhasil diperbarui.' });
       setShowPhoneModal(false);
@@ -177,7 +177,7 @@ export default function PpsuProfilePage() {
       await axios.put(
         `${apiUrl}/users/${user.id}`,
         { password: passwordForm.newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
       toast({ title: 'Password Diperbarui', description: 'Password Anda berhasil diganti.' });
       setShowPasswordModal(false);

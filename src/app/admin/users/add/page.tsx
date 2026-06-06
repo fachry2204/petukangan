@@ -12,7 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function AddPetugasPage() {
   const router = useRouter();
@@ -248,7 +248,7 @@ export default function AddPetugasPage() {
         phone: formattedPhone,
         roleName: 'PPSU',
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
 
       toast({ title: 'Berhasil', description: 'Data Petugas berhasil ditambahkan' });

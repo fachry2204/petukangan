@@ -21,7 +21,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { useRouter } from 'next/navigation';
 
 interface TaskItem {
@@ -109,14 +109,14 @@ export default function AdminTasksPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const headers = authHeaders(token);
 
   const fetchTasks = async () => {
     if (!token) return;
     setLoading(true);
     setErr(null);
     try {
-      const res = await axios.get(`${apiUrl}/tasks`, { headers: authHeaders });
+      const res = await axios.get(`${apiUrl}/tasks`, { headers });
       setTasks(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       console.error('Failed to fetch tasks', e);
@@ -169,7 +169,7 @@ export default function AdminTasksPage() {
         priority: editForm.priority,
         taskType: editForm.taskType,
         deadline: editForm.deadline || null,
-      }, { headers: authHeaders });
+      }, { headers });
 
       // Optimistic update in list
       setTasks((prev) => prev.map((t) => t.id === editTask.id ? { ...t, ...res.data } : t));
@@ -186,7 +186,7 @@ export default function AdminTasksPage() {
     if (!deleteTask) return;
     setDeleting(true);
     try {
-      await axios.delete(`${apiUrl}/tasks/${deleteTask.id}`, { headers: authHeaders });
+      await axios.delete(`${apiUrl}/tasks/${deleteTask.id}`, { headers });
       setTasks((prev) => prev.filter((t) => t.id !== deleteTask.id));
       setDeleteTask(null);
     } catch (e: any) {

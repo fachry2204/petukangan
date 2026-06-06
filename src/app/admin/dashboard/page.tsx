@@ -19,7 +19,7 @@ import {
 
 import { useAuthStore } from '@/store/auth-store';
 import axios from 'axios';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
 
 export default function AdminDashboardPage() {
@@ -47,7 +47,7 @@ export default function AdminDashboardPage() {
 
       try {
         const usersRes = await axios.get(`${apiUrl}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         usersData = usersRes.data || [];
       } catch (e) {
@@ -56,7 +56,7 @@ export default function AdminDashboardPage() {
 
       try {
         const tasksRes = await axios.get(`${apiUrl}/tasks`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         tasksData = tasksRes.data || [];
       } catch (e) {
@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
 
       try {
         const reportsRes = await axios.get(`${apiUrl}/reports`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         reportsData = reportsRes.data || [];
       } catch (e) {

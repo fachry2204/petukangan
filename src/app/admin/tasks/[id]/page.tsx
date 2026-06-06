@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -70,7 +70,7 @@ export default function AdminTaskDetailPage() {
   const fetchTask = async () => {
     try {
       const res = await axios.get(`${apiUrl}/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setTask(res.data);
     } catch (err) {
@@ -83,7 +83,7 @@ export default function AdminTaskDetailPage() {
   const handleVerify = async () => {
     setVerifying(true);
     try {
-      await axios.put(`${apiUrl}/tasks/${id}`, { status: 'DONE' }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${apiUrl}/tasks/${id}`, { status: 'DONE' }, { headers: authHeaders(token) });
       toast({ title: 'Berhasil', description: 'Tugas telah diverifikasi dan diselesaikan' });
       fetchTask();
     } catch (err: any) {
@@ -103,7 +103,7 @@ export default function AdminTaskDetailPage() {
       await axios.put(`${apiUrl}/tasks/${id}`, {
         status: rejectStatus,
         rejectionReason: rejectReason
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      }, { headers: authHeaders(token) });
       toast({ title: 'Berhasil', description: `Tugas dikembalikan ke status ${STATUS_LABEL[rejectStatus] || rejectStatus}` });
       setRejectModalOpen(false);
       setRejectReason('');

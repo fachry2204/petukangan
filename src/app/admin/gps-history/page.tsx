@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
@@ -72,7 +72,7 @@ export default function GPSHistoryPage() {
       const userIdParam = selectedUser !== 'all' ? `&userId=${selectedUser}` : '';
       const res = await axios.get(
         `${apiUrl}/tracking/gps-history?startDate=${startDate}&endDate=${endDate}${userIdParam}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
       setGpsPoints(res.data.points || []);
     } catch (error) {
@@ -89,7 +89,7 @@ export default function GPSHistoryPage() {
     try {
       const res = await axios.get(
         `${apiUrl}/users`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
       const allUsers = (res.data || []).map((u: any) => ({
         userId: u.id,

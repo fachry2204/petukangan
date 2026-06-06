@@ -10,3 +10,8 @@ function getApiUrl(): string {
 }
 
 export const apiUrl = getApiUrl();
+
+export function authHeaders(token: string | null): Record<string, string> {
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}

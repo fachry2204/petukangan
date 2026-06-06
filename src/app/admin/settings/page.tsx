@@ -11,7 +11,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { Input } from '@/components/ui/input';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function AdminSettingsPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -114,7 +114,7 @@ export default function AdminSettingsPage() {
         shifts: settings.shifts,
         zones: settings.zones,
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       alert('Pengaturan berhasil disimpan ke database!');
     } catch (err: any) {
@@ -128,7 +128,7 @@ export default function AdminSettingsPage() {
     const fetchUsers = async () => {
       try {
         const res = await axios.get(`${apiUrl}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         setUsers(res.data);
       } catch (error) {

@@ -16,6 +16,13 @@ export function verifyToken(token: string) {
   }
 }
 
+export function getUserFromToken(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  return verifyToken(token);
+}
+
 export async function comparePassword(plain: string, hashed: string) {
   return bcrypt.compare(plain, hashed);
 }

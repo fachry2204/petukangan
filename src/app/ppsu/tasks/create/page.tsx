@@ -20,7 +20,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
 export default function PpsuCreateTaskPage() {
@@ -205,7 +205,7 @@ export default function PpsuCreateTaskPage() {
     const fetchStatus = async () => {
       try {
         const res = await axios.get(`${apiUrl}/attendance/today`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         const status = res.data.status || 'Belum Absen';
         setAttendanceStatus(status);
@@ -388,7 +388,7 @@ export default function PpsuCreateTaskPage() {
           address: address || 'Lokasi Tugas',
           deadline: new Date().toISOString()
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders(token) }
       );
 
       toast({

@@ -12,7 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function EditPetugasPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
@@ -100,7 +100,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
       if (!token || !id) return;
       try {
         const res = await axios.get(`${apiUrl}/users/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: authHeaders(token)
         });
         
         const user = res.data;
@@ -351,7 +351,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         village: formData.village,
         postalCode: formData.postalCode
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
 
       toast({ title: 'Berhasil', description: 'Data Petugas berhasil diperbarui' });

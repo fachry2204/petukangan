@@ -12,7 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
-import { apiUrl } from '@/lib/api-config';
+import { apiUrl, authHeaders } from '@/lib/api-config';
 
 export default function AdminReportsPage() {
   const { token } = useAuthStore();
@@ -38,7 +38,7 @@ export default function AdminReportsPage() {
     setError(null);
     try {
       const res = await axios.get(`${apiUrl}/reports`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       console.log('Reports response:', res.data);
       setReports(res.data || []);
@@ -91,7 +91,7 @@ export default function AdminReportsPage() {
     if (!confirm('Apakah Anda yakin ingin menghapus laporan ini?')) return;
     try {
       await axios.delete(`${apiUrl}/reports/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: authHeaders(token)
       });
       setReports(prev => prev.filter(r => r.id !== id));
     } catch (err: any) {
