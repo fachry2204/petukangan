@@ -142,7 +142,9 @@ export default function HistoryMap({ tracks }: { tracks: Track[] }) {
         try {
           const bounds = L.latLngBounds(allLatLngs);
           map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
-        } catch (_) {}
+        } catch (boundsErr) {
+          console.warn('[HistoryMap] Failed to fit map bounds:', boundsErr);
+        }
       }
     });
   }, [tracks]);

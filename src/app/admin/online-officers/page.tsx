@@ -109,7 +109,7 @@ export default function OnlineOfficersPage() {
 
     // 2. Also call REST API to ensure database is cleared (more reliable)
     try {
-      await fetch(`${apiUrl}/tracking/offline`, {
+      const res = await fetch(`${apiUrl}/tracking/offline`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,6 +117,9 @@ export default function OnlineOfficersPage() {
         },
         body: JSON.stringify({ userId }),
       });
+      if (!res.ok) {
+        console.error('[OnlineOfficers] Offline API returned error:', res.status);
+      }
     } catch (err) {
       console.error('[OnlineOfficers] Failed to call offline API:', err);
     }

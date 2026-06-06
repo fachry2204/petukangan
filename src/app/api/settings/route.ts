@@ -57,7 +57,10 @@ export async function GET() {
     });
   } catch (err: any) {
     console.error('[GET /api/settings] error:', err.message);
-    return NextResponse.json(defaultSettings);
+    return NextResponse.json(
+      { error: 'Failed to load settings', details: err.message },
+      { status: 500 }
+    );
   }
 }
 

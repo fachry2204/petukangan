@@ -58,7 +58,9 @@ export default function PpsuLayout({
           attendanceStatusRef.current = resolveMapStatus(data.status);
         }
       })
-      .catch(() => {});
+      .catch(err => {
+        console.warn('[PPSU Layout] Failed to fetch attendance status:', err);
+      });
 
     // Also re-check periodically in case the user absen within the same session
     const interval = setInterval(() => {
@@ -87,7 +89,9 @@ export default function PpsuLayout({
             }
           }
         })
-        .catch(() => {});
+        .catch(err => {
+          console.warn('[PPSU Layout] Periodic attendance status check failed:', err);
+        });
     }, 30000); // every 30 seconds
 
     return () => clearInterval(interval);

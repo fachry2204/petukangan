@@ -121,7 +121,8 @@ export default function PpsuReportPage() {
       const videos = devices.filter((d) => d.kind === 'videoinput');
       setVideoDevices(videos);
       return videos;
-    } catch {
+    } catch (err) {
+      console.warn('[Reports] Failed to enumerate video devices:', err);
       return [] as MediaDeviceInfo[];
     }
   };
@@ -305,8 +306,8 @@ export default function PpsuReportPage() {
           const pos = await getGpsPosition();
           lat = pos.coords.latitude;
           lng = pos.coords.longitude;
-        } catch {
-          // submit without GPS as fallback
+        } catch (gpsErr) {
+          console.warn('[Reports] GPS unavailable, submitting without location:', gpsErr);
         }
       }
 
