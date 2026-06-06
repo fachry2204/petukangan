@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Camera, 
   MapPin, 
+  RefreshCw,
   ChevronLeft, 
   CheckCircle2, 
   Loader2, 
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
@@ -29,6 +31,7 @@ export default function PpsuTaskDetailPage() {
   const [task, setTask] = useState<any>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
@@ -36,10 +39,14 @@ export default function PpsuTaskDetailPage() {
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
   const [warningReason, setWarningReason] = useState<string>('');
-  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; address: string | null } | null>(null);
+  const [isGpsRefreshing, setIsGpsRefreshing] = useState(false);
+  const [photoMeta, setPhotoMeta] = useState<{ lat: number; lng: number; address: string | null } | null>(null);
+  const lastGpsErrorRef = useRef<{ name: string; code?: number; message?: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuthStore();
+  const systemName = useSettingsStore((s) => s.systemName);
   const { toast } = useToast();
 
   const fetchTask = async () => {
@@ -70,27 +77,100 @@ export default function PpsuTaskDetailPage() {
     }
   }, [id, token]);
 
-  // Track current GPS location continuously
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string | null> => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(
+        `${apiUrl}/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: controller.signal,
+        },
+      );
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      const addr = typeof data?.address === 'string' ? data.address.trim() : '';
+      return addr || null;
+    } catch {
+      return null;
+    }
+  }, [token]);
+
+  const refreshGps = useCallback(async (opts: { mode?: 'cached' | 'accurate'; silent?: boolean; showSpinner?: boolean } = {}) => {
+    const mode = opts.mode || 'accurate';
+    const showSpinner = opts.showSpinner !== false;
+    if (!navigator.geolocation) {
+      if (!opts.silent) {
+        toast({
+          variant: 'destructive',
+          title: 'GPS Tidak Tersedia',
+          description: 'Perangkat/browser tidak mendukung GPS.',
+        });
+      }
+      return null;
+    }
+
+    lastGpsErrorRef.current = null;
+    if (showSpinner) setIsGpsRefreshing(true);
+    try {
+      const getPos = (options: PositionOptions) =>
+        new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+
+      let pos: GeolocationPosition | null = null;
+      try {
+        pos = await getPos({
+          enableHighAccuracy: false,
+          timeout: 2000,
+          maximumAge: Infinity,
+        });
+      } catch {
+        pos = null;
+      }
+
+      if (!pos || mode === 'accurate') {
+        pos = await getPos({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      }
+
+      const lat = Number(pos.coords.latitude);
+      const lng = Number(pos.coords.longitude);
+      const address = await reverseGeocode(lat, lng);
+      const value = { lat, lng, address };
+      setCurrentGps(value);
+      return value;
+    } catch (err: any) {
+      const code = typeof err?.code === 'number' ? Number(err.code) : undefined;
+      const name = String(err?.name || (code === 1 ? 'PermissionDeniedError' : code === 2 ? 'PositionUnavailableError' : code === 3 ? 'TimeoutError' : 'Error'));
+      const message = typeof err?.message === 'string' ? err.message : undefined;
+      lastGpsErrorRef.current = { name, code, message };
+
+      if (!opts.silent) {
+        let desc = 'Gagal mengambil lokasi GPS.';
+        if (name === 'PermissionDeniedError') desc = 'Izin lokasi ditolak. Izinkan akses lokasi pada browser.';
+        if (name === 'PositionUnavailableError') desc = 'Lokasi tidak tersedia. Aktifkan GPS dan coba lagi.';
+        if (name === 'TimeoutError') desc = 'GPS timeout. Coba tekan Refresh GPS.';
+        if (message && /secure|Only secure origins|not allowed/i.test(message)) {
+          desc = 'Browser memblokir GPS karena bukan HTTPS. Buka via https atau localhost.';
+        }
+        toast({ variant: 'destructive', title: `GPS Gagal (${name})`, description: desc });
+      }
+      return null;
+    } finally {
+      if (showSpinner) setIsGpsRefreshing(false);
+    }
+  }, [reverseGeocode, toast]);
+
   useEffect(() => {
     if (!token) return;
-    const getCurrentLocation = () => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCurrentGps({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            address: 'Lokasi terdeteksi'
-          });
-        },
-        () => {},
-        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
-      );
-    };
-    getCurrentLocation();
-    const interval = setInterval(getCurrentLocation, 15000);
-    return () => clearInterval(interval);
-  }, [token]);
+    refreshGps({ mode: 'cached', silent: true, showSpinner: false });
+  }, [token, refreshGps]);
 
   // Realtime updates without page refresh
   useRealtime((event) => {
@@ -231,15 +311,89 @@ export default function PpsuTaskDetailPage() {
 
   const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
+      const gpsAtCapture = currentGps;
+      const addressForPhoto = gpsAtCapture ? normalizeAddress(gpsAtCapture.address) : null;
+      if (!gpsAtCapture || !addressForPhoto) {
+        void refreshGps({ mode: 'accurate', silent: false });
+        toast({
+          variant: 'destructive',
+          title: 'Alamat GPS Belum Siap',
+          description: 'Tunggu alamat muncul (atau tekan Refresh GPS) lalu ambil foto.',
+        });
+        return;
+      }
+
       const context = canvasRef.current.getContext('2d');
       if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
+        const videoWidth = videoRef.current.videoWidth;
+        const videoHeight = videoRef.current.videoHeight;
+        const maxWidth = 1280;
+        const scale = videoWidth > maxWidth ? maxWidth / videoWidth : 1;
+        canvasRef.current.width = Math.round(videoWidth * scale);
+        canvasRef.current.height = Math.round(videoHeight * scale);
+        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        const pad = Math.max(14, Math.round(canvasRef.current.width * 0.02));
+        const fontSize = Math.max(14, Math.round(canvasRef.current.width * 0.024));
+        const lineHeight = Math.round(fontSize * 1.25);
+        const maxTextWidth = canvasRef.current.width - pad * 2;
+
+        const formatTimestamp = (d: Date) =>
+          d.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+
+        const wrapText = (text: string, maxWidth: number) => {
+          const words = text.split(/\s+/).filter(Boolean);
+          const lines: string[] = [];
+          let line = '';
+          for (const w of words) {
+            const test = line ? `${line} ${w}` : w;
+            if (context.measureText(test).width <= maxWidth) {
+              line = test;
+            } else {
+              if (line) lines.push(line);
+              line = w;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        };
+
+        const tsLine = `Tanggal - Waktu: ${formatTimestamp(new Date())}`;
+        const addressLine = addressForPhoto ? `Alamat: ${addressForPhoto}` : 'Alamat: (tidak tersedia)';
+        const headerLine = (systemName || 'SIPETUT').trim();
+
+        context.save();
+        context.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+        const addressLines = wrapText(addressLine, maxTextWidth);
+        const lines = [headerLine, tsLine, ...addressLines];
+        const boxHeight = pad * 2 + lines.length * lineHeight;
+
+        context.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        context.fillRect(0, canvasRef.current.height - boxHeight, canvasRef.current.width, boxHeight);
+
+        context.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        context.textBaseline = 'top';
+        let y = canvasRef.current.height - boxHeight + pad;
+        for (const line of lines) {
+          context.fillText(line, pad, y);
+          y += lineHeight;
+        }
+        context.restore();
 
         // Upload to our API
-        const blob = await new Promise<Blob>((resolve) => {
-          canvasRef.current.toBlob(resolve, 'image/jpeg', 0.9);
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvasRef.current?.toBlob(
+            (blobResult) => (blobResult ? resolve(blobResult) : reject(new Error('Gagal membuat file foto'))),
+            'image/jpeg',
+            0.85,
+          );
         });
         const formData = new FormData();
         formData.append('file', blob, `task-${Date.now()}.jpg`);
@@ -251,6 +405,7 @@ export default function PpsuTaskDetailPage() {
 
         if (uploadRes.data.success) {
           setPhoto(uploadRes.data.url);
+          setPhotoMeta({ ...gpsAtCapture, address: addressForPhoto });
         }
 
         stopCameraStream();
@@ -287,22 +442,10 @@ export default function PpsuTaskDetailPage() {
 
     setIsLoading(true);
     try {
-      // Get current location — 2-step: cached fast, then refine
-      let pos: any = null;
-      try {
-        // Step 1: Try cached/coarse position first (very fast)
-        pos = await new Promise((res, rej) => {
-          navigator.geolocation.getCurrentPosition(res, rej, {
-            enableHighAccuracy: false, timeout: 2000, maximumAge: Infinity
-          });
-        });
-      } catch (coarseErr) {
-        // Step 2: Fallback to high accuracy if cached failed
-        pos = await new Promise((res, rej) => {
-          navigator.geolocation.getCurrentPosition(res, rej, {
-            enableHighAccuracy: true, timeout: 5000, maximumAge: 0
-          });
-        });
+      const requiresPhoto = ['ARRIVED', 'NOT_STARTED', 'WORKING', 'VERIFY'];
+      let gps = requiresPhoto.includes(newStatus) ? photoMeta : null;
+      if (!gps) {
+        gps = (await refreshGps({ mode: 'cached', silent: true })) || (await refreshGps({ mode: 'accurate', silent: true }));
       }
       
       await axios.post(
@@ -310,9 +453,9 @@ export default function PpsuTaskDetailPage() {
         {
           status: newStatus,
           photo: photo,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          address: task.address || 'Lokasi Tugas',
+          lat: gps?.lat ?? null,
+          lng: gps?.lng ?? null,
+          address: gps?.address ?? null,
           note: `Update status ke ${newStatus}`
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -369,6 +512,32 @@ export default function PpsuTaskDetailPage() {
       default: return 'bg-zinc-100 text-zinc-600';
     }
   };
+
+  const getTaskLogLabel = (status: string) => {
+    switch (status) {
+      case 'TASK_ACCEPTED': return 'Tugas Diterima';
+      case 'ARRIVED': return 'Sampai Di Lokasi';
+      case 'NOT_STARTED': return 'Belum Di Kerjakan';
+      case 'WORKING': return 'Mulai Dikerjakan';
+      case 'VERIFY': return 'Selesai Dikerjakan';
+      case 'DONE': return 'Diverifikasi Admin';
+      default: return status;
+    }
+  };
+
+  const normalizeAddress = (address: any) => {
+    const a = typeof address === 'string' ? address.trim() : '';
+    if (!a) return null;
+    if (/^lokasi:/i.test(a)) return null;
+    if (/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(a)) return null;
+    return a;
+  };
+
+  const taskLogs: any[] = Array.isArray(task?.logs) ? task.logs : [];
+  const logsWithPhoto = taskLogs
+    .filter((l: any) => !!l?.photoUrl)
+    .slice()
+    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
     <div className="pb-24 min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -485,6 +654,92 @@ export default function PpsuTaskDetailPage() {
                   </a>
                 )}
               </div>
+
+                      <div className="mt-3 rounded-xl bg-white/70 dark:bg-zinc-950/30 border border-blue-100 dark:border-blue-900/30 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[10px] font-black uppercase text-blue-500 tracking-wider">Lokasi GPS Tercatat</p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refreshGps({ mode: 'accurate', silent: false })}
+                            disabled={isGpsRefreshing}
+                            className="h-7 rounded-lg text-[10px] font-black px-2"
+                          >
+                            {isGpsRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            <span className="ml-1">Refresh GPS</span>
+                          </Button>
+                        </div>
+                        {currentGps ? (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-300 font-mono truncate">
+                              {currentGps.lat.toFixed(6)}, {currentGps.lng.toFixed(6)}
+                            </p>
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
+                              {normalizeAddress(currentGps.address) || 'Alamat belum tersedia'}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-[10px] text-zinc-400 font-semibold">Belum ada lokasi. Tekan Refresh GPS.</p>
+                        )}
+                      </div>
+            </div>
+
+            {/* 7. Bukti Foto per Status */}
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-2">Bukti Foto Berdasarkan Status</p>
+              {logsWithPhoto.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 font-semibold">
+                  Belum ada foto bukti yang diunggah untuk tugas ini.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {logsWithPhoto.map((log: any) => (
+                    <div
+                      key={log.id || `${log.status}-${log.createdAt}`}
+                      className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden"
+                    >
+                      <div className="p-3 flex items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800">
+                        <Badge className={`${getStatusBadgeColor(log.status)} border-none text-[10px] font-black uppercase px-2 py-0.5`}>
+                          {getTaskLogLabel(log.status)}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-zinc-400 whitespace-nowrap">
+                          {log.createdAt ? new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setViewingPhoto(log.photoUrl)}
+                        className="w-full bg-zinc-950/5 dark:bg-black/30"
+                      >
+                        <img
+                          src={log.photoUrl}
+                          alt={getTaskLogLabel(log.status)}
+                          className="w-full h-44 object-cover"
+                        />
+                      </button>
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase">
+                            GPS
+                          </Badge>
+                          <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 font-mono truncate">
+                            {log.lat != null && log.lng != null ? `${Number(log.lat).toFixed(6)}, ${Number(log.lng).toFixed(6)}` : '-'}
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase shrink-0">
+                            Alamat
+                          </Badge>
+                          <p className="text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
+                            {normalizeAddress(log.address) || 'Alamat belum tersedia'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -504,7 +759,13 @@ export default function PpsuTaskDetailPage() {
                 
                 <button
                   type="button"
-                  onClick={() => { if (!photo) openCamera(); }}
+                  onClick={async () => {
+                    if (photo) return;
+                    if (!currentGps || !normalizeAddress(currentGps.address)) {
+                      void refreshGps({ mode: 'accurate', silent: false });
+                    }
+                    openCamera();
+                  }}
                   className="relative w-full aspect-video rounded-3xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 shadow-inner cursor-pointer active:scale-[0.99] transition-transform"
                 >
                   {photo ? (
@@ -528,7 +789,7 @@ export default function PpsuTaskDetailPage() {
                   <div className="flex gap-3">
                     <Button 
                       variant="outline" 
-                      onClick={() => { setPhoto(null); openCamera(); }} 
+                      onClick={async () => { setPhoto(null); setPhotoMeta(null); await refreshGps({ mode: 'accurate', silent: true }); openCamera(); }} 
                       className="w-full py-6 rounded-2xl font-bold"
                     >
                       Ambil Ulang Foto
@@ -537,25 +798,6 @@ export default function PpsuTaskDetailPage() {
                 )}
               </>
             ) : null}
-
-            {/* GPS Location Tracker */}
-            <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-3 border border-green-100 dark:border-green-900/30 flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-green-600 animate-pulse" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-green-800 dark:text-green-400">
-                  Lokasi GPS Tercatat
-                </p>
-                {currentGps ? (
-                  <p className="text-[10px] text-zinc-500 font-mono truncate">
-                    {currentGps.lat.toFixed(6)}, {currentGps.lng.toFixed(6)}
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-zinc-400">Mendeteksi lokasi...</p>
-                )}
-              </div>
-            </div>
 
             {/* Active Action Button */}
             <div className="pt-2">
@@ -610,24 +852,49 @@ export default function PpsuTaskDetailPage() {
         ) : (
           /* Read-only verification state */
           <div className="space-y-4">
-            <Card className="border-none shadow-sm rounded-3xl bg-green-50/70 dark:bg-green-950/10 border-2 border-green-100/50 dark:border-green-950/20 p-5 flex items-start gap-4">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-6 h-6 animate-pulse" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-black text-sm text-green-800 dark:text-green-500 uppercase tracking-wider">Tugas Selesai Dikerjakan</h4>
-                <p className="text-xs font-semibold text-zinc-550 dark:text-zinc-400 leading-relaxed">
-                  Tugas telah selesai dikerjakan! Saat ini sedang dalam tahap **verifikasi administrasi** oleh Pimpinan, Staff, dan Administrator kelurahan.
-                </p>
-              </div>
-            </Card>
-            <Button 
-              disabled 
-              className="w-full py-6 bg-zinc-200 dark:bg-zinc-850 text-zinc-450 dark:text-zinc-550 rounded-2xl font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <ShieldAlert className="w-5 h-5" />
-              Menunggu Verifikasi Pimpinan
-            </Button>
+            {task.status === 'DONE' ? (
+              <>
+                <Card className="border-none shadow-sm rounded-3xl bg-emerald-50/70 dark:bg-emerald-950/10 border-2 border-emerald-100/50 dark:border-emerald-950/20 p-5 flex items-start gap-4">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-black text-sm text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Tugas Anda Sudah Diverifikasi Admin</h4>
+                    <p className="text-xs font-semibold text-zinc-550 dark:text-zinc-400 leading-relaxed">
+                      Status tugas Anda telah disetujui dan dinyatakan selesai oleh Admin.
+                    </p>
+                  </div>
+                </Card>
+                <Button
+                  onClick={() => router.push('/ppsu/tasks')}
+                  className="w-full py-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Lihat Daftar Tugas
+                </Button>
+              </>
+            ) : (
+              <>
+                <Card className="border-none shadow-sm rounded-3xl bg-green-50/70 dark:bg-green-950/10 border-2 border-green-100/50 dark:border-green-950/20 p-5 flex items-start gap-4">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-black text-sm text-green-800 dark:text-green-500 uppercase tracking-wider">Tugas Selesai Dikerjakan</h4>
+                    <p className="text-xs font-semibold text-zinc-550 dark:text-zinc-400 leading-relaxed">
+                      Tugas telah selesai dikerjakan! Saat ini sedang dalam tahap **verifikasi administrasi** oleh Pimpinan, Staff, dan Administrator kelurahan.
+                    </p>
+                  </div>
+                </Card>
+                <Button 
+                  disabled 
+                  className="w-full py-6 bg-zinc-200 dark:bg-zinc-850 text-zinc-450 dark:text-zinc-550 rounded-2xl font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <ShieldAlert className="w-5 h-5" />
+                  Menunggu Verifikasi Pimpinan
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -773,6 +1040,24 @@ export default function PpsuTaskDetailPage() {
               >
                 Tutup
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingPhoto && (
+        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl p-4">
+            <button
+              type="button"
+              onClick={() => setViewingPhoto(null)}
+              className="absolute top-6 right-6 z-10 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all"
+              aria-label="Tutup foto"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-full h-[70vh] bg-zinc-100 dark:bg-zinc-950 rounded-2xl overflow-hidden">
+              <img src={viewingPhoto} alt="Foto Bukti Tugas" className="w-full h-full object-contain" />
             </div>
           </div>
         </div>

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Camera, MapPin, Loader2, Send, X, Clock, SwitchCamera, ChevronLeft } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Camera, MapPin, Loader2, Send, X, Clock, SwitchCamera, ChevronLeft, Plus, Eye } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -18,8 +19,248 @@ import { apiUrl } from '@/lib/api-config';
 // Dynamic import for MapComponent (No SSR)
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
-export default function PpsuReportPage() {
+type ReportPhoto = { photoUrl?: string; createdAt?: string | null } | string;
+type ReportItem = {
+  id: number;
+  title?: string | null;
+  description?: string | null;
+  status?: string | null;
+  createdAt?: string | null;
+  address?: string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
+  photos?: ReportPhoto[];
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Menunggu',
+  REVIEWED: 'Ditinjau',
+  RESOLVED: 'Selesai',
+  REJECTED: 'Ditolak',
+  NEW: 'Menunggu',
+  IN_PROGRESS: 'Diproses',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-700',
+  REVIEWED: 'bg-blue-100 text-blue-700',
+  RESOLVED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+  NEW: 'bg-yellow-100 text-yellow-700',
+  IN_PROGRESS: 'bg-blue-100 text-blue-700',
+};
+
+export default function PpsuReportsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { token } = useAuthStore();
+  const { toast } = useToast();
+
+  const [mode, setMode] = useState<'list' | 'new'>('list');
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+
+  useEffect(() => {
+    setMode(searchParams.get('new') === '1' ? 'new' : 'list');
+  }, [searchParams]);
+
+  const fetchMyReports = async () => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`${apiUrl}/reports?mine=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReports(res.data || []);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || e?.response?.data?.message || 'Gagal memuat daftar laporan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mode !== 'list') return;
+    fetchMyReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, token]);
+
+  const openNewForm = () => router.push('/ppsu/reports?new=1');
+  const openList = () => router.push('/ppsu/reports');
+
+  if (mode === 'new') {
+    return (
+      <ReportForm
+        onCancel={openList}
+        onSubmitted={() => {
+          toast({ title: 'Laporan Terkirim', description: 'Terima kasih atas laporan Anda' });
+          openList();
+          fetchMyReports();
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6 pb-24">
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold">Laporan Saya</h2>
+          <p className="text-sm text-zinc-500">Daftar laporan yang sudah Anda kirim</p>
+        </div>
+        <Button
+          type="button"
+          onClick={openNewForm}
+          className="rounded-2xl font-bold bg-zinc-900 text-white shadow-lg"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Buat Laporan Baru
+        </Button>
+      </header>
+
+      <Card className="border-none shadow-xl rounded-3xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl overflow-hidden">
+        <CardContent className="p-4">
+          {loading ? (
+            <div className="py-10 text-center text-sm text-zinc-400 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Memuat daftar laporan...
+            </div>
+          ) : error ? (
+            <div className="py-8 text-center text-sm text-red-500 space-y-3">
+              <p>{error}</p>
+              <Button type="button" variant="outline" onClick={fetchMyReports} className="rounded-2xl">
+                Coba Lagi
+              </Button>
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="py-12 text-center text-sm text-zinc-400 italic">Belum ada laporan yang Anda kirim.</div>
+          ) : (
+            <div className="space-y-3">
+              {reports.map((r) => {
+                const statusKey = (r.status || 'PENDING').toString();
+                const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
+                const created = r.createdAt ? new Date(r.createdAt).toLocaleString('id-ID') : '-';
+                const firstPhoto = Array.isArray(r.photos) ? r.photos[0] : null;
+                const firstPhotoUrl =
+                  typeof firstPhoto === 'string' ? firstPhoto : (firstPhoto as any)?.photoUrl || null;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSelectedReport(r)}
+                    className="w-full text-left rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 flex items-center gap-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 transition-colors"
+                  >
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                      {firstPhotoUrl ? (
+                        <img src={firstPhotoUrl} alt="Foto" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="w-5 h-5 text-zinc-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{r.title || '-'}</p>
+                        <Badge className={`${statusColor} border-none font-bold text-[10px] rounded-full`}>
+                          {STATUS_LABEL[statusKey] || statusKey}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-1 truncate">{r.address || ''}</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">{created}</p>
+                    </div>
+                    <div className="flex-shrink-0 text-zinc-400">
+                      <Eye className="w-5 h-5" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">Detail Laporan</DialogTitle>
+          </DialogHeader>
+          {selectedReport && (
+            <div className="space-y-4">
+              {Array.isArray(selectedReport.photos) && selectedReport.photos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedReport.photos.map((p, idx) => {
+                    const url = typeof p === 'string' ? p : (p as any)?.photoUrl;
+                    if (!url) return null;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => window.open(url, '_blank')}
+                        className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800"
+                      >
+                        <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Judul</p>
+                <p className="font-bold text-zinc-900 dark:text-zinc-100">{selectedReport.title || '-'}</p>
+              </div>
+
+              {selectedReport.description && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Deskripsi</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 whitespace-pre-line">
+                    {selectedReport.description}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status</p>
+                  <Badge
+                    className={`${STATUS_COLOR[(selectedReport.status || 'PENDING').toString()] || 'bg-zinc-100 text-zinc-700'} border-none font-bold text-[11px] mt-1`}
+                  >
+                    {STATUS_LABEL[(selectedReport.status || 'PENDING').toString()] ||
+                      (selectedReport.status || 'PENDING')}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Tanggal</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                    {selectedReport.createdAt ? new Date(selectedReport.createdAt).toLocaleString('id-ID') : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Lokasi</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-300">{selectedReport.address || '-'}</p>
+                {selectedReport.lat != null && selectedReport.lng != null && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.lat},${selectedReport.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline mt-1 inline-block"
+                  >
+                    Buka di Google Maps
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ReportForm({ onSubmitted, onCancel }: { onSubmitted: () => void; onCancel: () => void }) {
   const { token } = useAuthStore();
   const { toast } = useToast();
 
@@ -282,9 +523,8 @@ export default function PpsuReportPage() {
 
     setIsLoading(true);
     try {
-      // Convert canvas to blob and upload
-      const blob = await new Promise<Blob>((resolve) => {
-        c.toBlob(resolve, 'image/jpeg', 0.9);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        c.toBlob((b) => (b ? resolve(b) : reject(new Error('Gagal memproses foto'))), 'image/jpeg', 0.9);
       });
       const formData = new FormData();
       formData.append('file', blob, `report-${Date.now()}.jpg`);
@@ -350,13 +590,14 @@ export default function PpsuReportPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      toast({ title: 'Laporan Terkirim', description: 'Terima kasih atas laporan Anda' });
-      router.push('/ppsu/home');
+      setForm({ title: '', description: '' });
+      setPhotos([]);
+      onSubmitted();
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Gagal',
-        description: error.response?.data?.message || 'Gagal mengirim laporan',
+        description: error.response?.data?.error || error.response?.data?.message || 'Gagal mengirim laporan',
       });
     } finally {
       setIsLoading(false);
@@ -372,9 +613,22 @@ export default function PpsuReportPage() {
 
   return (
     <div className="p-6 space-y-6 pb-24">
-      <header>
-        <h2 className="text-2xl font-bold">Lapor Kejadian</h2>
-        <p className="text-sm text-zinc-500">Laporkan temuan masalah di lapangan</p>
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            className="h-10 w-10 p-0 rounded-2xl"
+            aria-label="Kembali"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">Buat Laporan Baru</h2>
+            <p className="text-sm text-zinc-500">Laporkan temuan masalah di lapangan</p>
+          </div>
+        </div>
       </header>
 
       {/* Live timestamp + location card */}

@@ -62,9 +62,10 @@ export default function AdminTaskDetailPage() {
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [rejectStatus, setRejectStatus] = useState('WORKING');
+  const [rejectStatus, setRejectStatus] = useState('NOT_STARTED');
   const [rejecting, setRejecting] = useState(false);
 
   const fetchTask = async () => {
@@ -95,7 +96,7 @@ export default function AdminTaskDetailPage() {
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      alert('Alasan penolakan wajib diisi');
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Alasan penolakan wajib diisi' });
       return;
     }
     setRejecting(true);
@@ -109,7 +110,7 @@ export default function AdminTaskDetailPage() {
       setRejectReason('');
       fetchTask();
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Gagal', description: err.response?.data?.message || 'Gagal menolak tugas' });
+      toast({ variant: 'destructive', title: 'Gagal', description: err.response?.data?.message || err.response?.data?.error || 'Gagal menolak tugas' });
     } finally {
       setRejecting(false);
     }
@@ -128,6 +129,32 @@ export default function AdminTaskDetailPage() {
 
   if (loading) return <div className="p-12 text-center text-sm font-bold text-zinc-400 animate-pulse">Memuat detail tugas...</div>;
   if (!task) return <div className="p-12 text-center text-sm font-bold text-zinc-400">Tugas tidak ditemukan.</div>;
+
+  const getTaskLogLabel = (status: string) => {
+    switch (status) {
+      case 'TASK_ACCEPTED': return 'Tugas Diterima';
+      case 'ARRIVED': return 'Sampai Di Lokasi';
+      case 'NOT_STARTED': return 'Belum Di Kerjakan';
+      case 'WORKING': return 'Mulai Dikerjakan';
+      case 'VERIFY': return 'Menunggu Verifikasi';
+      case 'DONE': return 'Diverifikasi Admin';
+      default: return status;
+    }
+  };
+
+  const normalizeAddress = (address: any) => {
+    const a = typeof address === 'string' ? address.trim() : '';
+    if (!a) return null;
+    if (/^lokasi:/i.test(a)) return null;
+    if (/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(a)) return null;
+    return a;
+  };
+
+  const taskLogs: any[] = Array.isArray(task?.logs) ? task.logs : [];
+  const logsWithPhoto = taskLogs
+    .filter((l: any) => !!l?.photoUrl)
+    .slice()
+    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
     <div className="pb-8 min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -175,6 +202,63 @@ export default function AdminTaskDetailPage() {
             />
           </Card>
         )}
+
+        {/* Bukti Foto Berdasarkan Status (untuk admin) */}
+        <div>
+          <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-2">Bukti Foto Berdasarkan Status</p>
+          {logsWithPhoto.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 font-semibold">
+              Belum ada foto bukti yang diunggah untuk tugas ini.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {logsWithPhoto.map((log: any) => (
+                <div
+                  key={log.id || `${log.status}-${log.createdAt}`}
+                  className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden"
+                >
+                  <div className="p-3 flex items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <Badge className={`${STATUS_COLOR[log.status] || 'bg-zinc-100 text-zinc-700'} border-none text-[10px] font-black uppercase px-2 py-0.5`}>
+                      {getTaskLogLabel(log.status)}
+                    </Badge>
+                    <span className="text-[10px] font-bold text-zinc-400 whitespace-nowrap">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingPhoto(log.photoUrl)}
+                    className="w-full bg-zinc-950/5 dark:bg-black/30"
+                  >
+                    <img
+                      src={log.photoUrl}
+                      alt={getTaskLogLabel(log.status)}
+                      className="w-full h-44 object-cover"
+                    />
+                  </button>
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase">
+                        GPS
+                      </Badge>
+                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 font-mono truncate">
+                        {log.lat != null && log.lng != null ? `${Number(log.lat).toFixed(6)}, ${Number(log.lng).toFixed(6)}` : '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase shrink-0">
+                        Alamat
+                      </Badge>
+                      <p className="text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
+                        {normalizeAddress(log.address) || 'Alamat belum tersedia'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Info Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -313,6 +397,25 @@ export default function AdminTaskDetailPage() {
         </div>
       </div>
 
+      {/* Photo Viewer */}
+      {viewingPhoto && (
+        <div className="fixed inset-0 z-[1000] bg-black/80 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Tutup"
+            onClick={() => setViewingPhoto(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+          >
+            ×
+          </button>
+          <img
+            src={viewingPhoto}
+            alt="Foto bukti"
+            className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
+          />
+        </div>
+      )}
+
       {/* Reject Modal */}
       {rejectModalOpen && (
         <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
@@ -332,10 +435,9 @@ export default function AdminTaskDetailPage() {
                   onChange={(e) => setRejectStatus(e.target.value)}
                   className="mt-1 w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm"
                 >
-                  <option value="WORKING">Mulai Di Kerjakan</option>
-                  <option value="NOT_STARTED">Belum Di Kerjakan</option>
-                  <option value="ARRIVED">Sampai Di Lokasi</option>
-                  <option value="TASK_ACCEPTED">Tugas Diterima</option>
+                  <option value="NOT_STARTED">Sebelum Mengerjakan</option>
+                  <option value="WORKING">Saat Mengerjakan</option>
+                  <option value="VERIFY">Selesai Mengerjakan</option>
                 </select>
               </div>
               <div>

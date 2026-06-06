@@ -10,13 +10,44 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
+const reverseCache = new Map<string, string>();
+
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const cached = reverseCache.get(key);
+  if (cached) return cached;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+          'User-Agent': 'sipetut-petukangan/1.0',
+        },
+        signal: controller.signal,
+      },
+    );
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    const display = data?.display_name ? String(data.display_name) : null;
+    if (display) reverseCache.set(key, display);
+    return display;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const tasks: any = await queryDb(
-      `SELECT t.*, z.name as zoneName, u.fullName as assignedToName FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId WHERE t.id = ?`,
+      `SELECT t.*, z.name as zoneName, u.fullName as assignedToName, u.photoUrl as assignedToPhotoUrl FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId WHERE t.id = ?`,
       [id]
     );
     if (!tasks?.[0]) return NextResponse.json({ error: 'Tugas tidak ditemukan' }, { status: 404 });
@@ -26,7 +57,31 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       [id]
     );
 
-    return NextResponse.json({ ...tasks[0], logs: logs || [] });
+    const t = tasks[0];
+    const resolvedLogs: any[] = [];
+    for (const log of (logs || [])) {
+      const addressStr = typeof log?.address === 'string' ? String(log.address).trim() : '';
+      const isBadAddress = !addressStr || /^lokasi:/i.test(addressStr) || /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(addressStr);
+      const latNum = log?.lat != null && log.lat !== '' ? Number(log.lat) : null;
+      const lngNum = log?.lng != null && log.lng !== '' ? Number(log.lng) : null;
+
+      if (isBadAddress && latNum != null && lngNum != null && Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        const resolved = await reverseGeocode(latNum, lngNum);
+        resolvedLogs.push({ ...log, address: resolved || null, _addressResolved: Boolean(resolved) });
+        continue;
+      }
+      resolvedLogs.push({ ...log, address: addressStr || null });
+    }
+
+    return NextResponse.json({
+      ...t,
+      assignedTo: t.assignedToId ? {
+        id: t.assignedToId,
+        fullName: t.assignedToName || null,
+        photoUrl: t.assignedToPhotoUrl || null
+      } : null,
+      logs: resolvedLogs
+    });
   } catch (err: any) {
     console.error('[GET /api/tasks/:id] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -39,6 +94,10 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
+
+    try {
+      await queryDb('ALTER TABLE tasks ADD COLUMN rejectionReason TEXT NULL');
+    } catch {}
 
     const updates: string[] = [];
     const values: any[] = [];

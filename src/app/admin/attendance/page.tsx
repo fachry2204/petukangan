@@ -1196,10 +1196,10 @@ export default function AdminAttendancePage() {
                     lng: Number(rec.lng),
                     name: rec.user?.fullName || 'Petugas',
                     fullName: rec.user?.fullName || 'Petugas',
-                    photoUrl: rec.photoUrl || rec.user?.photoUrl,
                     status: getTypeText(rec.type),
                     address: rec.address,
-                    type: rec.type
+                    type: rec.type,
+                    markerStyle: 'statusDot'
                   })).filter((p: any) => p.lat && p.lng)}
                 />
               </div>
@@ -1401,9 +1401,9 @@ export default function AdminAttendancePage() {
                                         lat: Number(rec.lat) || -6.229728,
                                         lng: Number(rec.lng) || 106.747136,
                                         name: rec.user?.fullName || 'Petugas',
-                                        photoUrl: rec.photoUrl || rec.user?.photoUrl,
                                         status: getTypeText(rec.type),
-                                        type: rec.type
+                                        type: rec.type,
+                                        markerStyle: 'statusDot'
                                       }]}
                                     />
                                   </div>
@@ -1431,7 +1431,9 @@ export default function AdminAttendancePage() {
                                       lat: Number(rec.lat) || -6.229728,
                                       lng: Number(rec.lng) || 106.747136,
                                       name: rec.user?.fullName || 'Petugas',
-                                      status: getTypeText(rec.type)
+                                      status: getTypeText(rec.type),
+                                      type: rec.type,
+                                      markerStyle: 'statusDot'
                                     }]}
                                   />
                                 </div>

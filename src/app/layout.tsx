@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { queryDb } from "@/lib/db";
 
 const plusJakarta = localFont({
   src: [
@@ -24,20 +25,33 @@ const plusJakarta = localFont({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Skip dynamic metadata fetch during build time - use fallback
-  // This allows deployment to any domain without manual configuration
-  // The real metadata will be fetched client-side via SettingsProvider
+  let systemName = "SIPETUT";
+  let systemDescription = "Monitoring & Management System";
+  let logoUrl = "/logodki.png";
+
+  try {
+    const rows: any = await queryDb(
+      "SELECT systemName, systemDescription, logoUrl FROM system_settings LIMIT 1"
+    );
+    const settings = rows?.[0];
+    if (settings) {
+      systemName = settings.systemName || systemName;
+      systemDescription = settings.systemDescription || systemDescription;
+      logoUrl = settings.logoUrl || logoUrl;
+    }
+  } catch {}
 
   return {
-    title: "PPSU Smart Monitoring",
-    applicationName: "PPSU Smart Monitoring",
-    description: "Jakarta Smart City Monitoring System",
+    title: systemName,
+    applicationName: systemName,
+    description: systemDescription,
+    manifest: "/manifest.webmanifest",
     icons: {
-      icon: '/logodki.png',
-      apple: '/logodki.png',
+      icon: logoUrl,
+      apple: logoUrl,
     },
     appleWebApp: {
-      title: "PPSU Smart",
+      title: systemName,
       capable: true,
     },
   };

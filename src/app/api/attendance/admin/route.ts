@@ -15,15 +15,15 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const regular: any = await queryDb(
-      `SELECT a.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM attendance a JOIN users u ON u.id = a.userId ORDER BY a.timestamp DESC`
+      `SELECT a.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance a JOIN users u ON u.id = a.userId ORDER BY a.timestamp DESC`
     );
 
     const lembur: any = await queryDb(
-      `SELECT l.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM lembur l JOIN users u ON u.id = l.userId ORDER BY l.timestamp DESC`
+      `SELECT l.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM lembur l JOIN users u ON u.id = l.userId ORDER BY l.timestamp DESC`
     );
 
     const requests: any = await queryDb(
-      `SELECT r.*, u.id as userId, u.fullName, u.username, u.photoUrl FROM attendance_requests r JOIN users u ON u.id = r.userId ORDER BY r.timestamp DESC`
+      `SELECT r.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance_requests r JOIN users u ON u.id = r.userId ORDER BY r.timestamp DESC`
     );
 
     const mappedRequests = (requests || []).map((req: any) => ({
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
         id: req.userId,
         fullName: req.fullName,
         username: req.username,
-        photoUrl: req.photoUrl
+        photoUrl: req.userPhotoUrl
       },
       type: 'IN',
       timestamp: req.timestamp,
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
         id: r.userId,
         fullName: r.fullName,
         username: r.username,
-        photoUrl: r.photoUrl
+        photoUrl: r.userPhotoUrl
       }
     }));
     const lemburMapped = (lembur || []).map((l: any) => ({ 
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
         id: l.userId,
         fullName: l.fullName,
         username: l.username,
-        photoUrl: l.photoUrl
+        photoUrl: l.userPhotoUrl
       }
     }));
 

@@ -45,6 +45,7 @@ export default function PpsuLayout({
   const [gpsModalVisible, setGpsModalVisible] = useState(false);
   const [gpsStatusMessage, setGpsStatusMessage] = useState('Silakan klik tombol di bawah untuk mengizinkan akses lokasi.');
   const [isRequestingGps, setIsRequestingGps] = useState(false);
+  const [trackingAllowed, setTrackingAllowed] = useState<boolean | null>(null);
 
   // Fetch today's attendance status so we can include it in location updates
   useEffect(() => {
@@ -70,6 +71,12 @@ export default function PpsuLayout({
           if (data?.status) {
             const resolved = resolveMapStatus(data.status);
             attendanceStatusRef.current = resolved;
+            const allowed = resolved !== 'Pulang';
+            setTrackingAllowed(allowed);
+            if (!allowed) {
+              setGpsModalVisible(false);
+              setIsRequestingGps(false);
+            }
             // Re-emit location with new status if socket connected.
             // Reuse last known GPS so the marker is not wiped out.
             if (socketRef.current?.connected && user) {
@@ -109,6 +116,7 @@ export default function PpsuLayout({
 
   useEffect(() => {
     if (!token || !user || typeof window === 'undefined') return;
+    if (trackingAllowed !== true) return;
 
     // Show GPS activation prompt immediately after login
     setGpsModalVisible(true);
@@ -417,7 +425,7 @@ export default function PpsuLayout({
         socket.disconnect();
       }
     };
-  }, [token, user]);
+  }, [token, user, trackingAllowed]);
 
   const retryGps = () => {
     setIsRequestingGps(true);

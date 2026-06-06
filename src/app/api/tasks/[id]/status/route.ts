@@ -10,6 +10,30 @@ function getUserFromToken(req: Request) {
   return verifyToken(token);
 }
 
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+          'User-Agent': 'sipetut-petukangan/1.0',
+        },
+        signal: controller.signal,
+      },
+    );
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    return data?.display_name ? String(data.display_name) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
@@ -55,10 +79,20 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         return NextResponse.json({ error: 'Foto wajib disertakan untuk perubahan status ini' }, { status: 400 });
       }
 
+      const latNum = lat != null && lat !== '' ? Number(lat) : null;
+      const lngNum = lng != null && lng !== '' ? Number(lng) : null;
+      const addressStr = typeof address === 'string' ? address.trim() : '';
+      const isBadAddress = !addressStr || /^lokasi:/i.test(addressStr) || /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(addressStr);
+      let finalAddress: string | null = addressStr || null;
+      if (isBadAddress && latNum != null && lngNum != null && Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        const resolved = await reverseGeocode(latNum, lngNum);
+        if (resolved) finalAddress = resolved;
+      }
+
       // Create log
       await conn.execute(
         `INSERT INTO task_logs (taskId, status, lat, lng, address, photoUrl, note, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(6))`,
-        [id, status, lat || null, lng || null, address || null, photoUrl, note || null]
+        [id, status, latNum, lngNum, finalAddress, photoUrl, note || null]
       );
 
       // Update task status

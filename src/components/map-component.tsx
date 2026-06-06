@@ -34,6 +34,17 @@ export default function MapComponent({
   const memoizedPaths = useMemo(() => paths, [JSON.stringify(paths)]);
 
   const buildIcon = (L: any, p: any) => {
+    const sl = (p.status || '').toLowerCase();
+    const type = (p.type || '').toUpperCase();
+    let pulseColor = '#38bdf8';
+    
+    if (type === 'IN' || sl.includes('masuk')) pulseColor = '#22c55e';
+    if (type === 'BREAK' || type === 'END_BREAK' || sl.includes('istirahat')) pulseColor = '#fbbf24';
+    if (type === 'OUT' || sl.includes('pulang')) pulseColor = '#ef4444';
+    
+    if (p.isStart) pulseColor = '#22c55e';
+    if (p.isEnd) pulseColor = '#ef4444';
+
     if (p.isWaypoint) {
       const color = p.pathColor || '#6b7280';
       const html = `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:1.5px solid white;box-shadow:0 0 3px rgba(0,0,0,0.3);"></div>`;
@@ -54,16 +65,16 @@ export default function MapComponent({
       return L.divIcon({ className: 'custom-sos-icon', html, iconSize: [60, 60], iconAnchor: [30, 30], popupAnchor: [0, -30] });
     }
 
-    const sl = (p.status || '').toLowerCase();
-    const type = (p.type || '').toUpperCase();
-    let pulseColor = '#38bdf8';
-    
-    if (type === 'IN' || sl.includes('masuk')) pulseColor = '#22c55e';
-    if (type === 'BREAK' || type === 'END_BREAK' || sl.includes('istirahat')) pulseColor = '#fbbf24';
-    if (type === 'OUT' || sl.includes('pulang')) pulseColor = '#ef4444';
-    
-    if (p.isStart) pulseColor = '#22c55e';
-    if (p.isEnd) pulseColor = '#ef4444';
+    const markerStyle = String(p.markerStyle || '');
+    const useStatusDot = markerStyle === 'statusDot' || markerStyle === 'status-dot' || p.useStatusDot === true;
+    if (useStatusDot) {
+      const html = `
+        <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:${pulseColor};opacity:0.55;animation:ping 1s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          <div style="position:relative;width:12px;height:12px;border-radius:50%;background:${pulseColor};border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.25);z-index:10;"></div>
+        </div>`;
+      return L.divIcon({ className: 'attendance-dot-icon', html, iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11] });
+    }
 
     const innerHtml = p.photoUrl
       ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" />`
@@ -160,7 +171,7 @@ export default function MapComponent({
     // Process each point
     Object.values(coordGroups).forEach(group => {
       group.forEach((point, index) => {
-        const id = point.id || point.name || `${point.lat},${point.lng}`;
+        const id = String(point.id ?? point.name ?? `${point.lat},${point.lng}`);
         currentMarkerIds.add(id);
 
         // Calculate offset if multiple markers at same location
@@ -273,7 +284,7 @@ export default function MapComponent({
         @keyframes ping {
           75%, 100% { transform: scale(2); opacity: 0; }
         }
-        .custom-photo-icon, .custom-sos-icon { background: transparent !important; border: none !important; }
+        .custom-photo-icon, .custom-sos-icon, .attendance-dot-icon { background: transparent !important; border: none !important; }
       `}</style>
       <div ref={containerRef} style={{ height: '100%', width: '100%', minHeight: '300px' }} />
     </>

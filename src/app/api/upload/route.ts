@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { verifyToken } from '@/lib/auth';
+import { queryDb } from '@/lib/db';
 
 function getUserFromToken(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -28,9 +29,23 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Sanitize user name for folder
-    const sanitizedName = user.fullName ? user.fullName.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_') : 'admin';
-    const userFolder = user.role === 'ADMIN' ? `admin-${sanitizedName}` : `${user.id}-${sanitizedName}`;
+    const userId = Number(user.sub ?? user.id);
+    let resolvedFullName: string | null = null;
+    let resolvedUsername: string | null = null;
+    if (Number.isFinite(userId) && userId > 0) {
+      try {
+        const rows: any = await queryDb(`SELECT fullName, username FROM users WHERE id = ? LIMIT 1`, [userId]);
+        if (rows?.[0]) {
+          resolvedFullName = rows[0].fullName || null;
+          resolvedUsername = rows[0].username || null;
+        }
+      } catch { /* ignore */ }
+    }
+
+    const rawName = String(resolvedFullName || user.fullName || resolvedUsername || user.username || `Petugas_${userId || 'unknown'}`);
+    const sanitizedName = rawName.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_') || 'petugas';
+    const roleName = String(user.role || '').toUpperCase();
+    const userFolder = roleName === 'ADMIN' ? `admin-${sanitizedName}` : `${userId || 'unknown'}-${sanitizedName}`;
 
     // Get current date in DD-MM-YYYY format (for folders that need date)
     const now = new Date();

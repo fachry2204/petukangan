@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = decoded.role === 'PPSU' ? decoded.sub : undefined;
-    let sql = `SELECT t.*, z.name as zoneName, u.fullName as assignedToName FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId`;
+    let sql = `SELECT t.*, z.name as zoneName, u.fullName as assignedToName, u.photoUrl as assignedToPhotoUrl FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId`;
     const params: any[] = [];
 
     if (userId) {
@@ -26,7 +26,15 @@ export async function GET(req: Request) {
 
     sql += ' ORDER BY t.createdAt DESC';
     const rows: any = await queryDb(sql, params);
-    return NextResponse.json(rows || []);
+    const mapped = (rows || []).map((r: any) => ({
+      ...r,
+      assignedTo: r.assignedToId ? {
+        id: r.assignedToId,
+        fullName: r.assignedToName || null,
+        photoUrl: r.assignedToPhotoUrl || null
+      } : null,
+    }));
+    return NextResponse.json(mapped);
   } catch (err: any) {
     console.error('[GET /api/tasks] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

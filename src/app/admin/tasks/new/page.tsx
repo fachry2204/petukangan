@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,8 +34,33 @@ export default function NewTaskPage() {
   const [deadline, setDeadline] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   
-  const onlineStaff = officers.filter(o => onlineOfficers.some(onl => onl.userId === o.id));
-  const offlineStaff = officers.filter(o => !onlineOfficers.some(onl => onl.userId === o.id));
+  const onlineById = useMemo(() => {
+    const map = new Map<number, any>();
+    (onlineOfficers || []).forEach((o: any) => {
+      const id = Number(o?.userId);
+      if (!Number.isNaN(id)) map.set(id, o);
+    });
+    return map;
+  }, [onlineOfficers]);
+
+  const isSelectableOnlineStatus = (status: any) => {
+    const s = String(status || '').toLowerCase();
+    if (s.includes('istirahat')) return false;
+    if (s.includes('pulang') || s.includes('check-out') || s.includes('checkout')) return false;
+    return true;
+  };
+
+  const onlineStaff = officers.filter((o) => {
+    const onl = onlineById.get(Number(o.id));
+    if (!onl) return false;
+    return isSelectableOnlineStatus(onl.status);
+  });
+
+  const offlineStaff = officers.filter((o) => {
+    const onl = onlineById.get(Number(o.id));
+    if (!onl) return true;
+    return !isSelectableOnlineStatus(onl.status);
+  });
   const baseStaff = activeTab === 'online' ? onlineStaff : offlineStaff;
   const displayedStaff = officerSearch.trim()
     ? baseStaff.filter(o => (o.fullName || '').toLowerCase().includes(officerSearch.toLowerCase()))
@@ -55,7 +80,12 @@ export default function NewTaskPage() {
         if (res.ok) {
           const data = await res.json();
           // Filter out admins if any, assuming role is PPSU
-          setOfficers(data.filter((u: any) => u.role?.name === 'PPSU' || u.role === 'PPSU'));
+          setOfficers(
+            (data || []).filter((u: any) => {
+              const roleName = String(u?.roleName || u?.role?.name || u?.role || '').toUpperCase();
+              return roleName === 'PPSU';
+            })
+          );
         }
       } catch (err) {
         console.error('Failed to fetch staff', err);

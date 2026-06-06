@@ -1,35 +1,35 @@
 import { MetadataRoute } from 'next';
+import { queryDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  let systemName = 'PPSU Smart';
-  let description = 'Sistem Monitoring PPSU';
+  let systemName = 'SI PETUT';
+  let description = 'Monitoring PPSU';
   let logoUrl = '/logodki.png';
+  let mainColor = '#f97316';
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
-    // Ambil data pengaturan dari database
-    const res = await fetch('http://localhost:3001/settings', { 
-      next: { revalidate: 60 },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const settings = await res.json();
+    const rows: any = await queryDb(
+      'SELECT systemName, systemDescription, logoUrl, mainColor FROM system_settings LIMIT 1'
+    );
+    const settings = rows?.[0];
+    if (settings) {
       systemName = settings.systemName || systemName;
       description = settings.systemDescription || description;
       logoUrl = settings.logoUrl || logoUrl;
+      mainColor = settings.mainColor || mainColor;
     }
   } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.warn('⚠️ Manifest fetch aborted (backend not ready during build), using fallback.');
-    } else {
-      console.error('Failed to fetch settings for manifest:', error.message || error);
-    }
+    console.error('Failed to fetch settings for manifest:', error?.message || error);
   }
+
+  const lowerLogo = String(logoUrl || '').toLowerCase();
+  const iconType = lowerLogo.endsWith('.svg')
+    ? 'image/svg+xml'
+    : lowerLogo.endsWith('.jpg') || lowerLogo.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : 'image/png';
 
   return {
     name: systemName,
@@ -38,17 +38,17 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     start_url: '/login',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#FF8C00',
+    theme_color: mainColor,
     icons: [
       {
         src: logoUrl,
         sizes: '192x192',
-        type: 'image/png',
+        type: iconType,
       },
       {
         src: logoUrl,
         sizes: '512x512',
-        type: 'image/png',
+        type: iconType,
       },
     ],
   };
