@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let systemName = 'PPSU Smart';
   let description = 'Sistem Monitoring PPSU';
