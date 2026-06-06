@@ -1,0 +1,17 @@
+{
+  "app": {
+    "[project]/src/app/login/page": [
+      "static/media/PlusJakartaDisplay_Regular-s.p.0_~c1wqny~hl5.otf",
+      "static/media/PlusJakartaDisplay_Medium-s.p.0qwx.~yjrch.2.otf",
+      "static/media/PlusJakartaDisplay_Bold-s.p.0bz6ddvsw5w-q.otf"
+    ],
+    "[project]/src/app/page": [
+      "static/media/PlusJakartaDisplay_Regular-s.p.0_~c1wqny~hl5.otf",
+      "static/media/PlusJakartaDisplay_Medium-s.p.0qwx.~yjrch.2.otf",
+      "static/media/PlusJakartaDisplay_Bold-s.p.0bz6ddvsw5w-q.otf"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}
