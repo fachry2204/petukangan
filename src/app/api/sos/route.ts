@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server';
 import * as mysql from 'mysql2/promise';
+import { verifyToken } from '@/lib/auth';
 
-export async function GET() {
+function getUserFromToken(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  return verifyToken(token);
+}
+
+export async function GET(req: Request) {
+  const decoded = getUserFromToken(req);
+  if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const conn = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
@@ -39,6 +49,8 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  const decoded = getUserFromToken(req);
+  if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const { userId, status } = await req.json();
     
@@ -71,6 +83,8 @@ export async function PUT(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const decoded = getUserFromToken(req);
+  if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const payload = await req.json();
     const dateObj = new Date(payload.timestamp || Date.now());
