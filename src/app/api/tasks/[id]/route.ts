@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromToken } from '@/lib/auth';
 import { queryDb, getDbConnection } from '@/lib/db';
 
-function getUserFromToken(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.slice(7);
-  return verifyToken(token);
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server';
-import { verifyToken, hashPassword } from '@/lib/auth';
+import { getUserFromToken, hashPassword } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
 
-function getUserFromToken(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  console.log('[Auth] Header:', authHeader ? authHeader.substring(0, 50) + '...' : 'NONE');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.slice(7);
-  console.log('[Auth] Token length:', token.length);
-  const decoded = verifyToken(token);
-  console.log('[Auth] Decoded:', decoded ? 'OK (sub=' + decoded.sub + ')' : 'FAIL');
-  return decoded;
-}
 
 export async function GET(req: Request) {
   try {

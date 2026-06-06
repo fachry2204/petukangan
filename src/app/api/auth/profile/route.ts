@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
-import { verifyToken, getUserById } from '@/lib/auth';
+import { getUserFromToken, getUserById } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const decoded = verifyToken(token);
+    const decoded = getUserFromToken(req);
     if (!decoded?.sub) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

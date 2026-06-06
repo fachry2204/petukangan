@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
-import * as mysql from 'mysql2/promise';
+import { queryDb } from '@/lib/db';
 
 export async function GET() {
   try {
-    const conn = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'ppsu_monitoring'
-    });
-
-    const [rows] = await conn.query(`
+    const rows = await queryDb(`
       SELECT 
         s.id, 
         s.user_id as userId, 
@@ -29,7 +22,6 @@ export async function GET() {
       ORDER BY s.created_at DESC 
       LIMIT 100
     `);
-    await conn.end();
 
     return NextResponse.json(rows);
   } catch (error) {
@@ -46,22 +38,14 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Missing userId or status' }, { status: 400 });
     }
 
-    const conn = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'ppsu_monitoring'
-    });
-
     let query = 'UPDATE sos_signals SET status = ? WHERE user_id = ? AND status != "SELESAI"';
-    let params: any[] = [status, userId];
+    const params: any[] = [status, userId];
 
     if (status === 'SELESAI') {
       query = 'UPDATE sos_signals SET status = ?, resolved_at = CURRENT_TIMESTAMP WHERE user_id = ? AND status != "SELESAI"';
     }
 
-    await conn.query(query, params);
-    await conn.end();
+    await queryDb(query, params);
 
     return NextResponse.json({ success: true, message: `Status updated to ${status}` });
   } catch (error) {
@@ -79,14 +63,7 @@ export async function POST(req: Request) {
     const timeSos = gmt7Date.toISOString().split('T')[1].split('.')[0];
     const mapLink = `https://www.google.com/maps/search/?api=1&query=${payload.lat},${payload.lng}`;
 
-    const conn = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'ppsu_monitoring'
-    });
-    
-    await conn.query(
+    await queryDb(
       'INSERT INTO sos_signals (user_id, full_name, date_sos, time_sos, lat, lng, address, map_link, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         payload.userId || 0, 
@@ -100,7 +77,6 @@ export async function POST(req: Request) {
         'DARURAT'
       ]
     );
-    await conn.end();
 
     return NextResponse.json({ success: true, message: 'SOS signal saved successfully' });
   } catch (error) {

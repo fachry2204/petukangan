@@ -1,18 +1,10 @@
 import { NextResponse } from 'next/server';
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'ppsu_monitoring',
-};
+import { getDbConnection } from '@/lib/db';
 
 export async function GET() {
   let conn;
   try {
-    conn = await mysql.createConnection(dbConfig);
+    conn = await getDbConnection();
 
     // 1. Jumlah jadwal yang sudah selesai hari ini
     const [selesaiRows] = await conn.query<any[]>(
