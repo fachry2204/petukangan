@@ -421,7 +421,7 @@ export default function GPSHistoryPage() {
               </div>
             </div>
 
-            <Button onClick={fetchGPSHistory} disabled={loading} className="gap-2">
+            <Button onClick={() => fetchGPSHistory()} disabled={loading} className="gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" />}
               Filter
             </Button>
