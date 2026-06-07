@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,22 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function PpsuReportsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 pb-24">
+          <div className="py-10 text-center text-sm text-zinc-400 flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" /> Memuat...
+          </div>
+        </div>
+      }
+    >
+      <PpsuReportsPageInner />
+    </Suspense>
+  );
+}
+
+function PpsuReportsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token } = useAuthStore();

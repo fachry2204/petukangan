@@ -117,7 +117,7 @@ export function useRealtimeEntity(
   }, [onChange]);
 
   return useRealtime(
-    useCallback((event) => {
+    useCallback((event: DataChangeEvent) => {
       if (event.entity === entity) {
         memoizedOnChange(event.action, event.data);
       }
