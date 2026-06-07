@@ -97,10 +97,15 @@ export default function LoginPage() {
         }
       }, 1500);
     } catch (error: any) {
+      const status = error?.response?.status;
+      const serverMsg = error?.response?.data?.error || error?.response?.data?.message;
+      const isUnauthorized = status === 401;
       setModalState({
         isOpen: true,
         title: error.response ? 'Login Gagal ❌' : 'Server Offline 🚫',
-        description: error.response?.data?.message || 'SERVER Sedang Offline atau tidak dapat dihubungi. Silakan coba lagi nanti.',
+        description: isUnauthorized
+          ? 'Password salah. Silakan coba lagi.'
+          : serverMsg || 'SERVER Sedang Offline atau tidak dapat dihubungi. Silakan coba lagi nanti.',
         type: 'error'
       });
     } finally {
@@ -229,10 +234,12 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 text-center">
-            <p className="text-xs text-zinc-400 flex items-center justify-center gap-1">
-              <MapPin className="w-3 h-3" />
-              Kelurahan Petukangan Utara © 2026
-            </p>
+            {settings.footerShowOnLogin !== false && (
+              <p className="text-xs text-zinc-400 flex items-center justify-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {settings.footerText || 'Kelurahan Petukangan Utara © 2026'}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -11,12 +11,12 @@ export async function POST(req: Request) {
 
     const user = await getUserByUsername(username);
     if (!user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
 
     const valid = await comparePassword(password, user.password);
     if (!valid) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
 
     const token = signToken({

@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { useAuthStore } from '@/store/auth-store';
 
 import { Siren } from 'lucide-react'; // Ensure Siren is imported if missing
 
@@ -45,6 +46,17 @@ export function AdminSidebar() {
   const logoUrl = useSettingsStore(state => state.logoUrl);
   const systemName = useSettingsStore(state => state.systemName);
   const systemDescription = useSettingsStore(state => state.systemDescription);
+  const roleAccess = useSettingsStore(state => state.roleAccess);
+  const user = useAuthStore(state => state.user);
+
+  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const canAccess = (href: string) => {
+    if (!roleName || roleName === 'ADMIN') return true;
+    return roleAccess?.[roleName]?.[href] !== false;
+  };
+
+  const filteredGeneral = generalMenuItems.filter((i) => canAccess(i.href));
+  const filteredPpsu = ppsuMenuItems.filter((i) => canAccess(i.href));
 
   return (
     <aside 
@@ -83,7 +95,7 @@ export function AdminSidebar() {
         "flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pt-6",
         isCollapsed ? "px-2" : "px-4"
       )}>
-        {generalMenuItems.map((item) => {
+        {filteredGeneral.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -127,7 +139,7 @@ export function AdminSidebar() {
           <div className="h-px bg-zinc-100 my-4 mx-2" />
         )}
 
-        {ppsuMenuItems.map((item) => {
+        {filteredPpsu.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -168,22 +180,24 @@ export function AdminSidebar() {
         "border-t border-zinc-100 mt-auto transition-all duration-300",
         isCollapsed ? "p-2 flex justify-center" : "p-4"
       )}>
-        <Link
-          href="/admin/settings"
-          className={cn(
-            "flex items-center rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-all duration-300",
-            isCollapsed ? "p-3" : "px-4 py-3 gap-3 w-full"
-          )}
-          title={isCollapsed ? "Settings" : undefined}
-        >
-          <Settings className="w-5 h-5 shrink-0" />
-          <span className={cn(
-            "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
-            isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[180px]"
-          )}>
-            Settings
-          </span>
-        </Link>
+        {canAccess('/admin/settings') && (
+          <Link
+            href="/admin/settings"
+            className={cn(
+              "flex items-center rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-all duration-300",
+              isCollapsed ? "p-3" : "px-4 py-3 gap-3 w-full"
+            )}
+            title={isCollapsed ? "Settings" : undefined}
+          >
+            <Settings className="w-5 h-5 shrink-0" />
+            <span className={cn(
+              "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+              isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[180px]"
+            )}>
+              Settings
+            </span>
+          </Link>
+        )}
       </div>
     </aside>
   );

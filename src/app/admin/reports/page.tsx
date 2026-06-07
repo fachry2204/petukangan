@@ -13,9 +13,12 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
+import { useSettingsStore } from '@/store/settings-store';
 
 export default function AdminReportsPage() {
   const { token } = useAuthStore();
+  const user = useAuthStore(state => state.user);
+  const rolePermissions = useSettingsStore(state => state.rolePermissions);
   const { toast } = useToast();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,9 +98,12 @@ export default function AdminReportsPage() {
       });
       setReports(prev => prev.filter(r => r.id !== id));
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Gagal menghapus laporan');
+      alert(err?.response?.data?.error || err?.response?.data?.message || 'Gagal menghapus laporan');
     }
   };
+
+  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const canDelete = roleName === 'ADMIN' ? true : rolePermissions?.[String(roleName)]?.canDelete !== false;
 
   const STATUS_LABEL: Record<string, string> = {
     PENDING: 'Menunggu',
@@ -273,7 +279,8 @@ export default function AdminReportsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(report.id)}
-                              className="h-8 w-8 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50"
+                            disabled={!canDelete}
+                            className="h-8 w-8 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
                               title="Hapus"
                             >
                               <Trash2 className="w-4 h-4" />

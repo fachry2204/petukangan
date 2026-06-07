@@ -118,6 +118,9 @@ export default function PpsuLayout({
     if (!token || !user || typeof window === 'undefined') return;
     if (trackingAllowed !== true) return;
 
+    const gpsIntervalSeconds = Math.max(5, Number(settings.gpsUpdateInterval) || 30);
+    const gpsIntervalMs = gpsIntervalSeconds * 1000;
+
     // Show GPS activation prompt immediately after login
     setGpsModalVisible(true);
     setIsRequestingGps(true);
@@ -201,16 +204,15 @@ export default function PpsuLayout({
         console.log('[PPSU] Heartbeat skipped - socket not connected');
         return;
       }
-      const g = lastGpsRef.current;
       const deviceInfo = getDeviceInfo();
       const payload = {
         userId: user.id,
         fullName: user.fullName,
         photoUrl: user.photoUrl,
         status: attendanceStatusRef.current,
-        lat: g?.lat ?? null,
-        lng: g?.lng ?? null,
-        gpsStatus: !!g,
+        lat: null,
+        lng: null,
+        gpsStatus: false,
         timestamp: Date.now(),
         device: deviceInfo.device,
         os: deviceInfo.os,
@@ -218,6 +220,19 @@ export default function PpsuLayout({
       };
       console.log('[PPSU] Emitting heartbeat:', payload);
       socketRef.current.emit('updateLocation', payload);
+    };
+
+    let lastGpsEmitAt = 0;
+    const emitWithGpsThrottled = (pos: GeolocationPosition) => {
+      lastGpsRef.current = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        timestamp: Date.now(),
+      };
+      const now = Date.now();
+      if (now - lastGpsEmitAt < gpsIntervalMs) return;
+      lastGpsEmitAt = now;
+      emitWithGps(pos);
     };
 
     // Try to detect Capacitor native runtime and start native background
@@ -249,7 +264,7 @@ export default function PpsuLayout({
             }
             if (!location) return;
             // Reuse the same emit pipeline so admin map updates identically.
-            emitWithGps({
+            emitWithGpsThrottled({
               coords: {
                 latitude: location.latitude,
                 longitude: location.longitude,
@@ -333,7 +348,7 @@ export default function PpsuLayout({
         if (safeguardTimeout) clearTimeout(safeguardTimeout);
         setGpsModalVisible(false);
         setIsRequestingGps(false);
-        emitWithGps(pos);
+        emitWithGpsThrottled(pos);
       };
 
       const handleGpsError = (err: any) => {
@@ -373,11 +388,11 @@ export default function PpsuLayout({
       // We force a getCurrentPosition every 10s and always emit.
       pollInterval = setInterval(() => {
         navigator.geolocation.getCurrentPosition(
-          (pos) => emitWithGps(pos),
+          (pos) => emitWithGpsThrottled(pos),
           () => emitHeartbeat(), // fallback: re-emit last known GPS
           { enableHighAccuracy: true, maximumAge: 8000, timeout: 12000 },
         );
-      }, 10000);
+      }, gpsIntervalMs);
 
       // Lightweight heartbeat every 8s using last known GPS, so the admin
       // map always shows the marker as alive even if the OS hasn't returned
@@ -396,7 +411,7 @@ export default function PpsuLayout({
         acquireWakeLock();
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
-            (pos) => emitWithGps(pos),
+            (pos) => emitWithGpsThrottled(pos),
             () => emitHeartbeat(),
             { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
           );
@@ -425,7 +440,7 @@ export default function PpsuLayout({
         socket.disconnect();
       }
     };
-  }, [token, user, trackingAllowed]);
+  }, [token, user, trackingAllowed, settings.gpsUpdateInterval]);
 
   const retryGps = () => {
     setIsRequestingGps(true);

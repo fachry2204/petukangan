@@ -88,6 +88,34 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
   }
 }
 
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await context.params;
+    const decoded = getUserFromToken(req);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (decoded.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const body = await req.json().catch(() => ({}));
+    const action = String(body?.action || '');
+    if (action !== 'reset_password') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    const hashed = await hashPassword('1234');
+    try {
+      await queryDb('UPDATE users SET password = ?, updatedAt = NOW(6) WHERE id = ?', [hashed, id]);
+    } catch {
+      await queryDb('UPDATE users SET password = ?, updated_at = NOW(6) WHERE id = ?', [hashed, id]);
+    }
+
+    emitUserChange('update', { id: Number(id) });
+    return NextResponse.json({ message: 'Password berhasil direset' });
+  } catch (err: any) {
+    console.error('[POST /api/users/:id] error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;

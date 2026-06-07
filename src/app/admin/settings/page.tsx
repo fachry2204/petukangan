@@ -6,12 +6,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Shield, Plus, Edit2, Trash2, Upload, Database, FileArchive, Download, Loader2, Save } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { Input } from '@/components/ui/input';
 import { apiUrl } from '@/lib/api-config';
+
+const ROLE_PAGES = [
+  { href: '/admin/dashboard', label: 'Dashboard' },
+  { href: '/admin/monitoring', label: 'Live Monitoring' },
+  { href: '/admin/online-officers', label: 'Data Petugas Online' },
+  { href: '/admin/gps-history', label: 'Riwayat GPS' },
+  { href: '/admin/sos', label: 'SOS Petugas' },
+  { href: '/admin/users', label: 'Petugas' },
+  { href: '/admin/attendance', label: 'Absensi Petugas' },
+  { href: '/admin/schedules', label: 'Jadwal Petugas' },
+  { href: '/admin/tasks', label: 'Tugas Lapangan' },
+  { href: '/admin/reports', label: 'Laporan Kejadian' },
+  { href: '/admin/settings', label: 'Pengaturan Sistem' },
+];
 
 export default function AdminSettingsPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -74,6 +89,25 @@ export default function AdminSettingsPage() {
   };
 
   const [isSaving, setIsSaving] = useState(false);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    roleName: 'ADMIN',
+  });
+
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch users', error);
+    }
+  };
 
   const handleFileUpload = async (file: File, type: 'logo' | 'bg') => {
     const formData = new FormData();
@@ -111,6 +145,11 @@ export default function AdminSettingsPage() {
         maintenanceTitle: settings.maintenanceTitle,
         maintenanceDesc: settings.maintenanceDesc,
         gpsUpdateInterval: settings.gpsUpdateInterval,
+        roleAccess: settings.roleAccess,
+        rolePermissions: settings.rolePermissions,
+        footerText: settings.footerText,
+        footerShowOnAdmin: settings.footerShowOnAdmin,
+        footerShowOnLogin: settings.footerShowOnLogin,
         shifts: settings.shifts,
         zones: settings.zones,
       }, {
@@ -125,23 +164,69 @@ export default function AdminSettingsPage() {
   };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get(`${apiUrl}/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUsers(res.data);
-      } catch (error) {
-        console.error('Failed to fetch users', error);
-      }
-    };
     if (token) fetchUsers();
   }, [token]);
 
   // Filter users that are Admin, Staff, or Pimpinan
-  const adminUsers = users.filter(u => 
-    u.role && ['ADMIN', 'STAFF', 'PIMPINAN'].includes(u.role.name)
-  );
+  const adminUsers = users.filter((u) => {
+    const roleName = u.roleName || u.role?.name || u.role;
+    return roleName && ['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(roleName));
+  });
+
+  const setRoleAccess = (roleName: string, href: string, enabled: boolean) => {
+    const current = settings.roleAccess || {};
+    const currentRole = current[roleName] || {};
+    const nextRole = { ...currentRole, [href]: enabled };
+    settings.setSettings({ roleAccess: { ...current, [roleName]: nextRole } });
+  };
+
+  const handleCreateAdmin = async () => {
+    if (!token) return;
+    if (!newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.phone.trim()) {
+      alert('Nama, Email, dan No HP wajib diisi.');
+      return;
+    }
+    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(newAdmin.roleName)) {
+      alert('Role tidak valid.');
+      return;
+    }
+    setIsCreatingAdmin(true);
+    try {
+      await axios.post(
+        `${apiUrl}/users`,
+        {
+          username: newAdmin.email.trim(),
+          password: '1234',
+          fullName: newAdmin.fullName.trim(),
+          email: newAdmin.email.trim(),
+          phone: newAdmin.phone.trim(),
+          roleName: newAdmin.roleName,
+          status: 'ACTIVE',
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setAdminDialogOpen(false);
+      setNewAdmin({ fullName: '', email: '', phone: '', roleName: 'ADMIN' });
+      await fetchUsers();
+      alert('Admin berhasil dibuat. Password default: 1234');
+    } catch (err: any) {
+      alert('Gagal membuat admin: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message));
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (id: number) => {
+    if (!token) return;
+    const ok = confirm('Hapus akun ini?');
+    if (!ok) return;
+    try {
+      await axios.delete(`${apiUrl}/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchUsers();
+    } catch (err: any) {
+      alert('Gagal menghapus user: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -154,6 +239,9 @@ export default function AdminSettingsPage() {
         <TabsList className="bg-zinc-100 dark:bg-zinc-900 mb-6 p-1 rounded-xl h-12">
           <TabsTrigger value="umum" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Umum
+          </TabsTrigger>
+          <TabsTrigger value="role" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Role
           </TabsTrigger>
           <TabsTrigger value="administrator" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Shield className="w-4 h-4 mr-2" /> Administrator
@@ -278,6 +366,37 @@ export default function AdminSettingsPage() {
                     value={settings.systemDescription}
                     onChange={(e) => settings.setSettings({ systemDescription: e.target.value })}
                   />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Teks Footer</label>
+                  <Input
+                    value={settings.footerText || ''}
+                    onChange={(e) => settings.setSettings({ footerText: e.target.value })}
+                    placeholder="Contoh: Kelurahan Petukangan Utara © 2026"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-4 py-3">
+                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Tampilkan Footer (Admin)</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.footerShowOnAdmin !== false}
+                      onChange={(e) => settings.setSettings({ footerShowOnAdmin: e.target.checked })}
+                      className="h-5 w-5 accent-orange-500"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-4 py-3">
+                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Tampilkan Footer (Login)</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.footerShowOnLogin !== false}
+                      onChange={(e) => settings.setSettings({ footerShowOnLogin: e.target.checked })}
+                      className="h-5 w-5 accent-orange-500"
+                    />
+                  </label>
                 </div>
               </div>
             </CardContent>
@@ -680,6 +799,85 @@ export default function AdminSettingsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="role" className="space-y-6">
+          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
+            <CardHeader>
+              <CardTitle>Akses Halaman Berdasarkan Role</CardTitle>
+              <CardDescription>Aktifkan / nonaktifkan halaman admin untuk role STAFF dan PIMPINAN.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(['STAFF', 'PIMPINAN'] as const).map((r) => (
+                <div key={r} className="rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-white">{r}</p>
+                      <p className="text-xs text-zinc-500">Kontrol menu & akses halaman untuk role ini.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-4 py-3">
+                      <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Izin Edit</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.rolePermissions?.[r]?.canEdit !== false}
+                        onChange={(e) => {
+                          const next = { ...(settings.rolePermissions || {}) };
+                          next[r] = { ...(next[r] || { canEdit: true, canDelete: true }), canEdit: e.target.checked };
+                          settings.setSettings({ rolePermissions: next });
+                        }}
+                        className="h-5 w-5 accent-orange-500"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-4 py-3">
+                      <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Izin Hapus</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.rolePermissions?.[r]?.canDelete !== false}
+                        onChange={(e) => {
+                          const next = { ...(settings.rolePermissions || {}) };
+                          next[r] = { ...(next[r] || { canEdit: true, canDelete: true }), canDelete: e.target.checked };
+                          settings.setSettings({ rolePermissions: next });
+                        }}
+                        className="h-5 w-5 accent-orange-500"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {ROLE_PAGES.map((p) => {
+                      const checked = settings.roleAccess?.[r]?.[p.href] !== false;
+                      return (
+                        <label
+                          key={p.href}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900 px-4 py-3"
+                        >
+                          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{p.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => setRoleAccess(r, p.href, e.target.checked)}
+                            className="h-5 w-5 accent-orange-500"
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={isSaving}
+                  className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Simpan Pengaturan
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="administrator">
           <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -687,7 +885,10 @@ export default function AdminSettingsPage() {
                 <CardTitle className="text-xl">Akses Administrator</CardTitle>
                 <CardDescription>Manajemen akses untuk Role Admin, Staff, dan Pimpinan</CardDescription>
               </div>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl">
+              <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                onClick={() => setAdminDialogOpen(true)}
+              >
                 <Plus className="w-4 h-4 mr-2" /> Tambah Admin
               </Button>
             </CardHeader>
@@ -715,16 +916,20 @@ export default function AdminSettingsPage() {
                       </TableCell>
                       <TableCell className="text-zinc-500">@{user.username}</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={`rounded-md px-2 font-medium ${
-                            user.role.name === 'ADMIN' ? 'border-red-200 text-red-600 bg-red-50' :
-                            user.role.name === 'PIMPINAN' ? 'border-blue-200 text-blue-600 bg-blue-50' :
-                            'border-green-200 text-green-600 bg-green-50'
-                          }`}
-                        >
-                          {user.role.name}
-                        </Badge>
+                        {(() => {
+                          const roleName = String(user.roleName || user.role?.name || user.role || '');
+                          const badgeCls =
+                            roleName === 'ADMIN'
+                              ? 'border-red-200 text-red-600 bg-red-50'
+                              : roleName === 'PIMPINAN'
+                                ? 'border-blue-200 text-blue-600 bg-blue-50'
+                                : 'border-green-200 text-green-600 bg-green-50';
+                          return (
+                            <Badge variant="outline" className={`rounded-md px-2 font-medium ${badgeCls}`}>
+                              {roleName}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -737,7 +942,12 @@ export default function AdminSettingsPage() {
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-orange-500">
                             <Edit2 className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-500">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-400 hover:text-red-500"
+                            onClick={() => handleDeleteAdmin(Number(user.id))}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -755,6 +965,75 @@ export default function AdminSettingsPage() {
               </Table>
             </CardContent>
           </Card>
+
+          <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+            <DialogContent className="max-w-lg rounded-3xl">
+              <DialogHeader>
+                <DialogTitle>Tambah Admin</DialogTitle>
+                <DialogDescription>Password default otomatis: 1234</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">Nama</label>
+                  <Input
+                    value={newAdmin.fullName}
+                    onChange={(e) => setNewAdmin((p) => ({ ...p, fullName: e.target.value }))}
+                    placeholder="Nama lengkap"
+                    className="rounded-xl h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">Email</label>
+                  <Input
+                    value={newAdmin.email}
+                    onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="email@contoh.com"
+                    className="rounded-xl h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">No HP</label>
+                  <Input
+                    value={newAdmin.phone}
+                    onChange={(e) => setNewAdmin((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="08xxxxxxxxxx"
+                    className="rounded-xl h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">Role</label>
+                  <select
+                    className="flex h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    value={newAdmin.roleName}
+                    onChange={(e) => setNewAdmin((p) => ({ ...p, roleName: e.target.value }))}
+                  >
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="STAFF">STAFF</option>
+                    <option value="PIMPINAN">PIMPINAN</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => setAdminDialogOpen(false)}
+                    disabled={isCreatingAdmin}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                    onClick={handleCreateAdmin}
+                    disabled={isCreatingAdmin}
+                  >
+                    {isCreatingAdmin ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                    Buat Admin
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

@@ -17,6 +17,13 @@ interface SettingsState {
 
   gpsUpdateInterval: number; // detik, interval update lokasi GPS petugas
 
+  roleAccess: Record<string, Record<string, boolean>>;
+  rolePermissions: Record<string, { canEdit: boolean; canDelete: boolean }>;
+
+  footerText: string;
+  footerShowOnAdmin: boolean;
+  footerShowOnLogin: boolean;
+
   shifts: any[];
   zones: string[];
 
@@ -39,6 +46,58 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   maintenanceDesc: 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.',
 
   gpsUpdateInterval: 30, // default 30 detik
+
+  roleAccess: {
+    ADMIN: {
+      '/admin/dashboard': true,
+      '/admin/monitoring': true,
+      '/admin/online-officers': true,
+      '/admin/gps-history': true,
+      '/admin/sos': true,
+      '/admin/users': true,
+      '/admin/attendance': true,
+      '/admin/schedules': true,
+      '/admin/tasks': true,
+      '/admin/reports': true,
+      '/admin/settings': true,
+    },
+    STAFF: {
+      '/admin/dashboard': true,
+      '/admin/monitoring': true,
+      '/admin/online-officers': true,
+      '/admin/gps-history': true,
+      '/admin/sos': true,
+      '/admin/users': true,
+      '/admin/attendance': true,
+      '/admin/schedules': true,
+      '/admin/tasks': true,
+      '/admin/reports': true,
+      '/admin/settings': false,
+    },
+    PIMPINAN: {
+      '/admin/dashboard': true,
+      '/admin/monitoring': true,
+      '/admin/online-officers': true,
+      '/admin/gps-history': true,
+      '/admin/sos': true,
+      '/admin/users': false,
+      '/admin/attendance': false,
+      '/admin/schedules': false,
+      '/admin/tasks': false,
+      '/admin/reports': true,
+      '/admin/settings': false,
+    },
+  },
+
+  rolePermissions: {
+    ADMIN: { canEdit: true, canDelete: true },
+    STAFF: { canEdit: true, canDelete: true },
+    PIMPINAN: { canEdit: false, canDelete: false },
+  },
+
+  footerText: 'Kelurahan Petukangan Utara © 2026',
+  footerShowOnAdmin: true,
+  footerShowOnLogin: true,
 
   shifts: [],
   zones: [],

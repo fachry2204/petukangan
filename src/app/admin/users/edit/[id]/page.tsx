@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, Save, Trash2, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Trash2, PlusCircle, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -384,6 +385,30 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!token || !id) return;
+    const ok = confirm('Reset password petugas menjadi 1234?');
+    if (!ok) return;
+
+    setIsResettingPassword(true);
+    try {
+      await axios.post(
+        `${apiUrl}/users/${id}`,
+        { action: 'reset_password' },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      toast({ title: 'Berhasil', description: 'Password direset menjadi 1234' });
+    } catch (error: any) {
+      toast({
+        title: 'Gagal',
+        description: error?.response?.data?.error || error?.response?.data?.message || 'Gagal reset password',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -403,6 +428,22 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Petugas</h1>
           <p className="text-zinc-500">Perbarui data profil akun petugas PPSU.</p>
+        </div>
+        <div className="ml-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResetPassword}
+            disabled={isResettingPassword || isSubmitting}
+            className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            {isResettingPassword ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4 mr-2" />
+            )}
+            Reset Password
+          </Button>
         </div>
       </div>
 
