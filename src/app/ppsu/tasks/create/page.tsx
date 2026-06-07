@@ -338,15 +338,17 @@ export default function PpsuCreateTaskPage() {
 
   const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
+      const canvasEl = canvasRef.current;
+      const videoEl = videoRef.current;
+      const context = canvasEl.getContext('2d');
       if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
+        canvasEl.width = videoEl.videoWidth;
+        canvasEl.height = videoEl.videoHeight;
+        context.drawImage(videoEl, 0, 0);
 
         // Upload to our API instead of using base64
-        const blob = await new Promise<Blob>((resolve) => {
-          canvasRef.current.toBlob(resolve, 'image/jpeg', 0.9);
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvasEl.toBlob((b) => (b ? resolve(b) : reject(new Error('Gagal memproses foto'))), 'image/jpeg', 0.9);
         });
         const formData = new FormData();
         formData.append('file', blob, `task-${Date.now()}.jpg`);
