@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyToken, getUserById } from '@/lib/auth';
+import { verifyToken, getUserById, getAdminById } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
@@ -14,10 +14,27 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await getUserById(Number(decoded.sub));
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const role = String((decoded as any).role || '');
+    const adminRoles = ['ADMIN', 'STAFF', 'PIMPINAN'];
+    if (adminRoles.includes(role)) {
+      const admin = await getAdminById(Number(decoded.sub));
+      if (!admin) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      return NextResponse.json({
+        id: admin.id,
+        username: admin.username,
+        fullName: admin.fullName,
+        role: { name: admin.roleName, id: null },
+        photoUrl: null,
+        phone: admin.phone,
+        email: admin.email,
+        status: admin.status,
+      });
     }
+
+    const user = await getUserById(Number(decoded.sub));
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     return NextResponse.json({
       id: user.id,

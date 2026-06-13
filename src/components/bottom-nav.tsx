@@ -24,6 +24,56 @@ export function BottomNav() {
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  const getGPS = async (): Promise<GeolocationPosition> => {
+    if (!navigator.geolocation) {
+      throw new Error('Perangkat tidak mendukung GPS.');
+    }
+
+    const host = window.location.hostname;
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+    if (window.location.protocol !== 'https:' && !isLocalhost) {
+      throw new Error('Akses lokasi butuh HTTPS. Gunakan domain HTTPS atau localhost.');
+    }
+
+    try {
+      if (navigator.permissions) {
+        const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        if (perm.state === 'denied') {
+          throw new Error('Akses lokasi DITOLAK. Aktifkan izin lokasi pada browser/perangkat Anda.');
+        }
+      }
+    } catch {
+      // ignore permissions API errors
+    }
+
+    const getCurrent = (opts: PositionOptions) =>
+      new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, opts);
+      });
+
+    let cached: GeolocationPosition | null = null;
+    try {
+      cached = await getCurrent({ enableHighAccuracy: false, timeout: 4000, maximumAge: Infinity });
+      if (cached.coords.accuracy && cached.coords.accuracy <= 150) return cached;
+    } catch {
+      cached = null;
+    }
+
+    try {
+      return await getCurrent({ enableHighAccuracy: true, timeout: 25000, maximumAge: 0 });
+    } catch (e1: any) {
+      try {
+        await sleep(250);
+        return await getCurrent({ enableHighAccuracy: false, timeout: 25000, maximumAge: 60000 });
+      } catch {
+        if (cached) return cached;
+        throw e1;
+      }
+    }
+  };
+
   const confirmAndSendSOS = async () => {
     setIsSendingSOS(true);
     try {
@@ -36,21 +86,6 @@ export function BottomNav() {
       const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 
       // Validasi GPS tersedia — wajib ada lokasi nyata
-      if (!navigator.geolocation) {
-        setGpsError('Perangkat tidak mendukung GPS. Tidak bisa mengirim SOS.');
-        setIsSendingSOS(false);
-        return;
-      }
-
-      // Promise wrapper untuk mendapatkan GPS dengan timeout
-      const getGPS = () => new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { 
-          enableHighAccuracy: true,
-          timeout: 10000, 
-          maximumAge: 5000
-        });
-      });
-
       let finalLat: number;
       let finalLng: number;
       let finalAddress = 'Alamat sedang diverifikasi';
@@ -62,13 +97,16 @@ export function BottomNav() {
         setGpsError(null);
 
         // Geocoding otomatis (tidak blokir pengiriman SOS)
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLng}&zoom=18&addressdetails=1`, {
-          headers: { 'Accept-Language': 'id' },
-          signal: AbortSignal.timeout(3000)
-        })
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 3000);
+        fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalLat}&lon=${finalLng}&zoom=18&addressdetails=1`,
+          { headers: { 'Accept-Language': 'id' }, signal: controller.signal },
+        )
           .then(r => r.json())
           .then(data => { finalAddress = data.display_name || finalAddress; })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => clearTimeout(t));
 
       } catch (gpsErr: any) {
         // GPS gagal — tampilkan pesan error, JANGAN kirim SOS dengan koordinat palsu
@@ -76,8 +114,10 @@ export function BottomNav() {
         const msg = gpsErr?.code === 1
           ? 'Akses lokasi DITOLAK. Buka pengaturan browser dan izinkan lokasi, lalu coba lagi.'
           : gpsErr?.code === 2
-          ? 'GPS tidak tersedia saat ini. Pastikan berada di area terbuka dan coba lagi.'
-          : 'Gagal mendapatkan lokasi GPS. Pastikan GPS diaktifkan dan coba lagi.';
+            ? 'GPS tidak tersedia saat ini. Pastikan berada di area terbuka dan coba lagi.'
+            : gpsErr?.code === 3
+              ? 'Pencarian GPS timeout. Pastikan GPS aktif dan coba lagi.'
+              : (gpsErr?.message || 'Gagal mendapatkan lokasi GPS. Pastikan GPS diaktifkan dan coba lagi.');
         setGpsError(msg);
         setIsSendingSOS(false);
         return;

@@ -91,6 +91,7 @@ export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [isMigratingAdmins, setIsMigratingAdmins] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
     fullName: '',
     email: '',
@@ -100,7 +101,7 @@ export default function AdminSettingsPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${apiUrl}/users`, {
+      const res = await axios.get(`${apiUrl}/users?type=admin`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data || []);
@@ -221,10 +222,34 @@ export default function AdminSettingsPage() {
     const ok = confirm('Hapus akun ini?');
     if (!ok) return;
     try {
-      await axios.delete(`${apiUrl}/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${apiUrl}/users/${id}?type=admin`, { headers: { Authorization: `Bearer ${token}` } });
       await fetchUsers();
     } catch (err: any) {
       alert('Gagal menghapus user: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleMigrateAdminsFromUsers = async () => {
+    if (!token) return;
+    const ok = confirm('Pindahkan akun ADMIN/STAFF/PIMPINAN dari tabel users ke admin_users?');
+    if (!ok) return;
+    setIsMigratingAdmins(true);
+    try {
+      const res = await axios.post(
+        `${apiUrl}/users`,
+        { action: 'migrate_admins' },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = res.data || {};
+      alert(
+        `Migrasi selesai.\nDitemukan: ${data.found || 0}\nInsert: ${data.inserted || 0}\nUpdate: ${data.updated || 0}\nTerhapus dari users: ${data.deletedFromUsers || 0}` +
+          (data.deleteError ? `\n\nCatatan: ${data.deleteError}` : ''),
+      );
+      await fetchUsers();
+    } catch (err: any) {
+      alert('Gagal migrasi: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message));
+    } finally {
+      setIsMigratingAdmins(false);
     }
   };
 
@@ -885,12 +910,23 @@ export default function AdminSettingsPage() {
                 <CardTitle className="text-xl">Akses Administrator</CardTitle>
                 <CardDescription>Manajemen akses untuk Role Admin, Staff, dan Pimpinan</CardDescription>
               </div>
-              <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
-                onClick={() => setAdminDialogOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" /> Tambah Admin
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={handleMigrateAdminsFromUsers}
+                  disabled={isMigratingAdmins}
+                >
+                  {isMigratingAdmins ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  Migrasi dari Users
+                </Button>
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
+                  onClick={() => setAdminDialogOpen(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Tambah Admin
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>

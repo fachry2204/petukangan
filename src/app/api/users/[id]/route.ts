@@ -3,6 +3,27 @@ import { verifyToken, hashPassword } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
 import { emitUserChange } from '@/lib/socket-emit';
 
+async function ensureAdminUsersTable() {
+  try {
+    await queryDb(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        fullName VARCHAR(100) NOT NULL,
+        email VARCHAR(255) DEFAULT NULL,
+        phone VARCHAR(50) DEFAULT NULL,
+        roleName ENUM('ADMIN','STAFF','PIMPINAN') NOT NULL DEFAULT 'ADMIN',
+        status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+        createdAt DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+        updatedAt DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch {
+    // ignore
+  }
+}
+
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -15,6 +36,19 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const url = new URL(req.url);
+    const type = url.searchParams.get('type');
+    if (type === 'admin') {
+      await ensureAdminUsersTable();
+      const rows: any = await queryDb(
+        `SELECT id, username, fullName, email, phone, roleName, status, createdAt, updatedAt FROM admin_users WHERE id = ? LIMIT 1`,
+        [id]
+      );
+      if (!rows?.[0]) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json(rows[0]);
+    }
+
     const rows: any = await queryDb(
       `SELECT u.id, u.username, u.fullName, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
        FROM users u LEFT JOIN roles r ON r.id = u.roleId WHERE u.id = ?`,
@@ -95,6 +129,9 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (decoded.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+    const url = new URL(req.url);
+    const type = url.searchParams.get('type');
+
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || '');
     if (action !== 'reset_password') {
@@ -102,6 +139,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     const hashed = await hashPassword('1234');
+    if (type === 'admin') {
+      await ensureAdminUsersTable();
+      await queryDb('UPDATE admin_users SET password = ?, updatedAt = NOW(6) WHERE id = ?', [hashed, id]);
+      emitUserChange('update', { id: Number(id) });
+      return NextResponse.json({ message: 'Password berhasil direset' });
+    }
     try {
       await queryDb('UPDATE users SET password = ?, updatedAt = NOW(6) WHERE id = ?', [hashed, id]);
     } catch {
@@ -121,7 +164,14 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    await queryDb('DELETE FROM users WHERE id = ?', [id]);
+    const url = new URL(req.url);
+    const type = url.searchParams.get('type');
+    if (type === 'admin') {
+      await ensureAdminUsersTable();
+      await queryDb('DELETE FROM admin_users WHERE id = ?', [id]);
+    } else {
+      await queryDb('DELETE FROM users WHERE id = ?', [id]);
+    }
     emitUserChange('delete', { id: Number(id) });
     return NextResponse.json({ message: 'User berhasil dihapus' });
   } catch (err: any) {
