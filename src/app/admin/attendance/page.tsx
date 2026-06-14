@@ -12,6 +12,7 @@ import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
 import { apiUrl } from '@/lib/api-config';
+import * as XLSX from 'xlsx';
 import { 
   Users, FileText, Clock, Search, MapPin, 
   CheckCircle2, XCircle, AlertTriangle, RefreshCw, 
@@ -431,6 +432,85 @@ export default function AdminAttendancePage() {
     ['PERMIT', 'EARLY_OUT'].includes(item.type) && item.status === 'PENDING'
   ).length;
 
+  const handleExportExcel = () => {
+    if (!filteredData || filteredData.length === 0) {
+      alert("Tidak ada data absensi untuk di-export pada filter ini.");
+      return;
+    }
+    
+    // Group filteredData by user.username to separate tabs
+    const groupedByUser: Record<string, any[]> = {};
+    
+    filteredData.forEach(item => {
+      if (!item.user) return;
+      const username = item.user.username || `User-${item.user.id}`;
+      if (!groupedByUser[username]) {
+        groupedByUser[username] = [];
+      }
+      groupedByUser[username].push(item);
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    Object.keys(groupedByUser).forEach(username => {
+      const userLogs = groupedByUser[username];
+      const userName = userLogs[0].user?.fullName || '-';
+
+      const logsByDate = getGroupedLogs(userLogs);
+      
+      const excelData = logsByDate.map((log: any) => {
+        const sched = getScheduleForUser(log.user?.id, log.timestamp);
+        const shiftName = sched ? sched.shiftName : (log.isOutsideSchedule ? 'Luar Jadwal' : '-');
+        const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
+        
+        const { workStr, breakStr } = calculateDurations(log.records);
+        
+        const inRec = log.records.find((r: any) => r.type === 'IN');
+        const outRec = log.records.find((r: any) => r.type === 'OUT');
+        const permitRec = log.records.find((r: any) => r.type === 'PERMIT' || r.type === 'EARLY_OUT');
+        
+        let statusKehadiran = getTypeText(log.type);
+        if (permitRec) {
+          statusKehadiran = `Izin: ${permitRec.reason || ''} (${permitRec.status})`;
+        }
+        
+        return {
+          "Nama Petugas": userName,
+          "ID PPSU": username,
+          "Tanggal": formatDateOnly(log.timestamp),
+          "Jam Masuk": inRec ? formatTimeOnly(inRec.timestamp) : '-',
+          "Jam Keluar": outRec ? formatTimeOnly(outRec.timestamp) : '-',
+          "Total Jam Kerja": workStr,
+          "Total Istirahat": breakStr,
+          "Shift": shiftName,
+          "Zona": zoneName,
+          "Keterangan": statusKehadiran,
+          "Validitas GPS": log.isMock ? "Fake GPS" : "Valid",
+          "Lokasi Absen": log.address || '-'
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      const colWidths = [
+        { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+        { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, 
+        { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 50 },
+      ];
+      ws['!cols'] = colWidths;
+      
+      const sheetName = username.substring(0, 31).replace(/[\[\]\*\\\/\?\:]/g, '_'); // Safe sheet name
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    if (wb.SheetNames.length === 0) {
+      alert("Tidak ada data untuk di-export");
+      return;
+    }
+
+    XLSX.writeFile(wb, `Laporan_Absensi_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
   return (
     <div className="space-y-6 pb-12">
       
@@ -440,13 +520,22 @@ export default function AdminAttendancePage() {
           <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white">Kelola Kehadiran Petugas</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Monitoring kehadiran terjadwal, pengajuan dispensasi/izin sakit, dan permintaan presensi luar jadwal.</p>
         </div>
-        <Button 
-          onClick={fetchAttendance}
-          className="bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700 rounded-2xl h-11 px-4 shadow-sm font-bold flex items-center gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Segarkan
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleExportExcel}
+            className="bg-green-600 hover:bg-green-700 text-white rounded-2xl h-11 px-4 shadow-sm font-bold flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Export Excel
+          </Button>
+          <Button 
+            onClick={fetchAttendance}
+            className="bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700 rounded-2xl h-11 px-4 shadow-sm font-bold flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Segarkan
+          </Button>
+        </div>
       </div>
 
       {error && (

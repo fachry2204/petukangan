@@ -212,6 +212,16 @@ export default function AdminUsersPage() {
         </div>
         
         <div className="flex gap-3">
+          <a href="/Format_Import_Petugas.xlsx" download>
+            <Button 
+              variant="outline" 
+              className="rounded-xl h-12 px-4 border-zinc-200 text-zinc-600 hover:text-orange-600"
+              title="Download Format Template"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              Download Format
+            </Button>
+          </a>
           <input 
             type="file" 
             id="excel-upload" 

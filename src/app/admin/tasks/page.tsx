@@ -16,13 +16,16 @@ import {
 } from '@/components/ui/table';
 import {
   Plus, Search, MapPin, Calendar, ClipboardList, Filter,
-  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map,
+  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map, Download, FileText
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { useRouter } from 'next/navigation';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface TaskItem {
   id: number;
@@ -108,6 +111,11 @@ export default function AdminTasksPage() {
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportDateFrom, setExportDateFrom] = useState('');
+  const [exportDateTo, setExportDateTo] = useState('');
+  const [exportOfficer, setExportOfficer] = useState('ALL');
 
   const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -226,6 +234,111 @@ export default function AdminTasksPage() {
     return c;
   }, [tasks]);
 
+  const uniqueOfficers = useMemo(() => {
+    const map = new Map<number, string>();
+    tasks.forEach(t => {
+      if (t.assignedTo) map.set(t.assignedTo.id, t.assignedTo.fullName || `Petugas #${t.assignedTo.id}`);
+    });
+    return Array.from(map.entries()).map(([id, name]: [number, string]) => ({ id, name })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
+  const getExportData = () => {
+    let data = tasks;
+    if (exportDateFrom) {
+      const from = new Date(exportDateFrom + 'T00:00:00');
+      data = data.filter(t => t.createdAt && new Date(t.createdAt) >= from);
+    }
+    if (exportDateTo) {
+      const to = new Date(exportDateTo + 'T23:59:59');
+      data = data.filter(t => t.createdAt && new Date(t.createdAt) <= to);
+    }
+    if (exportOfficer !== 'ALL') {
+      data = data.filter(t => t.assignedTo?.id === Number(exportOfficer));
+    }
+    return data.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+  };
+
+  const handleExportExcel = () => {
+    const data = getExportData();
+    if (data.length === 0) {
+      toast({ title: 'Kosong', description: 'Tidak ada data untuk diexport', variant: 'destructive' });
+      return;
+    }
+    const excelData = data.map(t => ({
+      'Tanggal': t.createdAt ? new Date(t.createdAt).toLocaleDateString('id-ID') : '-',
+      'Petugas': t.assignedTo?.fullName || '-',
+      'Judul Tugas': t.title,
+      'Deskripsi': t.description || '-',
+      'Status': STATUS_LABEL[t.status] || t.status,
+      'Prioritas': t.priority || 'MEDIUM',
+      'Jenis Tugas': TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
+      'Zona': t.zone?.name || '-',
+      'Koordinat': (t.lat && t.lng) ? `${t.lat}, ${t.lng}` : '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    const colWidths = [
+      { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }
+    ];
+    ws['!cols'] = colWidths;
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tugas_Lapangan');
+    XLSX.writeFile(wb, `Laporan_Tugas_Lapangan.xlsx`);
+    setIsExportOpen(false);
+  };
+
+  const handleExportPDF = () => {
+    const data = getExportData();
+    if (data.length === 0) {
+      toast({ title: 'Kosong', description: 'Tidak ada data untuk diexport', variant: 'destructive' });
+      return;
+    }
+    const doc = new jsPDF({ orientation: 'landscape' });
+    
+    doc.setFontSize(16);
+    doc.text('Laporan Tugas Lapangan (PPSU)', 14, 15);
+    
+    let subtitle = '';
+    if (exportDateFrom || exportDateTo) {
+      subtitle += `Periode: ${exportDateFrom || '-'} s/d ${exportDateTo || '-'}  `;
+    }
+    if (exportOfficer !== 'ALL') {
+      const officerName = uniqueOfficers.find((o: any) => o.id === Number(exportOfficer))?.name;
+      subtitle += `Petugas: ${officerName}`;
+    }
+    doc.setFontSize(10);
+    doc.text(subtitle, 14, 22);
+
+    const tableData = data.map(t => [
+      t.createdAt ? new Date(t.createdAt).toLocaleDateString('id-ID') : '-',
+      t.assignedTo?.fullName || '-',
+      t.title,
+      STATUS_LABEL[t.status] || t.status,
+      t.priority || 'MEDIUM',
+      TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
+      t.zone?.name || '-'
+    ]);
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['Tanggal', 'Petugas', 'Judul Tugas', 'Status', 'Prioritas', 'Jenis', 'Zona']],
+      body: tableData as any,
+      theme: 'grid',
+      headStyles: { fillColor: [249, 115, 22] }, // orange-500
+      styles: { fontSize: 8 }
+    });
+
+    doc.save('Laporan_Tugas_Lapangan.pdf');
+    setIsExportOpen(false);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -239,6 +352,10 @@ export default function AdminTasksPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsExportOpen(true)} className="gap-1.5 border-green-200 hover:bg-green-50 hover:text-green-600 text-green-600">
+            <Download className="w-4 h-4" />
+            Export Data
+          </Button>
           <Button variant="outline" size="sm" onClick={fetchTasks} disabled={loading} className="gap-1.5">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -658,6 +775,57 @@ export default function AdminTasksPage() {
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Ya, Hapus
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-green-600" />
+              Export Data Tugas
+            </DialogTitle>
+            <DialogDescription>
+              Pilih rentang tanggal dan petugas untuk diexport.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-bold text-zinc-500">Nama Petugas</label>
+              <select
+                value={exportOfficer}
+                onChange={(e) => setExportOfficer(e.target.value)}
+                className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm focus:ring-2 focus:ring-green-500/30"
+              >
+                <option value="ALL">Semua Petugas</option>
+                {uniqueOfficers.map((o: any) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-zinc-500">Tanggal Mulai</label>
+                <Input type="date" value={exportDateFrom} onChange={(e) => setExportDateFrom(e.target.value)} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-zinc-500">Tanggal Akhir</label>
+                <Input type="date" value={exportDateTo} onChange={(e) => setExportDateTo(e.target.value)} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" onClick={() => setIsExportOpen(false)}>Batal</Button>
+            <div className="flex gap-2">
+              <Button onClick={handleExportPDF} className="bg-red-500 hover:bg-red-600 text-white gap-2">
+                <FileText className="w-4 h-4" /> PDF
+              </Button>
+              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white gap-2">
+                <FileText className="w-4 h-4" /> Excel
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
