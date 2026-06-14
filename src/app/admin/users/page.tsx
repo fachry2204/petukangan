@@ -14,6 +14,7 @@ import { useRealtime } from '@/hooks/use-realtime';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { apiUrl } from '@/lib/api-config';
+import * as XLSX from 'xlsx';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export default function AdminUsersPage() {
   const [pendingStatus, setPendingStatus] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusChangedAtInput, setStatusChangedAtInput] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   
   const { token } = useAuthStore();
   const { toast } = useToast();
@@ -80,6 +82,66 @@ export default function AdminUsersPage() {
       setIsDeleting(false);
     }
   };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const row of rows) {
+        const fullName = row.Nama || row.fullName || row.name || 'Tanpa Nama';
+        const email = row.Email || row.email || '';
+        const phoneRaw = row.Phone || row.Telepon || row.NoHP || row.phone || '';
+        
+        let formattedPhone = String(phoneRaw);
+        if (formattedPhone.startsWith('0')) {
+          formattedPhone = '62' + formattedPhone.substring(1);
+        }
+
+        const generatedUsername = `ppsu-${fullName.toLowerCase().replace(/[^a-z0-9]/gi, '')}-${Math.floor(Math.random() * 10000)}`;
+
+        try {
+          await axios.post(`${apiUrl}/users`, {
+            username: generatedUsername,
+            password: '1234',
+            fullName: fullName,
+            email: email,
+            phone: formattedPhone,
+            roleName: 'PPSU',
+            status: 'ACTIVE',
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Failed to import user', row, err);
+          failCount++;
+        }
+      }
+
+      toast({ 
+        title: 'Import Selesai', 
+        description: `Berhasil: ${successCount}, Gagal: ${failCount}` 
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Gagal', description: 'Gagal membaca file Excel', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      e.target.value = ''; // reset input
+    }
+  };
+
 
   const handleStatusChangeClick = (user: any, newStatus: string) => {
     if (newStatus === 'ACTIVE') {
@@ -149,11 +211,30 @@ export default function AdminUsersPage() {
           <p className="text-zinc-500">Manajemen akun PPSU, Staff, dan Pimpinan</p>
         </div>
         
-        <Link href="/admin/users/add">
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-12 px-6">
-            <Plus className="w-5 h-5 mr-2" /> Tambah Petugas
+        <div className="flex gap-3">
+          <input 
+            type="file" 
+            id="excel-upload" 
+            accept=".xlsx, .xls" 
+            className="hidden" 
+            onChange={handleImportExcel} 
+            disabled={isImporting}
+          />
+          <Button 
+            variant="outline" 
+            className="rounded-xl h-12 px-6 border-zinc-200"
+            onClick={() => document.getElementById('excel-upload')?.click()}
+            disabled={isImporting}
+          >
+            {isImporting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <FileText className="w-5 h-5 mr-2" />}
+            Import Excel
           </Button>
-        </Link>
+          <Link href="/admin/users/add">
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl h-12 px-6">
+              <Plus className="w-5 h-5 mr-2" /> Tambah Petugas
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900">

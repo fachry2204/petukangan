@@ -113,9 +113,13 @@ export default function AdminSettingsPage() {
   const handleFileUpload = async (file: File, type: 'logo' | 'bg') => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('type', 'system');
     try {
       const res = await axios.post('/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
       });
       if (res.data.success) {
         if (type === 'logo') {

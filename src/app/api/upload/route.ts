@@ -71,6 +71,9 @@ export async function POST(request: Request) {
       case 'izin':
         baseDir = path.join(process.cwd(), 'public', 'gambar', 'izin', userFolder, dateFolder);
         break;
+      case 'system':
+        baseDir = path.join(process.cwd(), 'public', 'gambar', 'system');
+        break;
       default:
         return NextResponse.json({ success: false, error: 'Invalid upload type' }, { status: 400 });
     }
