@@ -54,6 +54,22 @@ export async function generateMetadata(): Promise<Metadata> {
       title: systemName,
       capable: true,
     },
+    openGraph: {
+      title: systemName,
+      description: systemDescription,
+      siteName: systemName,
+      images: [
+        {
+          url: logoUrl,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: systemName,
+      description: systemDescription,
+      images: [logoUrl],
+    },
   };
 }
 
