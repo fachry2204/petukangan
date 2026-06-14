@@ -98,9 +98,23 @@ export default function AdminUsersPage() {
       let failCount = 0;
 
       for (const row of rows) {
-        const fullName = row.Nama || row.fullName || row.name || 'Tanpa Nama';
+        const fullName = row['Nama Lengkap'] || row.Nama || row.fullName || row.name || 'Tanpa Nama';
         const email = row.Email || row.email || '';
-        const phoneRaw = row.Phone || row.Telepon || row.NoHP || row.phone || '';
+        const gender = row['Jenis Kelamin'] || row.gender || 'Laki-laki';
+        
+        let birthDate = row['Tanggal Lahir'] || row.birthDate || null;
+        let joinDate = row['Tanggal Bergabung'] || row.joinDate || null;
+        
+        if (typeof birthDate === 'number') birthDate = new Date(Math.round((birthDate - 25569)*86400*1000)).toISOString().split('T')[0];
+        if (typeof joinDate === 'number') joinDate = new Date(Math.round((joinDate - 25569)*86400*1000)).toISOString().split('T')[0];
+
+        const phoneRaw = row['No Handphone'] || row.Phone || row.Telepon || row.NoHP || row.phone || '';
+        const province = row.Provinsi || row.province || '';
+        const city = row['Kota / Kabupaten'] || row.city || '';
+        const district = row.Kecamatan || row.district || '';
+        const village = row['Kelurahan / Desa'] || row.village || '';
+        const postalCode = String(row['Kode Pos'] || row.postalCode || '');
+        const address = row['Alamat Lengkap'] || row.address || '';
         
         let formattedPhone = String(phoneRaw);
         if (formattedPhone.startsWith('0')) {
@@ -115,7 +129,17 @@ export default function AdminUsersPage() {
             password: '1234',
             fullName: fullName,
             email: email,
+            gender: gender,
+            birthDate: birthDate,
             phone: formattedPhone,
+            joinDate: joinDate,
+            country: 'Indonesia',
+            province: province,
+            city: city,
+            district: district,
+            village: village,
+            postalCode: postalCode,
+            address: address,
             roleName: 'PPSU',
             status: 'ACTIVE',
           }, {
@@ -140,6 +164,36 @@ export default function AdminUsersPage() {
       setIsImporting(false);
       e.target.value = ''; // reset input
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateData = [{
+      "Nama Lengkap": "Budi Santoso",
+      "Email": "budi@example.com",
+      "Jenis Kelamin": "Laki-laki",
+      "Tanggal Lahir": "1990-01-01",
+      "No Handphone": "081234567890",
+      "Tanggal Bergabung": "2024-01-01",
+      "Provinsi": "DKI JAKARTA",
+      "Kota / Kabupaten": "KOTA JAKARTA SELATAN",
+      "Kecamatan": "PESANGGRAHAN",
+      "Kelurahan / Desa": "PETUKANGAN UTARA",
+      "Kode Pos": "12260",
+      "Alamat Lengkap": "Jl. Ciledug Raya No. 1"
+    }];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    
+    const colWidths = [
+      { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, 
+      { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, 
+      { wch: 20 }, { wch: 25 }, { wch: 10 }, { wch: 40 }
+    ];
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Format_Petugas");
+    XLSX.writeFile(wb, "Format_Import_Petugas.xlsx");
   };
 
 
@@ -212,16 +266,15 @@ export default function AdminUsersPage() {
         </div>
         
         <div className="flex gap-3">
-          <a href="/Format_Import_Petugas.xlsx" download>
-            <Button 
-              variant="outline" 
-              className="rounded-xl h-12 px-4 border-zinc-200 text-zinc-600 hover:text-orange-600"
-              title="Download Format Template"
-            >
-              <FileText className="w-5 h-5 mr-2" />
-              Download Format
-            </Button>
-          </a>
+          <Button 
+            variant="outline" 
+            className="rounded-xl h-12 px-4 border-zinc-200 text-zinc-600 hover:text-orange-600"
+            title="Download Format Template"
+            onClick={handleDownloadTemplate}
+          >
+            <FileText className="w-5 h-5 mr-2" />
+            Download Format
+          </Button>
           <input 
             type="file" 
             id="excel-upload" 
