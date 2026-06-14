@@ -93,6 +93,7 @@ export default function AdminSettingsPage() {
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [isMigratingAdmins, setIsMigratingAdmins] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
+    username: '',
     fullName: '',
     email: '',
     phone: '',
@@ -187,8 +188,8 @@ export default function AdminSettingsPage() {
 
   const handleCreateAdmin = async () => {
     if (!token) return;
-    if (!newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.phone.trim()) {
-      alert('Nama, Email, dan No HP wajib diisi.');
+    if (!newAdmin.username.trim() || !newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.phone.trim()) {
+      alert('Username, Nama, Email, dan No HP wajib diisi.');
       return;
     }
     if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(newAdmin.roleName)) {
@@ -200,7 +201,7 @@ export default function AdminSettingsPage() {
       await axios.post(
         `${apiUrl}/users`,
         {
-          username: newAdmin.email.trim(),
+          username: newAdmin.username.trim(),
           password: '1234',
           fullName: newAdmin.fullName.trim(),
           email: newAdmin.email.trim(),
@@ -211,7 +212,7 @@ export default function AdminSettingsPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setAdminDialogOpen(false);
-      setNewAdmin({ fullName: '', email: '', phone: '', roleName: 'ADMIN' });
+      setNewAdmin({ username: '', fullName: '', email: '', phone: '', roleName: 'ADMIN' });
       await fetchUsers();
       alert('Admin berhasil dibuat. Password default: 1234');
     } catch (err: any) {
@@ -1013,6 +1014,15 @@ export default function AdminSettingsPage() {
                 <DialogDescription>Password default otomatis: 1234</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-700">Username</label>
+                  <Input
+                    value={newAdmin.username}
+                    onChange={(e) => setNewAdmin((p) => ({ ...p, username: e.target.value.replace(/\s+/g, '') }))}
+                    placeholder="Username tanpa spasi"
+                    className="rounded-xl h-12"
+                  />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-zinc-700">Nama</label>
                   <Input
