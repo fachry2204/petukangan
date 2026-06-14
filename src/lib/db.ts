@@ -6,6 +6,7 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'ppsu_monitoring',
+  connectTimeout: 5000,
 };
 
 export async function getDbConnection() {

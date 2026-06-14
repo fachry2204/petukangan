@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import {
   Plus, Search, MapPin, Calendar, ClipboardList, Filter,
-  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map, Download, FileText
+  RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map as MapIcon, Download, FileText
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
@@ -479,7 +479,7 @@ export default function AdminTasksPage() {
                               rel="noopener noreferrer"
                               className="text-blue-500 hover:text-blue-600"
                             >
-                              <Map className="w-4 h-4" />
+                              <MapIcon className="w-4 h-4" />
                             </a>
                           </div>
                         ) : '-'}
