@@ -458,7 +458,7 @@ export default function AdminUsersPage() {
                     {selectedUser.username}
                   </span>
                   <h2 className="text-2xl font-black tracking-tight">{selectedUser.fullName}</h2>
-                  <p className="text-sm text-zinc-100 font-medium">Petugas PPSU SMART MONITORING</p>
+                  <p className="text-sm text-zinc-100 font-medium">PETUGAS PJLP SMART MONITORING</p>
                 </div>
               </div>
 
