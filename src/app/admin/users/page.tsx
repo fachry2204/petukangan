@@ -34,6 +34,9 @@ export default function AdminUsersPage() {
   const [statusChangedAtInput, setStatusChangedAtInput] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
   const { token } = useAuthStore();
   const { toast } = useToast();
 
@@ -258,6 +261,9 @@ export default function AdminUsersPage() {
     );
   });
 
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -310,7 +316,10 @@ export default function AdminUsersPage() {
                 placeholder="Cari nama atau username..." 
                 className="pl-10 rounded-xl bg-zinc-50 border-none h-11"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
             <Button variant="outline" className="rounded-xl h-11 border-zinc-100">
@@ -333,7 +342,7 @@ export default function AdminUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {paginatedUsers.map((user) => (
                   <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
                     <TableCell>
                       {user.photoUrl ? (
@@ -425,8 +434,64 @@ export default function AdminUsersPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+            </Table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
+              <div className="text-sm text-zinc-500 font-medium">
+                Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} dari {filteredUsers.length} petugas
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="rounded-xl border-zinc-200"
+                >
+                  Sebelumnya
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    // Logic to show limited page numbers (e.g. 1 2 ... 5 6)
+                    if (
+                      totalPages > 7 &&
+                      idx !== 0 &&
+                      idx !== totalPages - 1 &&
+                      Math.abs(currentPage - 1 - idx) > 1
+                    ) {
+                      if (Math.abs(currentPage - 1 - idx) === 2) {
+                        return <span key={idx} className="px-1 text-zinc-400">...</span>;
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <Button
+                        key={idx}
+                        variant={currentPage === idx + 1 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(idx + 1)}
+                        className={`w-9 h-9 rounded-xl p-0 ${currentPage === idx + 1 ? 'bg-orange-500 text-white hover:bg-orange-600' : 'border-zinc-200 text-zinc-600'}`}
+                      >
+                        {idx + 1}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="rounded-xl border-zinc-200"
+                >
+                  Selanjutnya
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
