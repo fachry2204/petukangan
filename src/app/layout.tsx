@@ -45,6 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: systemName,
     applicationName: systemName,
     description: systemDescription,
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
     manifest: "/manifest.webmanifest",
     icons: {
       icon: logoUrl,
