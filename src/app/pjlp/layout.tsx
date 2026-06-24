@@ -29,7 +29,7 @@ function resolveMapStatus(attendanceStatus: string): string {
   return 'Online';
 }
 
-export default function PpsuLayout({
+export default function PjlpLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -97,7 +97,7 @@ export default function PpsuLayout({
       } catch (err: any) {
         // Abaikan error yang disebabkan oleh abort
         if (err.name !== 'AbortError') {
-          console.warn('[PPSU] Attendance check error:', err);
+          console.warn('[PJLP] Attendance check error:', err);
         }
       }
     };
@@ -195,13 +195,13 @@ export default function PpsuLayout({
         provider: deviceInfo.provider,
       };
       
-      console.log('[PPSU] Emitting updateLocation:', payload);
+      console.log('[PJLP] Emitting updateLocation:', payload);
       socketRef.current?.emit('updateLocation', payload);
     };
 
     const emitHeartbeat = () => {
       if (!socketRef.current?.connected) {
-        console.log('[PPSU] Heartbeat skipped - socket not connected');
+        console.log('[PJLP] Heartbeat skipped - socket not connected');
         return;
       }
       const deviceInfo = getDeviceInfo();
@@ -218,7 +218,7 @@ export default function PpsuLayout({
         os: deviceInfo.os,
         provider: deviceInfo.provider,
       };
-      console.log('[PPSU] Emitting heartbeat:', payload);
+      console.log('[PJLP] Emitting heartbeat:', payload);
       socketRef.current.emit('updateLocation', payload);
     };
 
@@ -247,7 +247,7 @@ export default function PpsuLayout({
         BackgroundGeolocation = cap.registerPlugin('BackgroundGeolocation');
         nativeWatcherId = await BackgroundGeolocation.addWatcher(
           {
-            backgroundMessage: 'GPS PPSU sedang aktif - jangan tutup aplikasi.',
+            backgroundMessage: 'GPS PJLP sedang aktif - jangan tutup aplikasi.',
             backgroundTitle: 'SI PETUT - Live Tracking',
             requestPermissions: true,
             stale: false,
@@ -295,17 +295,17 @@ export default function PpsuLayout({
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log('[PPSU] Socket connected:', socket.id);
+        console.log('[PJLP] Socket connected:', socket.id);
         // Force immediate emission with current/last known location on connection
         emitHeartbeat();
       });
 
       socket.on('connect_error', (err: any) => {
-        console.error('[PPSU] Socket connect error:', err.message);
+        console.error('[PJLP] Socket connect error:', err.message);
       });
 
       socket.on('disconnect', (reason: string) => {
-        console.log('[PPSU] Socket disconnected:', reason);
+        console.log('[PJLP] Socket disconnected:', reason);
       });
 
       // Re-emit immediately whenever the socket reconnects.
@@ -489,7 +489,7 @@ export default function PpsuLayout({
             <img src={settings.logoUrl || '/logodki.png'} alt="Logo DKI" className="w-8 h-8 object-contain drop-shadow-sm" />
             <div className="flex items-baseline gap-2">
               <h1 className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none">
-                {settings.systemName || 'PPSU SMART'}
+                {settings.systemName || 'PJLP SMART'}
               </h1>
               {settings.systemDescription && (
                 <span className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none hidden sm:inline-block">

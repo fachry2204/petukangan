@@ -81,18 +81,18 @@ export default function AdminDashboardPage() {
         }
       }
 
-      const ppsuUsers = usersData.filter((u: any) => (u.role?.name || u.roleName) === 'PPSU');
-      const activePpsu = ppsuUsers.filter((u: any) => u.status === 'ACTIVE');
-      const lakiLaki = ppsuUsers.filter((u: any) => u.gender === 'LAKI-LAKI' || u.gender === 'Laki-Laki' || u.gender === 'Male');
-      const perempuan = ppsuUsers.filter((u: any) => u.gender === 'PEREMPUAN' || u.gender === 'Perempuan' || u.gender === 'Female');
-      const tidakAktif = ppsuUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
-      const dikeluarkan = ppsuUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
+      const pjlpUsers = usersData.filter((u: any) => (u.role?.name || u.roleName) === 'PJLP');
+      const activePjlp = pjlpUsers.filter((u: any) => u.status === 'ACTIVE');
+      const lakiLaki = pjlpUsers.filter((u: any) => u.gender === 'LAKI-LAKI' || u.gender === 'Laki-Laki' || u.gender === 'Male');
+      const perempuan = pjlpUsers.filter((u: any) => u.gender === 'PEREMPUAN' || u.gender === 'Perempuan' || u.gender === 'Female');
+      const tidakAktif = pjlpUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
+      const dikeluarkan = pjlpUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
       const tugasDikerjakan = tasksData.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
       const totalLaporan = reportsData.length;
 
       setStats({
-        totalPetugas: ppsuUsers.length,
-        petugasAktif: activePpsu.length,
+        totalPetugas: pjlpUsers.length,
+        petugasAktif: activePjlp.length,
         lakiLaki: lakiLaki.length,
         perempuan: perempuan.length,
         tidakAktif: tidakAktif.length,
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
         });
       });
 
-      ppsuUsers.filter((u: any) => u.lastSeen).slice(0, 2).forEach((u: any) => {
+      pjlpUsers.filter((u: any) => u.lastSeen).slice(0, 2).forEach((u: any) => {
         recentActivities.push({
           title: `Petugas Online: ${u.fullName}`,
           description: `${u.username} • GPS Aktif`,

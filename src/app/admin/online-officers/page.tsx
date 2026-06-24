@@ -136,7 +136,7 @@ export default function OnlineOfficersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">Data Petugas Online</h1>
-          <p className="text-zinc-500 font-medium mt-1 text-sm">Daftar petugas PPSU yang sedang aktif dan terhubung dengan sistem tracking GPS saat ini.</p>
+          <p className="text-zinc-500 font-medium mt-1 text-sm">Daftar petugas PJLP yang sedang aktif dan terhubung dengan sistem tracking GPS saat ini.</p>
         </div>
         <Badge className="bg-green-500 hover:bg-green-600 text-white border-none font-bold px-4 py-2 text-sm flex items-center gap-2 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)]">
           <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />

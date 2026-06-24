@@ -693,7 +693,7 @@ export default function AdminSettingsPage() {
           <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border-l-4 border-l-blue-500">
             <CardHeader>
               <CardTitle>Update Riwayat GPS</CardTitle>
-              <CardDescription>Atur interval waktu (dalam detik) untuk update lokasi GPS petugas PPSU ke sistem tracking dan riwayat GPS.</CardDescription>
+              <CardDescription>Atur interval waktu (dalam detik) untuk update lokasi GPS petugas PJLP ke sistem tracking dan riwayat GPS.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

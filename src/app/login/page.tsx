@@ -90,8 +90,8 @@ export default function LoginPage() {
 
       setTimeout(() => {
         const roleName = response.data.user.role?.name || response.data.user.role;
-        if (roleName === 'PPSU') {
-          router.push('/ppsu/home');
+        if (roleName === 'PJLP') {
+          router.push('/pjlp/home');
         } else {
           router.push('/admin/dashboard');
         }
@@ -270,8 +270,8 @@ export default function LoginPage() {
                     ? state.user?.role 
                     : state.user?.role?.name;
                   
-                  if (roleName === 'PPSU') {
-                    router.push('/ppsu/home');
+                  if (roleName === 'PJLP') {
+                    router.push('/pjlp/home');
                   } else if (state.user) {
                     router.push('/admin/dashboard');
                   }

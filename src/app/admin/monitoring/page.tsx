@@ -397,7 +397,7 @@ function AdminMonitoringContent() {
               {filteredOfficers.filter(o => !o.isSOS).length === 0 ? (
                 <div className="py-6 text-center text-[11px] text-zinc-400">
                   <p className="font-semibold">Belum ada petugas aktif terpantau.</p>
-                  <p className="mt-1 text-[10px]">Pastikan petugas sudah login di aplikasi PPSU dan memberikan izin GPS.</p>
+                  <p className="mt-1 text-[10px]">Pastikan petugas sudah login di aplikasi PJLP dan memberikan izin GPS.</p>
                 </div>
               ) : (
                 filteredOfficers.filter(o => !o.isSOS).map((o, idx) => (

@@ -10,11 +10,11 @@ import axios from 'axios';
 import { socketUrl } from '@/lib/socket-config';
 
 const navItems = [
-  { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/ppsu/home' },
-  { label: 'Tugas', iconUrl: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png', href: '/ppsu/tasks' },
+  { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/pjlp/home' },
+  { label: 'Tugas', iconUrl: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png', href: '/pjlp/tasks' },
   { label: 'SOS', iconUrl: '/icon/sos.png', href: '#' }, // Prevents accidental navigation
-  { label: 'Lapor', iconUrl: '/gambar/icon/lapor.png', href: '/ppsu/reports' },
-  { label: 'Profile', iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', href: '/ppsu/profile' },
+  { label: 'Lapor', iconUrl: '/gambar/icon/lapor.png', href: '/pjlp/reports' },
+  { label: 'Profile', iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', href: '/pjlp/profile' },
 ];
 
 export function BottomNav() {
@@ -151,7 +151,7 @@ export function BottomNav() {
           socket.disconnect();
           setShowSOSModal(false);
           setIsSendingSOS(false);
-          router.push('/ppsu/sos');
+          router.push('/pjlp/sos');
         }, 1000);
       };
 

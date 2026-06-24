@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const userId = decoded.role === 'PPSU' ? decoded.sub : undefined;
+    const userId = decoded.role === 'PJLP' ? decoded.sub : undefined;
     let sql = `SELECT t.*, z.name as zoneName, u.fullName as assignedToName, u.photoUrl as assignedToPhotoUrl FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId`;
     const params: any[] = [];
 

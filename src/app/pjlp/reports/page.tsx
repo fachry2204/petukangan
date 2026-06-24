@@ -51,7 +51,7 @@ const STATUS_COLOR: Record<string, string> = {
   IN_PROGRESS: 'bg-blue-100 text-blue-700',
 };
 
-export default function PpsuReportsPage() {
+export default function PjlpReportsPage() {
   return (
     <Suspense
       fallback={
@@ -62,12 +62,12 @@ export default function PpsuReportsPage() {
         </div>
       }
     >
-      <PpsuReportsPageInner />
+      <PjlpReportsPageInner />
     </Suspense>
   );
 }
 
-function PpsuReportsPageInner() {
+function PjlpReportsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token } = useAuthStore();
@@ -105,8 +105,8 @@ function PpsuReportsPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, token]);
 
-  const openNewForm = () => router.push('/ppsu/reports?new=1');
-  const openList = () => router.push('/ppsu/reports');
+  const openNewForm = () => router.push('/pjlp/reports?new=1');
+  const openList = () => router.push('/pjlp/reports');
 
   if (mode === 'new') {
     return (

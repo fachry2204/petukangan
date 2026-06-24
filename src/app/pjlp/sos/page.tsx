@@ -6,7 +6,7 @@ import { ShieldAlert, CheckCircle2, Navigation } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-export default function PpsuSosPage() {
+export default function PjlpSosPage() {
   const router = useRouter();
   const [dots, setDots] = useState('');
 
@@ -70,7 +70,7 @@ export default function PpsuSosPage() {
       </Card>
 
       <Button 
-        onClick={() => router.push('/ppsu/home')}
+        onClick={() => router.push('/pjlp/home')}
         variant="outline" 
         className="w-full h-14 rounded-2xl font-bold border-2 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:bg-zinc-50"
       >

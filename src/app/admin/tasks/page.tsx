@@ -303,7 +303,7 @@ export default function AdminTasksPage() {
     const doc = new jsPDF({ orientation: 'landscape' });
     
     doc.setFontSize(16);
-    doc.text('Laporan Tugas Lapangan (PPSU)', 14, 15);
+    doc.text('Laporan Tugas Lapangan (PJLP)', 14, 15);
     
     let subtitle = '';
     if (exportDateFrom || exportDateTo) {
@@ -348,7 +348,7 @@ export default function AdminTasksPage() {
             <ClipboardList className="w-6 h-6 text-orange-500" /> Tugas Lapangan
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Manajemen penugasan dan monitoring progres pekerjaan PPSU.
+            Manajemen penugasan dan monitoring progres pekerjaan PJLP.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ export default function AdminTasksPage() {
           <Link href="/admin/tasks/new">
             <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
               <Plus className="w-4 h-4" />
-              Tugaskan PPSU
+              Tugaskan PJLP
             </Button>
           </Link>
         </div>
@@ -436,7 +436,7 @@ export default function AdminTasksPage() {
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-sm text-zinc-400 italic">
             {tasks.length === 0
-              ? 'Belum ada tugas yang ditugaskan. Klik "Tugaskan PPSU" untuk membuat tugas baru.'
+              ? 'Belum ada tugas yang ditugaskan. Klik "Tugaskan PJLP" untuk membuat tugas baru.'
               : 'Tidak ada tugas yang cocok dengan filter.'}
           </div>
         ) : (

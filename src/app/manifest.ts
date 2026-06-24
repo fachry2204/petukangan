@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let systemName = 'SI PETUT';
-  let description = 'Monitoring PPSU';
+  let description = 'Monitoring PJLP';
   let logoUrl = '/logodki.png';
   let mainColor = '#f97316';
 

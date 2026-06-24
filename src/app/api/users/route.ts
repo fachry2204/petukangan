@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const url = new URL(req.url);
-    const type = url.searchParams.get('type') || 'ppsu';
+    const type = url.searchParams.get('type') || 'pjlp';
 
     if (type === 'admin') {
       await ensureAdminUsersTable();
@@ -75,13 +75,13 @@ export async function GET(req: Request) {
       return NextResponse.json(rows || []);
     }
 
-    console.log('[GET /api/users] Fetching PPSU users...');
+    console.log('[GET /api/users] Fetching PJLP users...');
     const rows: any = await queryDb(
       `SELECT u.id, u.username, u.fullName, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
        FROM users u LEFT JOIN roles r ON r.id = u.roleId
-       WHERE r.name = 'PPSU' OR r.name IS NULL`
+       WHERE r.name = 'PJLP' OR r.name IS NULL`
     );
-    console.log('[GET /api/users] Found', rows?.length || 0, 'PPSU users');
+    console.log('[GET /api/users] Found', rows?.length || 0, 'PJLP users');
     return NextResponse.json(rows || []);
   } catch (err: any) {
     console.error('[GET /api/users] error:', err);
@@ -246,25 +246,25 @@ export async function POST(req: Request) {
       if (roles?.[0]) roleId = roles[0].id;
     }
 
-    // Auto-generate sequential ID for PPSU
+    // Auto-generate sequential ID for PJLP
     let finalUsername = username;
-    if (roleName === 'PPSU') {
+    if (roleName === 'PJLP') {
       try {
         const lastUsers: any = await queryDb(
-          `SELECT username FROM users WHERE username REGEXP '^PPSU[0-9]+$' ORDER BY CAST(SUBSTRING(username, 5) AS UNSIGNED) DESC LIMIT 1`
+          `SELECT username FROM users WHERE username REGEXP '^PJLP[0-9]+$' ORDER BY CAST(SUBSTRING(username, 5) AS UNSIGNED) DESC LIMIT 1`
         );
         let nextId = 1;
         if (lastUsers && lastUsers.length > 0) {
-          const match = lastUsers[0].username.match(/^PPSU(\d+)$/i);
+          const match = lastUsers[0].username.match(/^PJLP(\d+)$/i);
           if (match) {
             nextId = parseInt(match[1], 10) + 1;
           }
         }
-        finalUsername = `PPSU${nextId.toString().padStart(3, '0')}`;
+        finalUsername = `PJLP${nextId.toString().padStart(3, '0')}`;
       } catch (err) {
         console.error('Failed to generate sequential ID:', err);
         // Fallback if regex fails on older MySQL versions
-        finalUsername = `PPSU${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+        finalUsername = `PJLP${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       }
     }
 

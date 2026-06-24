@@ -30,7 +30,7 @@ import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 
-export default function PpsuProfilePage() {
+export default function PjlpProfilePage() {
   const { user, token, setAuth, logout } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -285,7 +285,7 @@ export default function PpsuProfilePage() {
       <Card 
         className="border-none shadow-xl rounded-3xl overflow-hidden relative"
         style={{ 
-          backgroundImage: "url('/gambar/bgheaderppsu.jpg')", 
+          backgroundImage: "url('/gambar/bgheaderpjlp.jpg')", 
           backgroundSize: 'cover', 
           backgroundPosition: 'center' 
         }}
@@ -334,7 +334,7 @@ export default function PpsuProfilePage() {
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{user.username}</p>
             <div className="pt-2">
               <Badge className="bg-orange-50 dark:bg-orange-950/20 text-orange-600 hover:bg-orange-50 border-none font-bold capitalize">
-                {user.role?.name || 'Petugas PPSU'}
+                {user.role?.name || 'Petugas PJLP'}
               </Badge>
             </div>
           </div>

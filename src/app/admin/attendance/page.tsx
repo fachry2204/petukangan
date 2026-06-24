@@ -81,7 +81,7 @@ export default function AdminAttendancePage() {
   // Fetch Attendance data on mount
   useEffect(() => {
     // Check if there is a saved token in localStorage to prevent early logout during hydration
-    const savedAuthStr = typeof window !== 'undefined' ? localStorage.getItem('ppsu-auth-storage') : null;
+    const savedAuthStr = typeof window !== 'undefined' ? localStorage.getItem('pjlp-auth-storage') : null;
     let hasSavedToken = false;
     if (savedAuthStr) {
       try {
@@ -476,7 +476,7 @@ export default function AdminAttendancePage() {
         
         return {
           "Nama Petugas": userName,
-          "ID PPSU": username,
+          "ID PJLP": username,
           "Tanggal": formatDateOnly(log.timestamp),
           "Jam Masuk": inRec ? formatTimeOnly(inRec.timestamp) : '-',
           "Jam Keluar": outRec ? formatTimeOnly(outRec.timestamp) : '-',

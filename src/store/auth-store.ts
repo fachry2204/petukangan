@@ -17,7 +17,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ user: null, token: null }),
     }),
     {
-      name: 'ppsu-auth-storage',
+      name: 'pjlp-auth-storage',
     }
   )
 );

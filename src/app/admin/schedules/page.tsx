@@ -79,7 +79,7 @@ export default function AdminSchedulesPage() {
   // Fetch Schedules and Staff on Mount
   useEffect(() => {
     // Check if there is a saved token in localStorage to prevent early logout during hydration
-    const savedAuthStr = typeof window !== 'undefined' ? localStorage.getItem('ppsu-auth-storage') : null;
+    const savedAuthStr = typeof window !== 'undefined' ? localStorage.getItem('pjlp-auth-storage') : null;
     let hasSavedToken = false;
     if (savedAuthStr) {
       try {
@@ -158,16 +158,16 @@ export default function AdminSchedulesPage() {
       const res = await axios.get(`${apiUrl}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Filter out admin users, keep only PPSU/staff users who are active
+      // Filter out admin users, keep only PJLP/staff users who are active
       const staffUsers = res.data.filter((u: any) => {
         const roleName = u.roleName || (typeof u.role === 'string' ? u.role : u.role?.name);
-        const isPPSUorStaff = roleName === 'PPSU' || roleName === 'STAFF';
+        const isPJLPorStaff = roleName === 'PJLP' || roleName === 'STAFF';
 
         // Check if user status is active (default is ACTIVE)
         const userStatus = String(u.status || 'ACTIVE').toUpperCase();
         const isActuallyActive = userStatus === 'ACTIVE' || userStatus === 'AKTIF';
 
-        return isPPSUorStaff && isActuallyActive;
+        return isPJLPorStaff && isActuallyActive;
       });
       setAllStaff(staffUsers);
     } catch (err: any) {
@@ -481,7 +481,7 @@ export default function AdminSchedulesPage() {
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white">Jadwal Petugas PPSU</h1>
+          <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white">Jadwal Petugas PJLP</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Manajemen shift dinamis dan pembagian wilayah penugasan kerja lapangan</p>
         </div>
         
@@ -746,7 +746,7 @@ export default function AdminSchedulesPage() {
                 <h3 className="text-xl font-black text-zinc-950 dark:text-white">
                   {editingScheduleId !== null ? 'Edit Jadwal Petugas' : 'Tambah Jadwal Petugas'}
                 </h3>
-                <p className="text-xs text-zinc-500">Tentukan tanggal, wilayah kerja, shift, dan daftar petugas PPSU</p>
+                <p className="text-xs text-zinc-500">Tentukan tanggal, wilayah kerja, shift, dan daftar petugas PJLP</p>
               </div>
               <button 
                 onClick={() => { setIsAddModalOpen(false); setEditingScheduleId(null); }}
@@ -831,7 +831,7 @@ export default function AdminSchedulesPage() {
                   
                   {/* Petugas Smart Search Input */}
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Cari & Tambah Petugas PPSU (Bisa Lebih Dari Satu)</label>
+                    <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Cari & Tambah Petugas PJLP (Bisa Lebih Dari Satu)</label>
                     <div className="relative">
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                       <Input 
@@ -898,7 +898,7 @@ export default function AdminSchedulesPage() {
                               <p className="font-extrabold text-sm text-zinc-800 dark:text-zinc-100 truncate leading-snug">{staff.fullName}</p>
                               <p className="text-xs text-zinc-400 font-semibold mt-0.5">ID: {staff.username}</p>
                               <span className="inline-block text-[10px] text-orange-600 dark:text-orange-400 font-extrabold bg-orange-50 dark:bg-orange-950/20 border border-orange-100/30 rounded-md px-1.5 py-0.5 mt-1">
-                                PETUGAS PPSU
+                                PETUGAS PJLP
                               </span>
                             </div>
                             <button
@@ -1037,7 +1037,7 @@ export default function AdminSchedulesPage() {
                         <p className="font-extrabold text-sm text-zinc-800 dark:text-zinc-100 leading-snug">{staff.fullName}</p>
                         <p className="text-xs text-zinc-400 font-semibold mt-0.5">ID: {staff.username}</p>
                         <span className="inline-block text-[10px] text-orange-650 dark:text-orange-400 font-extrabold bg-orange-50 dark:bg-orange-950/20 border border-orange-100/30 rounded-md px-1.5 py-0.5 mt-1">
-                          PETUGAS PPSU
+                          PETUGAS PJLP
                         </span>
                       </div>
                     </div>

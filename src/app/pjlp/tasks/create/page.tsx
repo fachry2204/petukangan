@@ -23,7 +23,7 @@ import dynamic from 'next/dynamic';
 import { apiUrl } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 
-export default function PpsuCreateTaskPage() {
+export default function PjlpCreateTaskPage() {
   const router = useRouter();
   const { user, token } = useAuthStore();
   const { toast } = useToast();
@@ -215,7 +215,7 @@ export default function PpsuCreateTaskPage() {
             title: 'Tidak Dapat Membuat Tugas',
             description: 'Anda harus dalam status Absen Masuk untuk membuat tugas. Silakan absen masuk terlebih dahulu melalui menu Beranda.'
           });
-          router.push('/ppsu/home');
+          router.push('/pjlp/home');
         }
       } catch (err) {
         console.error('Failed to fetch attendance status', err);
@@ -412,7 +412,7 @@ export default function PpsuCreateTaskPage() {
         description: 'Tugas mandiri Anda berhasil dibuat dengan foto dan lokasi GPS.'
       });
 
-      router.push('/ppsu/tasks');
+      router.push('/pjlp/tasks');
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -441,7 +441,7 @@ export default function PpsuCreateTaskPage() {
             }
           </p>
           <Button 
-            onClick={() => router.push('/ppsu/home')}
+            onClick={() => router.push('/pjlp/home')}
             className="w-full py-4.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs"
           >
             Kembali ke Beranda

@@ -97,7 +97,7 @@ export function ActiveSOSLock() {
           <Button 
             onClick={() => {
               setIsResolved(false);
-              router.push('/ppsu/home');
+              router.push('/pjlp/home');
             }}
             className="w-full h-14 bg-white hover:bg-zinc-100 text-green-700 font-black rounded-2xl shadow-lg text-lg uppercase tracking-wider mt-4"
           >

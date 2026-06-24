@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { signToken, verifyToken } from '@/lib/auth';
 
 export async function GET() {
-  const secret = process.env.JWT_SECRET || 'ppsusmartmonitoring2026';
+  const secret = process.env.JWT_SECRET || 'pjlpsmartmonitoring2026';
   const payload = { sub: 1, role: 'ADMIN', test: true };
   
   // Test 1: jwt.sign directly

@@ -19,7 +19,7 @@ import axios from 'axios';
 import { apiUrl } from '@/lib/api-config';
 
 
-export default function PpsuSchedulePage() {
+export default function PjlpSchedulePage() {
   const { user, token } = useAuthStore();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -176,7 +176,7 @@ export default function PpsuSchedulePage() {
         <Button 
           variant="outline" 
           size="icon" 
-          onClick={() => router.push('/ppsu/home')}
+          onClick={() => router.push('/pjlp/home')}
           className="h-10 w-10 rounded-xl border-none bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 shadow-sm"
         >
           <ArrowLeft className="w-5 h-5 text-zinc-700 dark:text-white" />

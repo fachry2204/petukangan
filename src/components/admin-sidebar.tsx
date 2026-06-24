@@ -32,7 +32,7 @@ const generalMenuItems = [
   { label: 'SOS Petugas', icon: Siren, href: '/admin/sos' },
 ];
 
-const ppsuMenuItems = [
+const pjlpMenuItems = [
   { label: 'Petugas', icon: Users, href: '/admin/users' },
   { label: 'Absensi Petugas', icon: ClipboardCheck, href: '/admin/attendance' },
   { label: 'Jadwal Petugas', icon: Calendar, href: '/admin/schedules' },
@@ -56,7 +56,7 @@ export function AdminSidebar() {
   };
 
   const filteredGeneral = generalMenuItems.filter((i) => canAccess(i.href));
-  const filteredPpsu = ppsuMenuItems.filter((i) => canAccess(i.href));
+  const filteredPjlp = pjlpMenuItems.filter((i) => canAccess(i.href));
 
   return (
     <aside 
@@ -130,16 +130,16 @@ export function AdminSidebar() {
           );
         })}
 
-        {/* Kategori PPSU Header */}
+        {/* Kategori PJLP Header */}
         {!isCollapsed ? (
           <div className="px-4 pt-6 pb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
-            Kategori PPSU
+            Kategori PJLP
           </div>
         ) : (
           <div className="h-px bg-zinc-100 my-4 mx-2" />
         )}
 
-        {filteredPpsu.map((item) => {
+        {filteredPjlp.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

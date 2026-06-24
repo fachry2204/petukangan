@@ -24,8 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
 
-
-export default function PpsuAttendancePage() {
+export default function PjlpAttendanceLemburPage() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [location, setLocation] = useState<any>(null);
   const [address, setAddress] = useState<string>('');
@@ -125,13 +124,9 @@ export default function PpsuAttendancePage() {
   // Reverse Geocoding via OpenStreetMap Nominatim
   const getAddressFromCoords = async (lat: number, lng: number): Promise<string> => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for geocoding
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' },
-        signal: controller.signal
+        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
       });
-      clearTimeout(timeoutId);
       const data = await response.json();
       return data.display_name || `Lokasi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
@@ -152,13 +147,7 @@ export default function PpsuAttendancePage() {
         throw new Error('Perangkat Anda tidak mendukung GPS Geolocation.');
       }
 
-      const gpsPos: any = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 30000, // 30 seconds (increase from 10s)
-          maximumAge: 10000 // Allow up to 10 second old position
-        });
-      });
+      const gpsPos: any = await getGpsPosition();
 
       const coords = {
         lat: gpsPos.coords.latitude,
@@ -222,10 +211,45 @@ export default function PpsuAttendancePage() {
     }
   };
 
+  // Get GPS position with retry + fallback to low-accuracy when high-accuracy times out.
+  const getGpsPosition = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      const onError = (err: GeolocationPositionError) => {
+        // On timeout, retry once with low accuracy and a longer timeout.
+        if (err.code === err.TIMEOUT) {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            (err2) => {
+              const msg =
+                err2.code === err2.TIMEOUT
+                  ? 'GPS tidak merespons. Pastikan lokasi/GPS aktif dan sinyal cukup, lalu coba lagi.'
+                  : err2.code === err2.PERMISSION_DENIED
+                  ? 'Izin lokasi ditolak. Aktifkan izin lokasi pada browser Anda.'
+                  : err2.message || 'Gagal mengambil lokasi GPS.';
+              reject(new Error(msg));
+            },
+            { enableHighAccuracy: false, timeout: 25000, maximumAge: 60000 },
+          );
+          return;
+        }
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? 'Izin lokasi ditolak. Aktifkan izin lokasi pada browser Anda.'
+            : err.message || 'Gagal mengambil lokasi GPS.';
+        reject(new Error(msg));
+      };
+      navigator.geolocation.getCurrentPosition(resolve, onError, {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 30000,
+      });
+    });
+  };
+
   const submitQuickBreak = async (type: 'BREAK' | 'END_BREAK') => {
     setIsLoading(true);
     const endpoint = type === 'BREAK' ? 'break' : 'end-break';
-    const actionLabel = type === 'BREAK' ? 'Mulai Istirahat' : 'Selesai Istirahat';
+    const actionLabel = type === 'BREAK' ? 'Mulai Istirahat Lembur' : 'Selesai Istirahat Lembur';
 
     try {
       // Get Coordinates
@@ -233,13 +257,7 @@ export default function PpsuAttendancePage() {
         throw new Error('Perangkat Anda tidak mendukung GPS Geolocation.');
       }
 
-      const gpsPos: any = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 30000, // 30 seconds
-          maximumAge: 10000
-        });
-      });
+      const gpsPos: any = await getGpsPosition();
 
       const coords = {
         lat: gpsPos.coords.latitude,
@@ -261,10 +279,7 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: resolvedAddress,
         },
-        { 
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 30000 // 30 second timeout
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setSuccessModalData({
@@ -295,8 +310,8 @@ export default function PpsuAttendancePage() {
       setHasApprovedRequest(!!res.data.hasApprovedRequest);
       setTodayRecords(res.data.records || []);
 
-      // Automatically launch full camera flow on mount if status requires photo capture or has approved request
-      if (isInitial && (status === 'Belum Absen' || status === 'Selesai Istirahat' || !!res.data.hasApprovedRequest)) {
+      // Automatically launch camera on mount for lembur if they haven't check in or out
+      if (isInitial && (status === 'Belum Absen' || status === 'Selesai Istirahat')) {
         startAttendanceFlow();
       }
     } catch (err) {
@@ -347,8 +362,8 @@ export default function PpsuAttendancePage() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, height - bannerHeight, width, bannerHeight);
 
-    // Left Accent Stripe in Orange
-    ctx.fillStyle = '#f97316';
+    // Left Accent Stripe in Gold/Orange
+    ctx.fillStyle = '#eab308';
     ctx.fillRect(padding / 2, height - bannerHeight + (padding / 2), 6, bannerHeight - padding);
 
     // Text Shadow style
@@ -360,7 +375,7 @@ export default function PpsuAttendancePage() {
 
     // 1. Application Name Header
     ctx.font = `bold ${fontSize * 1.15}px 'Outfit', 'Inter', sans-serif`;
-    ctx.fillText('SI PETUT ABSENSI PPSU', padding, height - bannerHeight + padding + fontSize);
+    ctx.fillText('SI PETUT ABSENSI PJLP (LEMBUR)', padding, height - bannerHeight + padding + fontSize);
 
     // 2. Timestamp & GPS Coordinates Info Row
     ctx.font = `bold ${fontSize * 0.8}px 'Inter', sans-serif`;
@@ -396,7 +411,7 @@ export default function PpsuAttendancePage() {
   };
 
   // Capture Photo action
-  const capturePhoto = async () => {
+  const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && location) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -434,46 +449,12 @@ export default function PpsuAttendancePage() {
         // Draw Watermark
         drawWatermark(canvas, timestamp, coordsStr, address);
 
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        setPhoto(dataUrl);
+
         // Stop camera stream & close view overlay
         stopCameraStream();
         setIsCameraOpen(false);
-        
-        setIsLoading(true);
-        try {
-          // Convert canvas to Blob and upload to our API
-          const blob = await new Promise<Blob>((resolve, reject) => {
-            canvas.toBlob((blobResult) => {
-              if (blobResult) {
-                resolve(blobResult);
-              } else {
-                reject(new Error('Failed to convert canvas to blob'));
-              }
-            }, 'image/jpeg', 0.9);
-          });
-          const formData = new FormData();
-          formData.append('file', blob, `attendance-${Date.now()}.jpg`);
-          formData.append('type', 'absensi'); // Set type to absensi
-          
-          const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (uploadRes.data.success) {
-            setPhoto(uploadRes.data.url);
-          } else {
-            throw new Error('Upload failed');
-          }
-        } catch (err) {
-          console.error('Error uploading photo:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Upload Foto Gagal',
-            description: 'Gagal mengupload foto, silakan coba lagi'
-          });
-          startAttendanceFlow(); // Retake photo
-        } finally {
-          setIsLoading(false);
-        }
       }
     }
   };
@@ -501,15 +482,12 @@ export default function PpsuAttendancePage() {
           clientTimestamp: Date.now(),
           address: address,
         },
-        { 
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 30000 // 30 second timeout
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setSuccessModalData({
         isOpen: true,
-        title: isCheckOut ? 'Absen Pulang Berhasil 🎉' : 'Absen Masuk Berhasil 🎉',
+        title: isCheckOut ? 'Absen Lembur Pulang Berhasil 🎉' : 'Absen Lembur Masuk Berhasil 🎉',
         desc: `Data anda sudah tercatat di system`
       });
       setPhoto(null);
@@ -517,7 +495,7 @@ export default function PpsuAttendancePage() {
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: isCheckOut ? 'Absen Pulang Gagal' : 'Absen Masuk Gagal',
+        title: isCheckOut ? 'Absen Lembur Pulang Gagal' : 'Absen Lembur Masuk Gagal',
         description: error.response?.data?.message || 'Gagal mengirim data absensi ke basis data',
       });
     } finally {
@@ -528,8 +506,8 @@ export default function PpsuAttendancePage() {
   if (fetchingStatus) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
-        <p className="text-zinc-500 text-sm font-semibold">Memeriksa absensi hari ini...</p>
+        <Loader2 className="w-10 h-10 text-yellow-500 animate-spin" />
+        <p className="text-zinc-500 text-sm font-semibold">Memeriksa absensi lembur hari ini...</p>
       </div>
     );
   }
@@ -540,35 +518,35 @@ export default function PpsuAttendancePage() {
     switch (attendanceStatus) {
       case 'Belum Absen':
         return {
-          title: 'Absensi Masuk (Check-In)',
-          subtitle: 'Silakan ambil foto selfie untuk masuk kerja hari ini'
+          title: 'Absensi Lembur Masuk',
+          subtitle: 'Silakan ambil foto selfie untuk masuk tugas lembur hari ini'
         };
       case 'Sudah Absen':
         return {
-          title: 'Absen Istirahat',
-          subtitle: 'Mulai waktu istirahat Anda hari ini'
+          title: 'Absen Istirahat Lembur',
+          subtitle: 'Mulai waktu istirahat tugas lembur Anda hari ini'
         };
       case 'Absen Istirahat':
         return {
-          title: 'Selesai Istirahat',
-          subtitle: 'Akhiri waktu istirahat dan kembali bertugas'
+          title: 'Selesai Istirahat Lembur',
+          subtitle: 'Akhiri waktu istirahat lembur dan kembali bertugas'
         };
       case 'Selesai Istirahat':
         return {
-          title: 'Absensi Keluar (Check-Out)',
-          subtitle: 'Silakan ambil foto selfie untuk mengakhiri tugas lapangan'
+          title: 'Absensi Lembur Keluar (Check-Out)',
+          subtitle: 'Silakan ambil foto selfie untuk mengakhiri tugas lembur'
         };
       case 'Sudah Absen Pulang':
       case 'Sudah Check-Out':
       case 'Sudah Checkout':
         return {
-          title: 'Absensi Selesai',
-          subtitle: 'Tugas lapangan hari ini telah selesai sempurna'
+          title: 'Absensi Lembur Selesai',
+          subtitle: 'Tugas lembur luar jadwal hari ini telah selesai sempurna'
         };
       default:
         return {
-          title: 'Absensi Masuk (Check-In)',
-          subtitle: 'Pastikan Anda telah berada di lokasi kerja'
+          title: 'Absensi Lembur Masuk',
+          subtitle: 'Pastikan Anda telah berada di lokasi tugas lembur'
         };
     }
   };
@@ -578,7 +556,8 @@ export default function PpsuAttendancePage() {
   return (
     <div className="p-6 space-y-6 pb-24 relative">
       <header className="space-y-1">
-        <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+        <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
           {headerInfo.title}
         </h2>
         <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
@@ -594,16 +573,16 @@ export default function PpsuAttendancePage() {
               return (
                 <>
                   <div className="space-y-1">
-                    <span className="block text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest">Durasi Masuk (Kerja Net)</span>
+                    <span className="block text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest">Durasi Masuk Lembur</span>
                     <p className="text-sm font-black text-emerald-650 dark:text-emerald-400 flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-emerald-500" />
                       {workStr}
                     </p>
                   </div>
                   <div className="space-y-1 border-l border-zinc-200 dark:border-zinc-800 pl-4">
-                    <span className="block text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest">Durasi Istirahat</span>
+                    <span className="block text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest">Durasi Istirahat Lembur</span>
                     <p className="text-sm font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-amber-550" />
+                      <Sparkles className="w-4 h-4 text-amber-555" />
                       {breakStr}
                     </p>
                   </div>
@@ -614,75 +593,57 @@ export default function PpsuAttendancePage() {
         </Card>
       )}
 
-      {attendanceStatus === 'Menunggu Diterima' ? (
-        <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 rounded-3xl p-8 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/20 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-            <Clock className="w-10 h-10 animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-black text-zinc-800 dark:text-white">Permintaan Absen Menunggu Diterima</h3>
-            <p className="text-zinc-500 text-sm leading-relaxed">
-              Permintaan absen masuk di luar jadwal kerja Anda telah terkirim dan saat ini berstatus <strong>Menunggu Diterima</strong> oleh Staff, Pimpinan, dan Admin.
-            </p>
-          </div>
-          <Button 
-            onClick={() => router.push('/ppsu/home')} 
-            className="w-full bg-amber-550 hover:bg-amber-600 text-white font-bold rounded-2xl py-6 mt-4 shadow-lg shadow-amber-500/10 transition-all active:scale-95"
-          >
-            Kembali ke Beranda
-          </Button>
-        </Card>
-      ) : ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus) && !hasApprovedRequest ? (
+      {['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus) ? (
         <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 rounded-3xl p-8 text-center space-y-4">
-          <div className="w-16 h-16 bg-green-50 dark:bg-green-950/20 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-16 h-16 bg-yellow-50 dark:bg-yellow-950/20 text-yellow-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
             <CheckCircle2 className="w-10 h-10 animate-bounce" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-black text-zinc-800 dark:text-white">Tugas Anda Hari Ini Selesai</h3>
+            <h3 className="text-lg font-black text-zinc-800 dark:text-white">Tugas Lembur Selesai</h3>
             <p className="text-zinc-500 text-sm leading-relaxed">
-              Anda sudah melakukan absensi masuk, istirahat, selesai istirahat, dan absen pulang hari ini. Silakan beristirahat dengan baik!
+              Anda sudah menyelesaikan absensi masuk lembur, istirahat, dan pulang lembur hari ini. Terima kasih atas kerja keras Anda!
             </p>
           </div>
           <Button 
-            onClick={() => router.push('/ppsu/home')} 
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl py-6 mt-4 shadow-lg shadow-orange-500/10 transition-all active:scale-95"
+            onClick={() => router.push('/pjlp/home')} 
+            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-2xl py-6 mt-4 shadow-lg shadow-yellow-500/10 transition-all active:scale-95"
           >
             Kembali ke Beranda
           </Button>
         </Card>
       ) : ['Sudah Absen', 'Absen Istirahat'].includes(attendanceStatus) ? (
         <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 rounded-3xl p-6 text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
-          <div className="w-20 h-20 bg-orange-50 dark:bg-orange-500/10 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
-            <Clock className="w-10 h-10 text-orange-600 animate-pulse" />
+          <div className="w-20 h-20 bg-yellow-50 dark:bg-yellow-500/10 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+            <Clock className="w-10 h-10 text-yellow-600 animate-pulse" />
           </div>
           <div className="space-y-2">
-            <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 dark:bg-orange-950/20 font-bold px-3 py-1 text-xs">
-              {attendanceStatus === 'Sudah Absen' ? 'Waktu Istirahat' : 'Kembali Bertugas'}
+            <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 font-bold px-3 py-1 text-xs">
+              {attendanceStatus === 'Sudah Absen' ? 'Istirahat Lembur' : 'Kembali Bertugas'}
             </Badge>
             <h3 className="text-base font-bold text-zinc-850 dark:text-white">
-              {attendanceStatus === 'Sudah Absen' ? 'Mulai Waktu Istirahat' : 'Selesai Waktu Istirahat'}
+              {attendanceStatus === 'Sudah Absen' ? 'Mulai Waktu Istirahat Lembur' : 'Selesai Waktu Istirahat Lembur'}
             </h3>
             <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
               {attendanceStatus === 'Sudah Absen' 
-                ? 'Klik tombol di bawah untuk mencatat jam mulai istirahat Anda hari ini. Proses ini tidak memerlukan pengambilan foto.'
-                : 'Klik tombol di bawah untuk mencatat jam selesai istirahat dan kembali bekerja. Proses ini tidak memerlukan pengambilan foto.'}
+                ? 'Klik tombol di bawah untuk mencatat jam mulai istirahat lembur Anda hari ini.'
+                : 'Klik tombol di bawah untuk mencatat jam selesai istirahat lembur dan kembali bekerja.'}
             </p>
           </div>
 
           <Button 
             onClick={() => submitQuickBreak(attendanceStatus === 'Sudah Absen' ? 'BREAK' : 'END_BREAK')}
             disabled={isLoading}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl py-6 shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2"
+            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-black rounded-2xl py-6 shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Mencatat Status...
+                Mencatat Status Lembur...
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-5 h-5" />
-                {attendanceStatus === 'Sudah Absen' ? 'Tekan Mulai Istirahat' : 'Tekan Selesai Istirahat'}
+                {attendanceStatus === 'Sudah Absen' ? 'Tekan Mulai Istirahat Lembur' : 'Tekan Selesai Istirahat Lembur'}
               </>
             )}
           </Button>
@@ -692,25 +653,25 @@ export default function PpsuAttendancePage() {
           {/* Main Landing: Start Attendance Trigger Card (When no photo taken) */}
           {!photo && (
             <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 rounded-3xl p-6 text-center space-y-6">
-              <div className="w-20 h-20 bg-orange-50 dark:bg-orange-500/10 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
-                <Sparkles className="w-10 h-10 text-orange-600 animate-pulse" />
+              <div className="w-20 h-20 bg-yellow-50 dark:bg-yellow-500/10 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                <Sparkles className="w-10 h-10 text-yellow-600 animate-pulse" />
               </div>
               <div className="space-y-2">
-                <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 dark:bg-orange-950/20 font-bold px-3 py-1 text-xs">
-                  {attendanceStatus === 'Selesai Istirahat' ? 'Shift Selesai' : 'Mulai Tugas'}
+                <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 font-bold px-3 py-1 text-xs">
+                  {attendanceStatus === 'Selesai Istirahat' ? 'Lembur Selesai' : 'Mulai Lembur'}
                 </Badge>
                 <h3 className="text-base font-bold text-zinc-850 dark:text-white">
-                  Absensi Wajib GPS & Kamera HP
+                  Absensi Lembur GPS & Kamera HP
                 </h3>
                 <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
-                  Aplikasi akan memvalidasi posisi koordinat GPS Anda secara real-time dan mengambil foto bukti kehadiran yang disematkan dengan *watermark* terintegrasi.
+                  Bukti kehadiran tugas lembur Anda akan diverifikasi melalui foto selfie ber-watermark khusus serta koordinat GPS akurat.
                 </p>
               </div>
 
               <Button 
                 onClick={startAttendanceFlow}
                 disabled={isActivating}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl py-6 shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2"
+                className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-black rounded-2xl py-6 shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2"
               >
                 {isActivating ? (
                   <>
@@ -720,7 +681,7 @@ export default function PpsuAttendancePage() {
                 ) : (
                   <>
                     <Camera className="w-5 h-5" />
-                    {attendanceStatus === 'Selesai Istirahat' ? 'Mulai Absen Pulang' : 'Mulai Absen Masuk'}
+                    {attendanceStatus === 'Selesai Istirahat' ? 'Mulai Absen Pulang Lembur' : 'Mulai Absen Masuk Lembur'}
                   </>
                 )}
               </Button>
@@ -734,23 +695,23 @@ export default function PpsuAttendancePage() {
                 <div className="p-4 border-b border-zinc-150 dark:border-zinc-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200">Bukti Foto Berhasil Diambil</span>
+                    <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200">Foto Selfie Lembur Diambil</span>
                   </div>
-                  <Badge className="bg-orange-500 border-none font-bold text-xs">Akurat</Badge>
+                  <Badge className="bg-yellow-500 border-none text-zinc-900 font-bold text-xs">Lembur</Badge>
                 </div>
                 <div className="relative aspect-[3/4] bg-zinc-900">
-                  <img src={photo} alt="Watermarked Bukti Absen" className="w-full h-full object-contain" />
+                  <img src={photo} alt="Watermarked Bukti Absen Lembur" className="w-full h-full object-contain" />
                 </div>
               </Card>
 
               {/* Resolved Geolocation Address Info card */}
               <Card className="border-none shadow-md rounded-2xl bg-zinc-50 dark:bg-zinc-900 p-4">
                 <div className="flex gap-3">
-                  <div className="w-9 h-9 bg-orange-100 dark:bg-orange-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-orange-600" />
+                  <div className="w-9 h-9 bg-yellow-100 dark:bg-yellow-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-yellow-600" />
                   </div>
                   <div className="space-y-1 min-w-0 flex-1">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Titik Koordinat Terdeteksi</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Koordinat Deteksi Lembur</p>
                     <p className="text-xs font-black text-zinc-850 dark:text-white truncate">
                       {location ? `Lat: ${location.lat.toFixed(6)}, Lng: ${location.lng.toFixed(6)}` : '-'}
                     </p>
@@ -765,7 +726,7 @@ export default function PpsuAttendancePage() {
                     <MapComponent 
                       center={[location?.lat, location?.lng]} 
                       zoom={16} 
-                      points={[{ lat: location?.lat, lng: location?.lng, name: 'Anda', status: 'Lokasi Absen' }]} 
+                      points={[{ lat: location?.lat, lng: location?.lng, name: 'Anda', status: 'Lokasi Absen Lembur' }]} 
                     />
                     <div className="absolute inset-0 bg-transparent" />
                   </div>
@@ -779,14 +740,14 @@ export default function PpsuAttendancePage() {
                   onClick={handleRetake} 
                   className="flex-1 py-6 rounded-2xl font-bold border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:bg-zinc-100 transition-all duration-300"
                 >
-                  Ambil Ulang Foto
+                  Ambil Ulang
                 </Button>
                 <Button 
                   onClick={submitAttendance} 
                   disabled={isLoading || !location} 
-                  className="flex-1 py-6 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black shadow-lg shadow-orange-600/10 transition-all duration-300 transform active:scale-95"
+                  className="flex-1 py-6 bg-yellow-600 hover:bg-yellow-750 text-white font-black shadow-lg shadow-yellow-600/10 transition-all duration-300 transform active:scale-95"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (attendanceStatus === 'Selesai Istirahat' ? 'Kirim Absen Pulang' : 'Kirim Absen Masuk')}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (attendanceStatus === 'Selesai Istirahat' ? 'Kirim Absen Pulang Lembur' : 'Kirim Absen Masuk Lembur')}
                 </Button>
               </div>
             </div>
@@ -794,7 +755,7 @@ export default function PpsuAttendancePage() {
         </>
       )}
 
-      {/* 4. FULL SCREEN CAMERA OVERLAY */}
+      {/* FULL SCREEN CAMERA OVERLAY */}
       {isCameraOpen && (
         <div className="fixed inset-0 z-[10000] bg-black flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
           {/* Camera Top Controls */}
@@ -810,8 +771,8 @@ export default function PpsuAttendancePage() {
               <img src="/gambar/close.png" alt="Close" className="w-6 h-6 object-contain" />
             </Button>
 
-            <Badge className="bg-orange-600 text-white font-bold border-none py-1.5 px-3 rounded-full flex items-center gap-1.5 animate-pulse">
-              <Clock className="w-3.5 h-3.5" /> GPS AKTIF
+            <Badge className="bg-yellow-600 text-zinc-950 font-bold border-none py-1.5 px-3 rounded-full flex items-center gap-1.5 animate-pulse">
+              <Clock className="w-3.5 h-3.5" /> GPS LEMBUR AKTIF
             </Badge>
 
             <Button 
@@ -819,7 +780,7 @@ export default function PpsuAttendancePage() {
               onClick={toggleCameraFacing} 
               className="text-white hover:bg-white/10 border border-white/20 px-3.5 py-1.5 h-auto rounded-xl flex items-center gap-1.5 text-[11px] font-black bg-black/30 backdrop-blur-sm"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Ganti Camera
+              <RefreshCw className="w-3.5 h-3.5" /> Ganti Kamera
             </Button>
           </div>
 
@@ -832,25 +793,25 @@ export default function PpsuAttendancePage() {
               className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} 
             />
             
-            {/* Virtual Target Guidelines to make it premium */}
+            {/* Target guidelines */}
             <div className="absolute inset-x-12 inset-y-28 border border-dashed border-white/25 rounded-2xl pointer-events-none flex items-center justify-center">
-              <div className="w-6 h-6 border-t-2 border-l-2 border-orange-500 absolute top-0 left-0 rounded-tl-lg" />
-              <div className="w-6 h-6 border-t-2 border-r-2 border-orange-500 absolute top-0 right-0 rounded-tr-lg" />
-              <div className="w-6 h-6 border-b-2 border-l-2 border-orange-500 absolute bottom-0 left-0 rounded-bl-lg" />
-              <div className="w-6 h-6 border-b-2 border-r-2 border-orange-500 absolute bottom-0 right-0 rounded-br-lg" />
+              <div className="w-6 h-6 border-t-2 border-l-2 border-yellow-500 absolute top-0 left-0 rounded-tl-lg" />
+              <div className="w-6 h-6 border-t-2 border-r-2 border-yellow-500 absolute top-0 right-0 rounded-tr-lg" />
+              <div className="w-6 h-6 border-b-2 border-l-2 border-yellow-500 absolute bottom-0 left-0 rounded-bl-lg" />
+              <div className="w-6 h-6 border-b-2 border-r-2 border-yellow-500 absolute bottom-0 right-0 rounded-br-lg" />
               
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Tempatkan Wajah Anda Di Sini</p>
             </div>
           </div>
 
-          {/* Hidden canvas for drawing watermarked screenshots */}
+          {/* Hidden canvas for watermarking */}
           <canvas ref={canvasRef} className="hidden" />
 
           {/* Camera Bottom Controls */}
           <div className="p-8 z-50 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-4">
             {/* Live Info overlay */}
             <div className="bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-center max-w-xs space-y-0.5">
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-orange-500 uppercase tracking-widest">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-yellow-500 uppercase tracking-widest">
                 <MapPin className="w-3 h-3" /> Akurasi GPS Tinggi
               </div>
               <p className="text-[10px] text-white/80 leading-normal truncate w-60">
@@ -858,11 +819,11 @@ export default function PpsuAttendancePage() {
               </p>
             </div>
 
-            {/* Big circular capture button */}
+            {/* Circular capture button */}
             <div className="flex items-center justify-center py-2">
               <button 
                 onClick={capturePhoto}
-                className="w-20 h-20 bg-orange-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all transform active:scale-90 hover:scale-105 active:bg-orange-700 overflow-hidden"
+                className="w-20 h-20 bg-yellow-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all transform active:scale-90 hover:scale-105 active:bg-yellow-750 overflow-hidden"
               >
                 <div className="w-8 h-8 rounded-full bg-white/20 animate-ping absolute pointer-events-none" />
                 <img src="/gambar/camera.png" alt="Shutter" className="w-10 h-10 object-contain" />
@@ -878,8 +839,8 @@ export default function PpsuAttendancePage() {
           <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl overflow-hidden w-full max-w-md shadow-2xl flex flex-col h-[60vh] animate-in zoom-in-95 duration-150">
             <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-orange-600 animate-bounce" />
-                <h3 className="font-black text-zinc-900 dark:text-white">Peta Lokasi GPS Anda</h3>
+                <MapPin className="w-5 h-5 text-yellow-600 animate-bounce" />
+                <h3 className="font-black text-zinc-900 dark:text-white">Peta Lokasi GPS Lembur</h3>
               </div>
               <Button 
                 variant="outline" 
@@ -894,7 +855,7 @@ export default function PpsuAttendancePage() {
               <MapComponent 
                 center={[location.lat, location.lng]} 
                 zoom={16} 
-                points={[{ lat: location.lat, lng: location.lng, name: 'Lokasi Anda', status: 'Akurasi GPS Sangat Baik' }]} 
+                points={[{ lat: location.lat, lng: location.lng, name: 'Lokasi Lembur Anda', status: 'GPS Valid' }]} 
               />
             </div>
           </div>
@@ -953,7 +914,7 @@ export default function PpsuAttendancePage() {
             <button
               onClick={() => {
                 setSuccessModalData({ isOpen: false, title: '', desc: '' });
-                router.push('/ppsu/home');
+                router.push('/pjlp/home');
               }}
               className="w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 shadow-md bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-green-500/20"
             >

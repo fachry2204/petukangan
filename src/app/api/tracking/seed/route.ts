@@ -38,11 +38,11 @@ export async function GET(req: Request) {
     const columns: any = await queryDb('SHOW COLUMNS FROM gps_tracking');
     const colNames = columns.map((c: any) => c.Field);
     
-    // Get some PPSU users
+    // Get some PJLP users
     const users: any = await queryDb(`SELECT id FROM users WHERE roleId = 2 LIMIT 5`);
     
     if (!users || users.length === 0) {
-      return NextResponse.json({ message: 'No PPSU users found to seed' });
+      return NextResponse.json({ message: 'No PJLP users found to seed' });
     }
 
     // Insert dummy GPS data for testing

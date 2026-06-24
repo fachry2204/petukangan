@@ -427,7 +427,7 @@ export default function EditPetugasPage({ params }: { params: Promise<{ id: stri
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Petugas</h1>
-          <p className="text-zinc-500">Perbarui data profil akun petugas PPSU.</p>
+          <p className="text-zinc-500">Perbarui data profil akun petugas PJLP.</p>
         </div>
         <div className="ml-auto">
           <Button

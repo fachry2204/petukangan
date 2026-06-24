@@ -26,26 +26,26 @@ export async function GET() {
     );
     const laporan = laporanRows[0]?.total || 0;
 
-    // 3. Jumlah petugas PPSU yang absen hari ini
-    // Absen = petugas PPSU yang tidak memiliki absensi masuk (type=IN) hari ini
-    const [totalPpsuRows] = await conn.query<any[]>(
-      `SELECT COUNT(*) as total FROM users u JOIN roles r ON r.id = u.roleId WHERE r.name = 'PPSU' AND u.status = 'ACTIVE'`
+    // 3. Jumlah petugas PJLP yang absen hari ini
+    // Absen = petugas PJLP yang tidak memiliki absensi masuk (type=IN) hari ini
+    const [totalPjlpRows] = await conn.query<any[]>(
+      `SELECT COUNT(*) as total FROM users u JOIN roles r ON r.id = u.roleId WHERE r.name = 'PJLP' AND u.status = 'ACTIVE'`
     );
-    const totalPpsu = totalPpsuRows[0]?.total || 0;
+    const totalPjlp = totalPjlpRows[0]?.total || 0;
 
     const [hadirRows] = await conn.query<any[]>(
       `SELECT COUNT(DISTINCT a.userId) as total FROM attendance a
        JOIN users u ON u.id = a.userId
        JOIN roles r ON r.id = u.roleId
-       WHERE r.name = 'PPSU' AND a.type = 'IN' AND DATE(a.timestamp) = CURDATE()`
+       WHERE r.name = 'PJLP' AND a.type = 'IN' AND DATE(a.timestamp) = CURDATE()`
     );
     const hadir = hadirRows[0]?.total || 0;
-    const absen = Math.max(0, totalPpsu - hadir);
+    const absen = Math.max(0, totalPjlp - hadir);
 
-    return NextResponse.json({ selesai, laporan, absen, totalPpsu });
+    return NextResponse.json({ selesai, laporan, absen, totalPjlp });
   } catch (err: any) {
     console.error('[monitoring-stats] DB Error:', err.message);
-    return NextResponse.json({ selesai: 0, laporan: 0, absen: 0, totalPpsu: 0 });
+    return NextResponse.json({ selesai: 0, laporan: 0, absen: 0, totalPjlp: 0 });
   } finally {
     if (conn) await conn.end();
   }

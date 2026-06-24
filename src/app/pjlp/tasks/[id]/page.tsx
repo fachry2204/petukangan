@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { useRealtime } from '@/hooks/use-realtime';
 
-export default function PpsuTaskDetailPage() {
+export default function PjlpTaskDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [task, setTask] = useState<any>(null);
@@ -473,7 +473,7 @@ export default function PpsuTaskDetailPage() {
         title: 'Status Diperbarui', 
         description: `Tugas sekarang ${statusLabelMap[newStatus] || newStatus}` 
       });
-      router.push('/ppsu/tasks');
+      router.push('/pjlp/tasks');
     } catch (error: any) {
       toast({ 
         variant: 'destructive', 
@@ -866,7 +866,7 @@ export default function PpsuTaskDetailPage() {
                   </div>
                 </Card>
                 <Button
-                  onClick={() => router.push('/ppsu/tasks')}
+                  onClick={() => router.push('/pjlp/tasks')}
                   className="w-full py-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
                 >
                   <CheckCircle2 className="w-5 h-5" />
@@ -1027,7 +1027,7 @@ export default function PpsuTaskDetailPage() {
               <Button 
                 onClick={() => {
                   setIsWarningOpen(false);
-                  router.push('/ppsu/home');
+                  router.push('/pjlp/home');
                 }}
                 className="flex-1 py-5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs"
               >

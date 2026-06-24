@@ -28,7 +28,7 @@ import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 
-export default function PpsuHomePage() {
+export default function PjlpHomePage() {
   const { user, token, setAuth } = useAuthStore();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -271,7 +271,7 @@ export default function PpsuHomePage() {
       });
 
     } catch (error) {
-      console.error('Error fetching PPSU dashboard data:', error);
+      console.error('Error fetching PJLP dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -579,7 +579,7 @@ export default function PpsuHomePage() {
       <Card 
         className="border-none shadow-sm rounded-3xl overflow-hidden relative"
         style={{ 
-          backgroundImage: "url('/gambar/bgheaderppsu.jpg')", 
+          backgroundImage: "url('/gambar/bgheaderpjlp.jpg')", 
           backgroundSize: 'cover', 
           backgroundPosition: 'center' 
         }}
@@ -610,7 +610,7 @@ export default function PpsuHomePage() {
             <div className="space-y-0.5">
               <p className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">{getGreeting()},</p>
               <h2 className="text-base font-black text-zinc-800 dark:text-white leading-tight">
-                {user?.fullName || 'Petugas PPSU'} 👋
+                {user?.fullName || 'Petugas PJLP'} 👋
               </h2>
               <div className="flex items-center gap-2 pt-0.5">
                 <span className="text-[10px] font-bold text-zinc-800 dark:text-zinc-200 uppercase">ID Petugas:</span>
@@ -765,7 +765,7 @@ export default function PpsuHomePage() {
                 ) : (
                   <>
                     <Button 
-                      onClick={() => { window.location.href = hasApprovedRequest ? '/ppsu/attendance-lembur' : '/ppsu/attendance'; }}
+                      onClick={() => { window.location.href = hasApprovedRequest ? '/pjlp/attendance-lembur' : '/pjlp/attendance'; }}
                       className={`flex-[2.2] rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 ${
                         hasApprovedRequest 
                           ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
@@ -874,7 +874,7 @@ export default function PpsuHomePage() {
             </div>
             <Button 
               variant="ghost" 
-              onClick={() => router.push('/ppsu/schedule')}
+              onClick={() => router.push('/pjlp/schedule')}
               className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/20 font-bold px-3 py-1.5 rounded-xl transition-all"
             >
               Lihat Jadwal

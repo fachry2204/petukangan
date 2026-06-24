@@ -35,7 +35,7 @@ const MapComponent = dynamic(() => import('@/components/map-component'), {
   loading: () => <div className="w-full h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse" />
 });
 
-export default function PpsuTasksPage() {
+export default function PjlpTasksPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
@@ -113,7 +113,7 @@ export default function PpsuTasksPage() {
       setWarningReason(attendanceStatus);
       setIsWarningOpen(true);
     } else {
-      router.push('/ppsu/tasks/create');
+      router.push('/pjlp/tasks/create');
     }
   };
 
@@ -123,7 +123,7 @@ export default function PpsuTasksPage() {
       setWarningReason(attendanceStatus);
       setIsWarningOpen(true);
     } else {
-      router.push(`/ppsu/tasks/${taskId}`);
+      router.push(`/pjlp/tasks/${taskId}`);
     }
   };
 
@@ -320,7 +320,7 @@ export default function PpsuTasksPage() {
               <Button
                 onClick={() => {
                   setIsWarningOpen(false);
-                  router.push('/ppsu/home');
+                  router.push('/pjlp/home');
                 }}
                 className="flex-1 py-5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs"
               >

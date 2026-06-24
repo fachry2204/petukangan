@@ -287,7 +287,7 @@ export default function AddPetugasPage() {
       const formattedJoinDate = formData.joinDate ? format(formData.joinDate, 'yyyy-MM-dd') : null;
 
       // Generate username and set default password
-      const generatedUsername = `ppsu-${formData.fullName.toLowerCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 10000)}`;
+      const generatedUsername = `pjlp-${formData.fullName.toLowerCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 10000)}`;
       const defaultPassword = '1234';
 
       await axios.post(`${apiUrl}/users`, {
@@ -297,7 +297,7 @@ export default function AddPetugasPage() {
         birthDate: formattedBirthDate,
         joinDate: formattedJoinDate,
         phone: formattedPhone,
-        roleName: 'PPSU',
+        roleName: 'PJLP',
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -322,7 +322,7 @@ export default function AddPetugasPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tambah Petugas</h1>
-          <p className="text-zinc-500">Registrasi akun baru untuk petugas PPSU.</p>
+          <p className="text-zinc-500">Registrasi akun baru untuk petugas PJLP.</p>
         </div>
       </div>
 
@@ -336,7 +336,7 @@ export default function AddPetugasPage() {
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
                 <Label className="text-base">User ID / Username</Label>
-                <Input disabled value="Dihasilkan Otomatis (PPSU...)" className="bg-zinc-100 rounded-xl h-14 text-base" />
+                <Input disabled value="Dihasilkan Otomatis (PJLP...)" className="bg-zinc-100 rounded-xl h-14 text-base" />
                 <p className="text-sm text-zinc-500">Password default: 1234</p>
               </div>
               <div className="space-y-3">

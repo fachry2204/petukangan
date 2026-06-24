@@ -70,7 +70,7 @@ export default function NewTaskPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Fetch all PPSU staff
+    // Fetch all PJLP staff
     const fetchStaff = async () => {
       try {
         setIsLoading(true);
@@ -79,11 +79,11 @@ export default function NewTaskPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          // Filter out admins if any, assuming role is PPSU
+          // Filter out admins if any, assuming role is PJLP
           setOfficers(
             (data || []).filter((u: any) => {
               const roleName = String(u?.roleName || u?.role?.name || u?.role || '').toUpperCase();
-              return roleName === 'PPSU';
+              return roleName === 'PJLP';
             })
           );
         }

@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
           formattedPhone = '62' + formattedPhone.substring(1);
         }
 
-        const generatedUsername = `ppsu-${fullName.toLowerCase().replace(/[^a-z0-9]/gi, '')}-${Math.floor(Math.random() * 10000)}`;
+        const generatedUsername = `pjlp-${fullName.toLowerCase().replace(/[^a-z0-9]/gi, '')}-${Math.floor(Math.random() * 10000)}`;
 
         try {
           await axios.post(`${apiUrl}/users`, {
@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
             village: village,
             postalCode: postalCode,
             address: address,
-            roleName: 'PPSU',
+            roleName: 'PJLP',
             status: 'ACTIVE',
           }, {
             headers: { Authorization: `Bearer ${token}` }
@@ -251,7 +251,7 @@ export default function AdminUsersPage() {
 
   const filteredUsers = users.filter(u => {
     const role = (u.roleName || u.role?.name || '').toUpperCase();
-    return role === 'PPSU' && (
+    return role === 'PJLP' && (
       (u.fullName || '').toLowerCase().includes(search.toLowerCase()) || 
       (u.username || '').toLowerCase().includes(search.toLowerCase())
     );
@@ -262,7 +262,7 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Data Petugas</h1>
-          <p className="text-zinc-500">Manajemen akun PPSU, Staff, dan Pimpinan</p>
+          <p className="text-zinc-500">Manajemen akun PJLP, Staff, dan Pimpinan</p>
         </div>
         
         <div className="flex gap-3">
