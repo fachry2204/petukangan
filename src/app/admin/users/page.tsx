@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtime } from '@/hooks/use-realtime';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { apiUrl } from '@/lib/api-config';
 import * as XLSX from 'xlsx';
@@ -336,7 +337,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
                     <TableCell>
                       {user.photoUrl ? (
-                        <img src={user.photoUrl} alt={user.fullName} className="w-10 h-10 rounded-xl object-contain border border-zinc-100 bg-zinc-50" />
+                        <Image src={user.photoUrl} alt={user.fullName} width={40} height={40} className="w-10 h-10 rounded-xl object-cover border border-zinc-100 bg-zinc-50" />
                       ) : (
                         <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center font-bold text-orange-600 border border-orange-200">
                           {user.fullName.charAt(0)}
@@ -441,10 +442,12 @@ export default function AdminUsersPage() {
                 
                 <div className="relative z-10">
                   {selectedUser.photoUrl ? (
-                    <img
+                    <Image
                       src={selectedUser.photoUrl}
                       alt={selectedUser.fullName}
-                      className="h-32 w-auto max-w-full rounded-2xl object-contain border-4 border-white/20 shadow-lg bg-white/10"
+                      width={128}
+                      height={128}
+                      className="h-32 w-auto max-w-full rounded-2xl object-cover border-4 border-white/20 shadow-lg bg-white/10"
                     />
                   ) : (
                     <div className="h-32 w-32 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-3xl text-white border-2 border-white/20 shadow-lg">
