@@ -143,15 +143,19 @@ CREATE TABLE report_photos (
 -- GPS Tracking Table (History)
 CREATE TABLE gps_tracking (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    userId INT NOT NULL,
     lat DECIMAL(10, 8) NOT NULL,
     lng DECIMAL(11, 8) NOT NULL,
     speed DECIMAL(5, 2),
-    battery_level INT,
-    is_mock BOOLEAN DEFAULT FALSE,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX (user_id, timestamp),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    batteryLevel INT,
+    isMock BOOLEAN DEFAULT FALSE,
+    ipAddress VARCHAR(45) DEFAULT NULL,
+    wifiName VARCHAR(100) DEFAULT NULL,
+    provider VARCHAR(50) DEFAULT NULL,
+    statusAbsen VARCHAR(30) DEFAULT NULL,
+    timestamp DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+    INDEX (userId, timestamp),
+    FOREIGN KEY (userId) REFERENCES users(id)
 );
 
 -- Notifications Table

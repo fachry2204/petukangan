@@ -19,6 +19,10 @@ const activeLocations = new Map();
 // MySQL connection pool (shared between socket.io and auto-migration)
 let dbPool = null;
 try {
+  console.log('[Server] Connecting to MySQL at host:', process.env.DB_HOST || 'localhost');
+  console.log('[Server] Using DB_USER:', process.env.DB_USER || 'root');
+  console.log('[Server] Using DB_NAME:', process.env.DB_NAME || 'ppsu_monitoring');
+  
   const mysql = require('mysql2/promise');
   dbPool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -153,7 +157,7 @@ app.prepare().then(async () => {
               [data.userId, data.lat, data.lng, data.speed || null, data.batteryLevel || null, data.isMock ? 1 : 0]
             );
           } catch (dbErr) {
-            // Silently ignore DB errors in socket handler
+            console.error('[Socket] Failed to insert GPS tracking data:', dbErr.message);
           }
         }
       }
