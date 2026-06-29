@@ -291,7 +291,7 @@ export default function PjlpLayout({
 
     const setupTracking = async () => {
       const ioModule = await import('socket.io-client');
-      socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, transports: ['websocket', 'polling'], path: '/socket.io' });
+      socket = ioModule.io(socketUrl, { auth: { token, userId: user.id, fullName: user.fullName, photoUrl: user.photoUrl }, path: '/socket.io' });
       socketRef.current = socket;
 
       socket.on('connect', () => {

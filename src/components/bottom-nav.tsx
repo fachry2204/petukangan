@@ -83,7 +83,7 @@ export function BottomNav() {
       if (!token || !user) throw new Error('Not authenticated');
 
       const { io } = await import('socket.io-client');
-      const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
+      const socket = io(socketUrl, { auth: { token }, path: '/socket.io' });
 
       // Validasi GPS tersedia — wajib ada lokasi nyata
       let finalLat: number;

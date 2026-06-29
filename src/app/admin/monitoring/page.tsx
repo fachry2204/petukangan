@@ -127,7 +127,6 @@ function AdminMonitoringContent() {
       console.log('[Admin] Connecting to socket:', socketUrl);
       const socket = io(socketUrl, {
         auth: { token },
-        transports: ['websocket', 'polling'],
         path: '/socket.io'
       });
 
