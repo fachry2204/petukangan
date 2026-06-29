@@ -193,7 +193,7 @@ function AdminMonitoringContent() {
       console.log('[Admin] userOffline received:', data);
       setOfficers(prev => {
         const filtered = prev.filter(o => {
-          if (o.userId === data.userId && !o.isSOS) {
+          if (String(o.userId) === String(data.userId) && !o.isSOS) {
             console.log('[Admin] Removing officer from map:', data.userId);
             return false;
           }

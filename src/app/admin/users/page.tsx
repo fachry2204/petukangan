@@ -346,7 +346,12 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
                     <TableCell>
                       {user.photoUrl ? (
-                        <Image src={user.photoUrl} alt={user.fullName} width={40} height={40} className="w-10 h-10 rounded-xl object-cover border border-zinc-100 bg-zinc-50" />
+                        <img 
+                          src={user.photoUrl} 
+                          alt={user.fullName} 
+                          className="w-10 h-10 rounded-xl object-cover border border-zinc-100 bg-zinc-50" 
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
                       ) : (
                         <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center font-bold text-orange-600 border border-orange-200">
                           {user.fullName.charAt(0)}
@@ -507,12 +512,11 @@ export default function AdminUsersPage() {
                 
                 <div className="relative z-10">
                   {selectedUser.photoUrl ? (
-                    <Image
+                    <img
                       src={selectedUser.photoUrl}
                       alt={selectedUser.fullName}
-                      width={128}
-                      height={128}
-                      className="h-32 w-auto max-w-full rounded-2xl object-cover border-4 border-white/20 shadow-lg bg-white/10"
+                      className="h-32 w-32 max-w-full rounded-2xl object-cover border-4 border-white/20 shadow-lg bg-white/10"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
                     <div className="h-32 w-32 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-bold text-3xl text-white border-2 border-white/20 shadow-lg">

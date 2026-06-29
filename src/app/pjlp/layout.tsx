@@ -311,10 +311,12 @@ export default function PjlpLayout({
       // Re-emit immediately whenever the socket reconnects.
       socket.on('reconnect', () => emitHeartbeat());
 
-      socket.on('forceLogout', () => {
-        socket.disconnect();
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
+      socket.on('forceLogout', (data: any) => {
+        if (!data || String(data.userId) === String(user.id)) {
+          socket.disconnect();
+          useAuthStore.getState().logout();
+          window.location.href = '/login';
+        }
       });
     };
 

@@ -238,13 +238,14 @@ app.prepare().then(async () => {
         const userIdStr = String(data.userId);
         const userIdNum = Number(data.userId);
 
-        // Find and disconnect the target socket
+        // Find and disconnect the target socket on the server side
         for (const [uid, loc] of activeLocations.entries()) {
           if (uid === userIdStr && loc.socketId) {
             const targetSocket = io.sockets.sockets.get(loc.socketId);
             if (targetSocket) {
-              targetSocket.emit('forceLogout');
-              targetSocket.disconnect();
+              // We don't disconnect immediately here because polling might drop the packet.
+              // We just broadcast the forceLogout event globally.
+              setTimeout(() => targetSocket.disconnect(), 2000);
             }
             break;
           }
@@ -261,6 +262,8 @@ app.prepare().then(async () => {
           }
         }
 
+        // Broadcast to all clients so the specific user's HP will catch it and log out
+        io.emit('forceLogout', { userId: userIdNum });
         io.emit('userOffline', { userId: userIdNum });
         console.log('[Socket] Force logout user:', userIdNum);
       }
