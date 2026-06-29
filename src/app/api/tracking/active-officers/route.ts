@@ -16,7 +16,6 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const minutes = Math.max(1, Math.min(Number(searchParams.get('minutes')) || 60, 240));
-    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
 
     const rows: any = await queryDb(
       `SELECT g.*, u.fullName, u.photoUrl
@@ -24,12 +23,12 @@ export async function GET(req: Request) {
        INNER JOIN (
          SELECT userId, MAX(timestamp) AS maxTs
          FROM gps_tracking
-         WHERE timestamp >= ?
+         WHERE timestamp >= NOW() - INTERVAL ? MINUTE
          GROUP BY userId
        ) latest ON g.userId = latest.userId AND g.timestamp = latest.maxTs
        LEFT JOIN users u ON u.id = g.userId
-       WHERE g.timestamp >= ?`,
-      [cutoff, cutoff]
+       WHERE g.timestamp >= NOW() - INTERVAL ? MINUTE`,
+      [minutes, minutes]
     );
 
     const officers = (rows || []).map((r: any) => ({
