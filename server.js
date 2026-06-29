@@ -83,6 +83,22 @@ async function runAutoMigration() {
   }
 }
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return Infinity;
+  const R = 6371e3; // Radius bumi dalam meter
+  const p1 = (lat1 * Math.PI) / 180;
+  const p2 = (lat2 * Math.PI) / 180;
+  const dp = ((lat2 - lat1) * Math.PI) / 180;
+  const dl = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+            Math.cos(p1) * Math.cos(p2) *
+            Math.sin(dl / 2) * Math.sin(dl / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Jarak dalam meter
+}
+
 app.prepare().then(async () => {
   // Run auto-migration before starting server
   await runAutoMigration();
@@ -116,6 +132,8 @@ app.prepare().then(async () => {
         photoUrl: auth.photoUrl || null,
         lat: null,
         lng: null,
+        lastSavedLat: null,
+        lastSavedLng: null,
         gpsStatus: false,
         timestamp: Date.now(),
         socketId: socket.id,
@@ -129,6 +147,15 @@ app.prepare().then(async () => {
         const prev = activeLocations.get(String(data.userId)) || {};
         const hasNewCoords = data.lat != null && data.lng != null;
 
+        let shouldSaveToDb = false;
+        if (hasNewCoords) {
+          const dist = calculateDistance(prev.lastSavedLat, prev.lastSavedLng, data.lat, data.lng);
+          // Hanya simpan ke DB jika ini titik pertama ATAU jarak bergerak lebih dari 10 meter
+          if (dist > 10) {
+            shouldSaveToDb = true;
+          }
+        }
+
         const locationData = {
           userId: data.userId,
           fullName: data.fullName ?? prev.fullName,
@@ -136,6 +163,8 @@ app.prepare().then(async () => {
           status: data.status || prev.status || 'Online',
           lat: hasNewCoords ? data.lat : prev.lat ?? null,
           lng: hasNewCoords ? data.lng : prev.lng ?? null,
+          lastSavedLat: shouldSaveToDb ? data.lat : prev.lastSavedLat ?? null,
+          lastSavedLng: shouldSaveToDb ? data.lng : prev.lastSavedLng ?? null,
           gpsStatus: hasNewCoords ? !!data.gpsStatus : prev.gpsStatus ?? false,
           timestamp: data.timestamp || Date.now(),
           device: data.device || prev.device || 'Unknown',
@@ -149,7 +178,7 @@ app.prepare().then(async () => {
         io.emit('locationUpdated', locationData);
 
         // Save to database for history
-        if (dbPool && hasNewCoords) {
+        if (dbPool && shouldSaveToDb) {
           try {
             await dbPool.execute(
               `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, timestamp)

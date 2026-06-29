@@ -48,19 +48,7 @@ export async function GET(req: Request) {
 
     const rows: any = await queryDb(sql, params);
 
-    // Deduplicate: keep only one record per user per time bucket (based on interval)
-    const seen = new Map<string, any>();
-    for (const r of rows || []) {
-      const ts = new Date(r.timestamp).getTime();
-      const bucket = Math.floor(ts / (gpsIntervalSeconds * 1000));
-      const key = `${r.userId}_${bucket}`;
-      if (!seen.has(key)) {
-        seen.set(key, r);
-      }
-    }
-
-    // Convert back to array and sort by timestamp ASC
-    const dedupedRows = Array.from(seen.values()).sort((a: any, b: any) =>
+    const dedupedRows = (rows || []).sort((a: any, b: any) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
