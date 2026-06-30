@@ -172,7 +172,16 @@ export default function PjlpProfilePage() {
     fetchStats();
   }, [token, user, isHydrated]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (user && token) {
+        await axios.post(`${apiUrl}/tracking/offline`, { userId: user.id }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to set offline status', err);
+    }
     logout();
     router.push('/login');
     toast({ title: 'Logged Out', description: 'Anda telah berhasil keluar sistem.' });
