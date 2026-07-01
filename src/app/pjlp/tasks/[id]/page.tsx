@@ -414,7 +414,7 @@ export default function PjlpTaskDetailPage() {
     }
   };
 
-  const allowedTaskStatuses = ['Sudah Absen'];
+  const allowedTaskStatuses = ['Sudah Absen', 'Selesai Istirahat'];
   const canDoTask = allowedTaskStatuses.includes(attendanceStatus);
 
   const updateStatus = async (newStatus: string) => {

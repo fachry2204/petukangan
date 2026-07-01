@@ -178,11 +178,11 @@ export default function PjlpCreateTaskPage() {
         });
         const status = res.data.status || 'Belum Absen';
         setAttendanceStatus(status);
-        if (status !== 'Sudah Absen') {
+        if (status !== 'Sudah Absen' && status !== 'Selesai Istirahat') {
           toast({
             variant: 'destructive',
             title: 'Tidak Dapat Membuat Tugas',
-            description: 'Anda harus dalam status Absen Masuk untuk membuat tugas. Silakan absen masuk terlebih dahulu melalui menu Beranda.'
+            description: 'Anda harus dalam status Absen Masuk atau Selesai Istirahat untuk membuat tugas.'
           });
           router.push('/pjlp/home');
         }

@@ -137,8 +137,20 @@ export default async function RootLayout({
     >
       <head>
         <meta name="google" content="notranslate" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              document.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+              });
+              document.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+              }, { passive: false });
+            `,
+          }}
+        />
       </head>
-      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning={true}>
+      <body className="min-h-full flex flex-col font-sans touch-manipulation" suppressHydrationWarning={true}>
         <SettingsProvider>
           {children}
         </SettingsProvider>
