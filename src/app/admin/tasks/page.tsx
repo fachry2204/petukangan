@@ -42,6 +42,9 @@ interface TaskItem {
   photo_before?: string | null;
   photo_during?: string | null;
   photo_after?: string | null;
+  lat_done?: number | null;
+  lng_done?: number | null;
+  address_done?: string | null;
   createdAt?: string;
   updatedAt?: string;
   assignedTo?: { id: number; fullName?: string; photoUrl?: string } | null;
@@ -272,21 +275,56 @@ export default function AdminTasksPage() {
     });
   };
 
-  const handleExportExcel = () => {
+  const getAddressText = (t: TaskItem) => {
+    let addr = t.address_done || t.address;
+    if (addr && addr.toLowerCase().includes('lokasi petugas')) addr = null;
+    return addr || (t.lat_done && t.lng_done ? `${Number(t.lat_done).toFixed(5)}, ${Number(t.lng_done).toFixed(5)}` : '-');
+  };
+
+  const handleExportExcel = async () => {
     const data = getExportData();
     if (data.length === 0) {
       alert('Tidak ada data tugas selesai untuk rentang waktu dan petugas yang dipilih.');
       return;
     }
+
+    setPdfGenerating(true);
+    setPdfProgress(0);
+
+    const addressCache: Record<string, string> = {};
+    for (let i = 0; i < data.length; i++) {
+      const t = data[i];
+      let addr = t.address_done || t.address;
+      if (addr && addr.toLowerCase().includes('lokasi petugas')) addr = null;
+      
+      if (!addr && (t.lat_done || t.lat) && (t.lng_done || t.lng)) {
+        const latToUse = t.lat_done || t.lat;
+        const lngToUse = t.lng_done || t.lng;
+        const key = `${latToUse},${lngToUse}`;
+        
+        if (!addressCache[key]) {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latToUse}&lon=${lngToUse}&zoom=18&addressdetails=1`);
+            const d = await res.json();
+            if (d?.display_name) addressCache[key] = String(d.display_name);
+          } catch (e) {
+            // ignore
+          }
+        }
+        if (addressCache[key]) {
+          t.address_done = addressCache[key];
+        }
+      }
+      setPdfProgress(Math.round(((i + 1) / data.length) * 100));
+    }
+
     const excelData = data.map(t => ({
       'Waktu Tugas': t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
       'Petugas': t.assignedTo?.fullName || '-',
       'Judul Tugas': t.title,
       'Deskripsi': t.description || '-',
-      'Status': STATUS_LABEL[t.status] || t.status,
       'Jenis Tugas': TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-      'Alamat': t.address || (t.lat && t.lng ? `${t.lat}, ${t.lng}` : '-'),
-      'Foto Belum': t.photo_before ? 'Ada' : 'Tidak Ada',
+      'Alamat Lengkap': getAddressText(t),
       'Foto Saat': t.photo_during ? 'Ada' : 'Tidak Ada',
       'Foto Selesai': t.photo_after || t.photoUrl ? 'Ada' : 'Tidak Ada',
     }));
@@ -295,13 +333,15 @@ export default function AdminTasksPage() {
     
     const colWidths = [
       { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
-      { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+      { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }
     ];
     ws['!cols'] = colWidths;
     
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Tugas_Lapangan');
     XLSX.writeFile(wb, `Laporan_Tugas_Lapangan.xlsx`);
+    
+    setPdfGenerating(false);
     setIsExportOpen(false);
   };
 
@@ -342,23 +382,62 @@ export default function AdminTasksPage() {
         }
       };
       
+      // We will also pre-fetch any missing addresses
+      const addressCache: Record<string, string> = {};
+      
       for (let i = 0; i < data.length; i++) {
         const t = data[i];
-        if (t.photo_before) await fetchImage(t.photo_before);
         if (t.photo_during) await fetchImage(t.photo_during);
         if (t.photo_after || t.photoUrl) await fetchImage(t.photo_after || t.photoUrl || '');
+        
+        let addr = t.address_done || t.address;
+        if (addr && addr.toLowerCase().includes('lokasi petugas')) addr = null;
+        
+        if (!addr && (t.lat_done || t.lat) && (t.lng_done || t.lng)) {
+          const latToUse = t.lat_done || t.lat;
+          const lngToUse = t.lng_done || t.lng;
+          const key = `${latToUse},${lngToUse}`;
+          
+          if (!addressCache[key]) {
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latToUse}&lon=${lngToUse}&zoom=18&addressdetails=1`);
+              const d = await res.json();
+              if (d?.display_name) addressCache[key] = String(d.display_name);
+            } catch (e) {
+              // ignore
+            }
+          }
+          if (addressCache[key]) {
+            t.address_done = addressCache[key]; // Store it directly for PDF table
+          }
+        }
+        
         setPdfProgress(Math.round(((i + 1) / data.length) * 40));
       }
 
       // Add a small delay to let UI render the 40% progress
       await new Promise(r => setTimeout(r, 50));
 
+      let logoBase64 = null;
+      try {
+        const logoUrl = window.location.origin + '/logodki.png';
+        logoBase64 = await getBase64ImageFromUrl(logoUrl);
+      } catch (e) {
+        // ignore
+      }
+
       const doc = new jsPDF({ orientation: 'landscape' });
       const systemName = 'Sistem Monitoring PJLP Petukangan Utara';
       const exportDate = new Date().toLocaleDateString('id-ID');
       
+      let textStartX = 14;
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 14, 10, 14, 16);
+        textStartX = 32;
+      }
+      
       doc.setFontSize(16);
-      doc.text('Laporan Tugas Lapangan (PJLP)', 14, 15);
+      doc.text('Laporan Tugas Lapangan (PJLP)', textStartX, 17);
       
       let subtitle = '';
       if (exportDateFrom || exportDateTo) {
@@ -368,7 +447,7 @@ export default function AdminTasksPage() {
       }
       subtitle += `|  Sistem: ${systemName}`;
       doc.setFontSize(10);
-      doc.text(subtitle, 14, 22);
+      doc.text(subtitle, textStartX, 24);
 
       // Group by Petugas
       const grouped: Record<string, typeof data> = {};
@@ -378,7 +457,7 @@ export default function AdminTasksPage() {
         grouped[officer].push(t);
       });
 
-      let currentY = 28;
+      let currentY = 40; // Increased distance between header and first Petugas
       const officerKeys = Object.keys(grouped);
 
       for (let i = 0; i < officerKeys.length; i++) {
@@ -390,17 +469,16 @@ export default function AdminTasksPage() {
         
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Petugas: ${officer}`, 14, currentY);
+        const totalTugas = grouped[officer].length;
+        doc.text(`Petugas: ${officer} (Total Tugas: ${totalTugas})`, 14, currentY);
         currentY += 5;
 
         const tableData = grouped[officer].map(t => [
           t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
           t.title,
           (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
-          STATUS_LABEL[t.status] || t.status,
           TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-          t.address || (t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-'),
-          t.photo_before && imageCache[t.photo_before] ? '' : (t.photo_before ? 'Gagal' : '-'),
+          getAddressText(t),
           t.photo_during && imageCache[t.photo_during] ? '' : (t.photo_during ? 'Gagal' : '-'),
           (t.photo_after || t.photoUrl) && imageCache[t.photo_after || t.photoUrl || ''] ? '' : ((t.photo_after || t.photoUrl) ? 'Gagal' : '-')
         ]);
@@ -409,7 +487,7 @@ export default function AdminTasksPage() {
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Status', 'Jenis Tugas', 'Alamat', 'Belum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
+          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Saat Dikerjakan', 'Selesai']],
           body: tableData as any,
           theme: 'grid',
           headStyles: { fillColor: [249, 115, 22] }, // orange-500
@@ -418,11 +496,11 @@ export default function AdminTasksPage() {
           columnStyles: {
             0: { cellWidth: 25 },
             1: { cellWidth: 35 },
-            2: { cellWidth: 40 },
-            5: { cellWidth: 30 },
-            6: { cellWidth: 20, halign: 'center' },
-            7: { cellWidth: 20, halign: 'center' },
-            8: { cellWidth: 20, halign: 'center' }
+            2: { cellWidth: 45 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 40 },
+            5: { cellWidth: 25, halign: 'center' },
+            6: { cellWidth: 25, halign: 'center' }
           },
           didDrawPage: function (data) {
             // Footer on each page
@@ -439,9 +517,8 @@ export default function AdminTasksPage() {
               const colIndex = cellData.column.index;
               
               let photoToDraw = null;
-              if (colIndex === 6) photoToDraw = rowData?.photo_before;
-              else if (colIndex === 7) photoToDraw = rowData?.photo_during;
-              else if (colIndex === 8) photoToDraw = rowData?.photo_after || rowData?.photoUrl;
+              if (colIndex === 5) photoToDraw = rowData?.photo_during;
+              else if (colIndex === 6) photoToDraw = rowData?.photo_after || rowData?.photoUrl;
               
               if (photoToDraw && imageCache[photoToDraw]) {
                 try {
