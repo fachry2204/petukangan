@@ -49,6 +49,45 @@ export default function PjlpLayout({
   const [isRequestingGps, setIsRequestingGps] = useState(false);
   const [trackingAllowed, setTrackingAllowed] = useState<boolean | null>(null);
 
+  // Call Officer Modal States
+  const [callIncoming, setCallIncoming] = useState(false);
+  const [callMessage, setCallMessage] = useState('');
+  const callIntervalRef = useRef<any>(null);
+
+  const startRinging = () => {
+    if (callIntervalRef.current) clearInterval(callIntervalRef.current);
+    
+    const playAndVibrate = () => {
+      if ('vibrate' in navigator) navigator.vibrate([500, 250, 500, 250]);
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.2);
+        gainNode.gain.setValueAtTime(1, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+      } catch (e) {}
+    };
+
+    playAndVibrate();
+    callIntervalRef.current = setInterval(playAndVibrate, 1500);
+  };
+
+  const stopRinging = () => {
+    if (callIntervalRef.current) {
+      clearInterval(callIntervalRef.current);
+      callIntervalRef.current = null;
+    }
+    if ('vibrate' in navigator) navigator.vibrate(0);
+    setCallIncoming(false);
+  };
+
   // Fetch today's attendance status so we can include it in location updates
   useEffect(() => {
     if (!token) return;
@@ -323,41 +362,23 @@ export default function PjlpLayout({
 
       socket.on('callOfficerReceived', (data: any) => {
         if (data && String(data.userId) === String(user.id)) {
-          // Play ringtone/beep
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            osc.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.2);
-            gainNode.gain.setValueAtTime(1, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.6);
-          } catch (e) { console.warn('Audio play failed', e); }
-
-          // Show Toast
-          toast({
-            title: 'Panggilan dari Admin 🔔',
-            description: data.message,
-            duration: 10000,
-          });
+          setCallMessage(data.message);
+          setCallIncoming(true);
+          startRinging();
 
           // Show Native Notification
           if (Notification.permission === 'granted') {
-            new Notification('Panggilan dari Admin 🔔', { body: data.message });
+            new Notification('Panggilan dari Admin 🔔', { body: data.message, requireInteraction: true });
           } else if (Notification.permission !== 'denied') {
             Notification.requestPermission().then(permission => {
               if (permission === 'granted') {
-                new Notification('Panggilan dari Admin 🔔', { body: data.message });
+                new Notification('Panggilan dari Admin 🔔', { body: data.message, requireInteraction: true });
               }
             });
           }
         }
       });
+
     };
 
     const startGpsTracking = async () => {
@@ -559,6 +580,37 @@ export default function PjlpLayout({
 
       <ActiveSOSLock />
       <BottomNav />
+
+      {/* Call Incoming Modal */}
+      {callIncoming && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-orange-950/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-zinc-900 border-[3px] border-orange-500 rounded-[2rem] p-8 max-w-sm w-full shadow-[0_0_80px_rgba(249,115,22,0.6)] text-center animate-in zoom-in-95 duration-200">
+            <div className="w-24 h-24 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+              <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-30"></div>
+              <ShieldAlert className="w-12 h-12 animate-pulse" />
+            </div>
+
+            <h3 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-2">
+              PANGGILAN ADMIN
+            </h3>
+
+            <div className="mb-8 mt-4">
+              <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 p-4 rounded-2xl">
+                <p className="text-base font-bold text-orange-700 dark:text-orange-400">
+                  {callMessage || 'Harap segera hubungi Admin!'}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={stopRinging}
+              className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/30 text-base tracking-wide uppercase"
+            >
+              Mengerti & Tutup
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Mandatory GPS Error Modal */}
       {gpsModalVisible && (
