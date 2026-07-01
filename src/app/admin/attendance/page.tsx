@@ -156,7 +156,7 @@ export default function AdminAttendancePage() {
 
   // Handle Approve Izin
   const handleApproveIzin = async (id: number, isRequestTable?: boolean) => {
-    if (!await useConfirmStore.getState().showConfirm('Persetujuan', 'Apakah Anda yakin ingin menyetujui pengajuan ini?')) return;
+    if (!window.confirm('Apakah Anda yakin ingin menyetujui pengajuan ini?')) return;
     try {
       await axios.put(`${apiUrl}/attendance/record/${id}/status`, {
         status: 'APPROVED',
