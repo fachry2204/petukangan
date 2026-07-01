@@ -379,7 +379,7 @@ export default function AdminAttendancePage() {
     
     logs.forEach(item => {
       if (!item.user) return;
-      const dateStr = item.timestamp ? item.timestamp.split('T')[0] : '';
+      const dateStr = item.timestamp ? getLocalDateString(new Date(item.timestamp)) : '';
       const key = `${item.user.id}_${dateStr}`;
       if (!groups[key]) {
         groups[key] = [];
@@ -458,35 +458,81 @@ export default function AdminAttendancePage() {
 
       const logsByDate = getGroupedLogs(userLogs);
       
-      const excelData = logsByDate.map((log: any) => {
-        const sched = getScheduleForUser(log.user?.id, log.timestamp);
-        const shiftName = sched ? sched.shiftName : (log.isOutsideSchedule ? 'Luar Jadwal' : '-');
+      let startDateStr = filterStartDate;
+      let endDateStr = filterEndDate;
+      
+      if (!startDateStr || !endDateStr) {
+        let minTime = Infinity;
+        let maxTime = -Infinity;
+        userLogs.forEach(log => {
+          const t = new Date(log.timestamp).getTime();
+          if (t < minTime) minTime = t;
+          if (t > maxTime) maxTime = t;
+        });
+        if (minTime === Infinity) {
+          minTime = new Date().getTime();
+          maxTime = minTime;
+        }
+        if (!startDateStr) startDateStr = getLocalDateString(new Date(minTime));
+        if (!endDateStr) endDateStr = getLocalDateString(new Date(maxTime));
+      }
+
+      const dateArray = [];
+      let currentD = new Date(startDateStr + 'T00:00:00');
+      const endD = new Date(endDateStr + 'T00:00:00');
+      while (currentD <= endD) {
+        dateArray.push(getLocalDateString(currentD));
+        currentD.setDate(currentD.getDate() + 1);
+      }
+      
+      const excelData = dateArray.map(dateStr => {
+        const log = logsByDate.find(l => l.dateStr === dateStr);
+        
+        const sched = getScheduleForUser(userLogs[0].user?.id, dateStr + 'T08:00:00');
+        const shiftName = sched ? sched.shiftName : (log?.isOutsideSchedule ? 'Luar Jadwal' : '-');
         const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
         
-        const { workStr, breakStr } = calculateDurations(log.records);
+        let inRec, outRec, permitRec;
+        let workStr = '-', breakStr = '-';
+
+        if (log && log.records) {
+          inRec = log.records.find((r: any) => r.type === 'IN');
+          outRec = log.records.find((r: any) => r.type === 'OUT');
+          permitRec = log.records.find((r: any) => r.type === 'PERMIT' || r.type === 'EARLY_OUT');
+          const dur = calculateDurations(log.records);
+          workStr = dur.workStr;
+          breakStr = dur.breakStr;
+        }
         
-        const inRec = log.records.find((r: any) => r.type === 'IN');
-        const outRec = log.records.find((r: any) => r.type === 'OUT');
-        const permitRec = log.records.find((r: any) => r.type === 'PERMIT' || r.type === 'EARLY_OUT');
-        
-        let statusKehadiran = getTypeText(log.type);
+        let statusKehadiran = '';
         if (permitRec) {
-          statusKehadiran = `Izin: ${permitRec.reason || ''} (${permitRec.status})`;
+          statusKehadiran = `${permitRec.reason || 'Izin'} (${permitRec.status})`;
+        } else if (inRec && !outRec) {
+          statusKehadiran = 'Tidak Absen Pulang';
+        } else if (inRec && outRec) {
+          statusKehadiran = 'Hadir';
+        } else if (!inRec && !permitRec) {
+          if (sched) {
+            statusKehadiran = 'Tidak Melakukan Absen';
+          } else {
+            statusKehadiran = 'Libur';
+          }
         }
         
         return {
           "Nama Petugas": userName,
           "ID PJLP": username,
-          "Tanggal": formatDateOnly(log.timestamp),
+          "Tanggal": formatDateOnly(dateStr + 'T12:00:00'),
           "Jam Masuk": inRec ? formatTimeOnly(inRec.timestamp) : '-',
-          "Jam Keluar": outRec ? formatTimeOnly(outRec.timestamp) : '-',
+          "Tanggal Pulang": outRec ? formatDateOnly(outRec.timestamp) : '-',
+          "Jam Pulang": outRec ? formatTimeOnly(outRec.timestamp) : '-',
           "Total Jam Kerja": workStr,
           "Total Istirahat": breakStr,
           "Shift": shiftName,
           "Zona": zoneName,
           "Keterangan": statusKehadiran,
-          "Validitas GPS": log.isMock ? "Fake GPS" : "Valid",
-          "Lokasi Absen": log.address || '-'
+          "Validitas GPS": log ? (log.isMock ? "Fake GPS" : "Valid") : "-",
+          "Lokasi Absen": log ? (log.address || '-') : "-"
         };
       });
 
