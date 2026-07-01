@@ -508,16 +508,16 @@ export default function AdminTasksPage() {
           theme: 'grid',
           headStyles: { fillColor: [249, 115, 22] }, // orange-500
           styles: { fontSize: 8, valign: 'middle' },
-          bodyStyles: { minCellHeight: 20 },
+          bodyStyles: { minCellHeight: 28 }, // Increased from 20 for bigger images
           columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 45 },
+            0: { cellWidth: 23 },
+            1: { cellWidth: 32 },
+            2: { cellWidth: 40 },
             3: { cellWidth: 20 },
-            4: { cellWidth: 70 }, // Lebarkan Alamat
-            5: { cellWidth: 20, halign: 'center' },
-            6: { cellWidth: 20, halign: 'center' },
-            7: { cellWidth: 20, halign: 'center' }
+            4: { cellWidth: 65 }, 
+            5: { cellWidth: 28, halign: 'center' }, // Increased from 20
+            6: { cellWidth: 28, halign: 'center' }, // Increased from 20
+            7: { cellWidth: 28, halign: 'center' }  // Increased from 20
           },
           didDrawPage: function (data) {
             // Footer on each page
@@ -547,7 +547,7 @@ export default function AdminTasksPage() {
               if (photoToDraw && imageCache[photoToDraw]) {
                 try {
                   const imgData = imageCache[photoToDraw];
-                  const dim = 16;
+                  const dim = 24; // Increased from 16 for better visibility
                   const xPos = cellData.cell.x + (cellData.cell.width - dim) / 2;
                   const yPos = cellData.cell.y + (cellData.cell.height - dim) / 2;
                   
