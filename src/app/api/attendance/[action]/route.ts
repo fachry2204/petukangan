@@ -27,6 +27,7 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
       'end-break': 'END_BREAK',
       'permit': 'PERMIT',
       'early-out': 'EARLY_OUT',
+      'request': 'REQUEST',
     };
 
     const type = typeMap[action];
@@ -49,6 +50,22 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
       const hasApprovedRequest = requests?.[0];
 
       // Determine table to insert
+      if (type === 'REQUEST') {
+        await conn.execute(
+          `INSERT INTO attendance_requests (userId, lat, lng, address, reason, status, timestamp)
+           VALUES (?, ?, ?, ?, ?, 'PENDING', NOW(6))`,
+          [
+            userId,
+            data.lat != null ? data.lat : 0,
+            data.lng != null ? data.lng : 0,
+            data.address || 'Pengajuan Absen Luar Jadwal',
+            data.reason || null,
+          ]
+        );
+        emitAttendanceChange('create', { userId, type: 'IN', status: 'PENDING', isRequestTable: true });
+        return NextResponse.json({ message: 'Permintaan absen berhasil dikirim', type, status: 'PENDING' });
+      }
+
       const table = hasApprovedRequest ? 'lembur' : 'attendance';
       const isPermitType = ['PERMIT', 'EARLY_OUT'].includes(type);
       const status = isPermitType ? 'PENDING' : 'VALID';

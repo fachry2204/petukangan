@@ -393,7 +393,7 @@ export default function PjlpHomePage() {
 
     try {
       await axios.post(
-        `${apiUrl}/attendance/check-in`,
+        `${apiUrl}/attendance/request`,
         {
           lat,
           lng,
@@ -725,7 +725,7 @@ export default function PjlpHomePage() {
                   className="w-full bg-white text-purple-600 hover:bg-zinc-100 rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1.5"
                 >
                   <Sparkles className="w-4.5 h-4.5 text-purple-500 animate-pulse" />
-                  Permintaan Absen Masuk (Lembur)
+                  Absen Lembur
                 </Button>
               </div>
             ) : ['Izin Tidak Masuk', 'Pulang Awal'].includes(attendanceStatus) || todayIzinStatus ? (
@@ -760,7 +760,7 @@ export default function PjlpHomePage() {
                     className="w-full bg-white text-orange-600 hover:bg-zinc-100 rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1.5"
                   >
                     <Sparkles className="w-4.5 h-4.5 text-orange-500 animate-pulse" />
-                    Permintaan Absen Masuk (Luar Jadwal)
+                    Absen Lembur
                   </Button>
                 ) : (
                   <>
