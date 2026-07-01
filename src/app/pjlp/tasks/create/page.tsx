@@ -191,7 +191,7 @@ export default function PjlpCreateTaskPage() {
       }
     };
     fetchStatus();
-  }, [token]);
+  }, [isHydrated, token, user, router]);
 
   // Clean up camera stream + GPS watch + safety timer on unmount
   useEffect(() => {
