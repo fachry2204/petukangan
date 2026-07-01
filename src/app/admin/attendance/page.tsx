@@ -64,6 +64,10 @@ export default function AdminAttendancePage() {
   const [filterEndDate, setFilterEndDate] = useState('');
   const [activeTab, setActiveTab] = useState<'absensi' | 'izin' | 'request' | 'lembur'>('absensi');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [selectedRejectionId, setSelectedRejectionId] = useState<number | null>(null);
@@ -427,6 +431,55 @@ export default function AdminAttendancePage() {
   const groupedAbsensiLogs = getGroupedLogs(absensiLogs);
   const groupedLemburLogs = getGroupedLogs(lemburLogs);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStartDate, filterEndDate, activeTab]);
+
+  const getPaginatedData = (data: any[]) => {
+    const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
+    const paginated = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    return { totalPages, paginated, total: data.length };
+  };
+
+  const paginatedAbsensi = getPaginatedData(groupedAbsensiLogs);
+  const paginatedIzin = getPaginatedData(izinLogs);
+  const paginatedRequest = getPaginatedData(requestLogs);
+  const paginatedLembur = getPaginatedData(groupedLemburLogs);
+
+  const PaginationControls = ({ paginatedObj }: { paginatedObj: any }) => {
+    if (paginatedObj.total === 0) return null;
+    return (
+      <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-50/30 dark:bg-zinc-800/10">
+        <div className="text-xs font-semibold text-zinc-500">
+          Menampilkan {((currentPage - 1) * itemsPerPage) + 1} hingga {Math.min(currentPage * itemsPerPage, paginatedObj.total)} dari {paginatedObj.total} entri
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="h-8 text-xs font-bold rounded-xl"
+          >
+            Sebelumnya
+          </Button>
+          <div className="px-3 text-xs font-black text-zinc-700 dark:text-zinc-300">
+            Hal {currentPage} / {paginatedObj.totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(p => Math.min(paginatedObj.totalPages, p + 1))}
+            disabled={currentPage === paginatedObj.totalPages}
+            className="h-8 text-xs font-bold rounded-xl"
+          >
+            Selanjutnya
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   // Badge counters
   const pendingIzinCount = attendance.filter(item => 
     ['PERMIT', 'EARLY_OUT'].includes(item.type) && item.status === 'PENDING'
@@ -704,7 +757,7 @@ export default function AdminAttendancePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {groupedAbsensiLogs.map((item) => {
+                        {paginatedAbsensi.paginated.map((item) => {
                           const sched = getScheduleForUser(item.user?.id, item.timestamp);
                           const shiftName = sched ? sched.shiftName : (item.isOutsideSchedule ? 'Luar Jadwal' : '-');
                           const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
@@ -831,7 +884,7 @@ export default function AdminAttendancePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {izinLogs.map((item) => (
+                        {paginatedIzin.paginated.map((item) => (
                           <TableRow key={item.id} className="border-zinc-50 dark:border-zinc-800/50 hover:bg-zinc-50/40 dark:hover:bg-zinc-800/20">
                             <TableCell className="px-6 py-4">
                               <div className="flex items-center gap-3">
@@ -938,6 +991,7 @@ export default function AdminAttendancePage() {
                         ))}
                       </TableBody>
                     </Table>
+                    <PaginationControls paginatedObj={paginatedIzin} />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-center p-6">
@@ -967,7 +1021,7 @@ export default function AdminAttendancePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {requestLogs.map((item) => (
+                        {paginatedRequest.paginated.map((item) => (
                           <TableRow key={item.id} className="border-zinc-50 dark:border-zinc-800/50 hover:bg-zinc-50/40 dark:hover:bg-zinc-800/20">
                             <TableCell className="px-6 py-4">
                               <div className="flex items-center gap-3">
@@ -1105,7 +1159,7 @@ export default function AdminAttendancePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {groupedLemburLogs.map((item) => {
+                        {paginatedLembur.paginated.map((item) => {
                           const sched = getScheduleForUser(item.user?.id, item.timestamp);
                           const shiftName = 'Luar Jadwal (Lembur)';
                           const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : 'Luar Wilayah';

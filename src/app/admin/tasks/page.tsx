@@ -108,6 +108,10 @@ export default function AdminTasksPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Dialog states
   const [viewTask, setViewTask] = useState<TaskItem | null>(null);
   const [editTask, setEditTask] = useState<TaskItem | null>(null);
@@ -242,6 +246,13 @@ export default function AdminTasksPage() {
     for (const t of tasks) c[t.status] = (c[t.status] || 0) + 1;
     return c;
   }, [tasks]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, typeFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginatedTasks = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const uniqueOfficers = useMemo(() => {
     const map = new Map<number, string>();
@@ -789,7 +800,7 @@ export default function AdminTasksPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((t) => {
+                {paginatedTasks.map((t) => {
                   const statusKey = t.status || 'NOT_STARTED';
                   const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
                   const priorityColor = PRIORITY_COLOR[t.priority || 'MEDIUM'] || 'bg-zinc-100 text-zinc-700';
@@ -866,6 +877,38 @@ export default function AdminTasksPage() {
                 })}
               </TableBody>
             </Table>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {filtered.length > 0 && (
+          <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="text-xs text-zinc-500">
+              Menampilkan {((currentPage - 1) * itemsPerPage) + 1} hingga {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} tugas
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-8 text-xs font-semibold"
+              >
+                Sebelumnya
+              </Button>
+              <div className="px-2 text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Hal {currentPage} / {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 text-xs font-semibold"
+              >
+                Selanjutnya
+              </Button>
+            </div>
           </div>
         )}
       </Card>

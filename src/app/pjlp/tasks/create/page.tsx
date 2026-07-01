@@ -288,6 +288,60 @@ export default function PjlpCreateTaskPage() {
         canvasEl.height = videoEl.videoHeight;
         context.drawImage(videoEl, 0, 0);
 
+        // --- Watermark Logic ---
+        const pad = 12;
+        const fontSize = Math.max(12, Math.floor(canvasEl.width * 0.025));
+        const maxTextWidth = canvasEl.width - (pad * 2);
+        const lineHeight = fontSize * 1.4;
+
+        const wrapText = (text: string, maxWidth: number) => {
+          const words = text.split(/\s+/).filter(Boolean);
+          const lines: string[] = [];
+          let line = '';
+          for (const w of words) {
+            const test = line ? `${line} ${w}` : w;
+            if (context.measureText(test).width <= maxWidth) {
+              line = test;
+            } else {
+              if (line) lines.push(line);
+              line = w;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        };
+
+        const formatTimestamp = (date: Date) => {
+          return new Intl.DateTimeFormat('id-ID', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            timeZoneName: 'short'
+          }).format(date);
+        };
+
+        const tsLine = `Tanggal - Waktu: ${formatTimestamp(new Date())}`;
+        const addressLine = address ? `Alamat: ${address}` : 'Alamat: (tidak tersedia)';
+        const headerLine = 'Sistem Monitoring PJLP Kelurahan Petukangan Utara';
+
+        context.save();
+        context.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+        const addressLines = wrapText(addressLine, maxTextWidth);
+        const lines = [headerLine, tsLine, ...addressLines];
+        const boxHeight = pad * 2 + lines.length * lineHeight;
+
+        context.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        context.fillRect(0, canvasEl.height - boxHeight, canvasEl.width, boxHeight);
+
+        context.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        context.textBaseline = 'top';
+        let y = canvasEl.height - boxHeight + pad;
+        for (const line of lines) {
+          context.fillText(line, pad, y);
+          y += lineHeight;
+        }
+        context.restore();
+        // -------------------------
+
         // Upload to our API instead of using base64
         const blob = await new Promise<Blob>((resolve, reject) => {
           canvasEl.toBlob((b) => (b ? resolve(b) : reject(new Error('Gagal memproses foto'))), 'image/jpeg', 0.9);

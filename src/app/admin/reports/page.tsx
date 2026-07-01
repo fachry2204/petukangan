@@ -32,6 +32,10 @@ export default function AdminReportsPage() {
   const [filterEndDate, setFilterEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Fetch reports
   useEffect(() => {
     fetchReports();
@@ -91,6 +95,13 @@ export default function AdminReportsPage() {
       return tb - ta;
     });
   }, [reports, search, filterStartDate, filterEndDate, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStartDate, filterEndDate, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / itemsPerPage));
+  const paginatedReports = filteredReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleUpdateStatus = async (status: string) => {
     if (!selectedReport) return;
@@ -273,7 +284,7 @@ export default function AdminReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReports.map((report) => {
+                  {paginatedReports.map((report) => {
                     const statusKey = report.status || 'PENDING';
                     const statusColor = STATUS_COLOR[statusKey] || 'bg-zinc-100 text-zinc-700';
                     return (
@@ -333,6 +344,36 @@ export default function AdminReportsPage() {
                   })}
                 </TableBody>
               </Table>
+              {filteredReports.length > 0 && (
+                <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-50/30 dark:bg-zinc-800/10">
+                  <div className="text-xs font-semibold text-zinc-500">
+                    Menampilkan {((currentPage - 1) * itemsPerPage) + 1} hingga {Math.min(currentPage * itemsPerPage, filteredReports.length)} dari {filteredReports.length} laporan
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 text-xs font-bold rounded-xl"
+                    >
+                      Sebelumnya
+                    </Button>
+                    <div className="px-3 text-xs font-black text-zinc-700 dark:text-zinc-300">
+                      Hal {currentPage} / {totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 text-xs font-bold rounded-xl"
+                    >
+                      Selanjutnya
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

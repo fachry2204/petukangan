@@ -58,6 +58,10 @@ export default function AdminSchedulesPage() {
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterZone, setFilterZone] = useState('');
   const [filterShift, setFilterShift] = useState('');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -477,6 +481,13 @@ export default function AdminSchedulesPage() {
     return matchesQuery && matchesDate && matchesZone && matchesShift;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStartDate, filterEndDate, filterZone, filterShift]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSchedules.length / itemsPerPage));
+  const paginatedSchedules = filteredSchedules.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
@@ -618,7 +629,7 @@ export default function AdminSchedulesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSchedules.map((schedule) => (
+                  {paginatedSchedules.map((schedule) => (
                     <TableRow key={schedule.id} className="border-zinc-50 dark:border-zinc-800/50 hover:bg-zinc-50/40 dark:hover:bg-zinc-800/20 transition-colors">
                       <TableCell className="px-6 py-4">
                         <div className="flex items-center gap-2.5">
@@ -718,6 +729,36 @@ export default function AdminSchedulesPage() {
                   ))}
                 </TableBody>
               </Table>
+              {filteredSchedules.length > 0 && (
+                <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-50/30 dark:bg-zinc-800/10">
+                  <div className="text-xs font-semibold text-zinc-500">
+                    Menampilkan {((currentPage - 1) * itemsPerPage) + 1} hingga {Math.min(currentPage * itemsPerPage, filteredSchedules.length)} dari {filteredSchedules.length} jadwal
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 text-xs font-bold rounded-xl"
+                    >
+                      Sebelumnya
+                    </Button>
+                    <div className="px-3 text-xs font-black text-zinc-700 dark:text-zinc-300">
+                      Hal {currentPage} / {totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 text-xs font-bold rounded-xl"
+                    >
+                      Selanjutnya
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-center p-6">
