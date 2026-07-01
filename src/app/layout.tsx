@@ -81,6 +81,10 @@ import SettingsProvider from '@/components/SettingsProvider';
 
 export const viewport: Viewport = {
   themeColor: "#FF8C00",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default async function RootLayout({
