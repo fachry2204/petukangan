@@ -47,7 +47,7 @@ interface TaskItem {
   address_done?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  assignedTo?: { id: number; fullName?: string; photoUrl?: string } | null;
+  assignedTo?: { id: number; username?: string; fullName?: string; photoUrl?: string } | null;
   zone?: { id: number; name?: string } | null;
 }
 
@@ -325,7 +325,7 @@ export default function AdminTasksPage() {
       'Deskripsi': t.description || '-',
       'Jenis Tugas': TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
       'Alamat Lengkap': getAddressText(t),
-      'Foto Belum': t.photo_before ? 'Ada' : 'Tidak Ada',
+      'Foto Sebelum': t.photo_before ? 'Ada' : 'Tidak Ada',
       'Foto Saat': t.photo_during ? 'Ada' : 'Tidak Ada',
       'Foto Selesai': t.photo_after || t.photoUrl ? 'Ada' : 'Tidak Ada',
     }));
@@ -454,7 +454,7 @@ export default function AdminTasksPage() {
       // Group by Petugas ID and Name
       const grouped: Record<string, { id: string, name: string, tasks: typeof data }> = {};
       data.forEach(t => {
-        const id = t.assignedTo?.id ? String(t.assignedTo.id) : '-';
+        const id = t.assignedTo?.username || (t.assignedTo?.id ? String(t.assignedTo.id) : '-');
         const name = t.assignedTo?.fullName || 'Tanpa Petugas';
         const key = `${id}_${name}`;
         if (!grouped[key]) grouped[key] = { id, name, tasks: [] };
@@ -479,7 +479,7 @@ export default function AdminTasksPage() {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         const totalTugas = group.tasks.length;
-        const officerDisplay = group.id !== '-' ? `${group.id} - ${group.name}` : group.name;
+        const officerDisplay = group.id !== '-' ? `User ID ${group.id} - ${group.name}` : group.name;
         doc.text(`Petugas: ${officerDisplay} (Total Tugas: ${totalTugas})`, 14, currentY);
         currentY += 5;
 
@@ -498,7 +498,7 @@ export default function AdminTasksPage() {
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Belum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
+          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Sebelum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
           body: tableData as any,
           theme: 'grid',
           headStyles: { fillColor: [249, 115, 22] }, // orange-500
@@ -578,7 +578,7 @@ export default function AdminTasksPage() {
 
       autoTable(doc, {
         startY: 25,
-        head: [['No', 'ID Petugas', 'Nama Petugas', 'Total Tugas']],
+        head: [['No', 'User ID', 'Nama Petugas', 'Total Tugas']],
         body: summaryData,
         theme: 'grid',
         headStyles: { fillColor: [249, 115, 22] },
@@ -596,6 +596,43 @@ export default function AdminTasksPage() {
           const pageSize = doc.internal.pageSize;
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
           doc.text(footerText, data.settings.margin.left, pageHeight - 10);
+        }
+      });
+
+      // ----------------- TOP 3 PAGE / SECTION -----------------
+      let top3StartY = (doc as any).lastAutoTable.finalY + 20;
+      if (top3StartY > 150) {
+        doc.addPage();
+        top3StartY = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.text('3 Besar Petugas Paling Aktif (Terbanyak Mengerjakan Tugas)', 14, top3StartY);
+
+      const top3Groups = [...groupKeys]
+        .map(key => grouped[key])
+        .sort((a, b) => b.tasks.length - a.tasks.length)
+        .slice(0, 3);
+
+      const top3Data = top3Groups.map((group, idx) => [
+        (idx + 1).toString(),
+        group.id,
+        group.name,
+        group.tasks.length.toString()
+      ]);
+
+      autoTable(doc, {
+        startY: top3StartY + 8,
+        head: [['Peringkat', 'User ID', 'Nama Petugas', 'Total Tugas']],
+        body: top3Data,
+        theme: 'grid',
+        headStyles: { fillColor: [34, 197, 94] }, // green-500
+        styles: { fontSize: 10, valign: 'middle', fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 25, halign: 'center' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 90 },
+          3: { cellWidth: 30, halign: 'center' }
         }
       });
 
