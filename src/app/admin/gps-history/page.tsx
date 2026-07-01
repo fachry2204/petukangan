@@ -59,6 +59,7 @@ export default function GPSHistoryPage() {
   const [mapZoom, setMapZoom] = useState(13);
   const [flyTrigger, setFlyTrigger] = useState(0);
   const [focusMarker, setFocusMarker] = useState<string | null>(null);
+  const [activeMapUserId, setActiveMapUserId] = useState<number | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -141,12 +142,24 @@ export default function GPSHistoryPage() {
     );
   }, [gpsPoints, searchQuery]);
 
+  // Table points (Group by user, get latest)
+  const tablePoints = useMemo(() => {
+    const latestPoints = new Map<number, GPSPoint>();
+    filteredPoints.forEach(p => {
+      const existing = latestPoints.get(p.userId);
+      if (!existing || new Date(p.timestamp) > new Date(existing.timestamp)) {
+        latestPoints.set(p.userId, p);
+      }
+    });
+    return Array.from(latestPoints.values());
+  }, [filteredPoints]);
+
   // Pagination
-  const totalPages = Math.ceil(filteredPoints.length / itemsPerPage);
+  const totalPages = Math.ceil(tablePoints.length / itemsPerPage);
   const paginatedPoints = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredPoints.slice(start, start + itemsPerPage);
-  }, [filteredPoints, currentPage]);
+    return tablePoints.slice(start, start + itemsPerPage);
+  }, [tablePoints, currentPage]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -174,10 +187,12 @@ export default function GPSHistoryPage() {
     });
 
     const markers: any[] = [];
-    Object.entries(pointsByUser).forEach(([userId, pts]) => {
+    Object.entries(pointsByUser).forEach(([userIdStr, pts]) => {
+      const userId = Number(userIdStr);
+      if (activeMapUserId !== null && activeMapUserId !== userId) return;
       if (pts.length === 0) return;
       const sorted = [...pts].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      const color = userColors[Number(userId)];
+      const color = userColors[userId];
 
       sorted.forEach((p, idx) => {
         const isStart = idx === 0;
@@ -205,18 +220,20 @@ export default function GPSHistoryPage() {
       });
     });
     return markers;
-  }, [pointsByUser]);
+  }, [pointsByUser, activeMapUserId]);
 
   // Build polyline paths per user for route visualization
   const mapPaths = useMemo(() => {
     const paths: { userId: number; name: string; color: string; coords: [number, number][] }[] = [];
     const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
     let colorIdx = 0;
-    Object.entries(pointsByUser).forEach(([userId, pts]) => {
+    Object.entries(pointsByUser).forEach(([userIdStr, pts]) => {
+      const userId = Number(userIdStr);
+      if (activeMapUserId !== null && activeMapUserId !== userId) return;
       if (pts.length >= 2) {
         const sorted = [...pts].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         paths.push({
-          userId: Number(userId),
+          userId,
           name: sorted[0].fullName || `Petugas ${userId}`,
           color: colors[colorIdx % colors.length],
           coords: sorted.map(p => [p.lat, p.lng] as [number, number]),
@@ -225,7 +242,7 @@ export default function GPSHistoryPage() {
       }
     });
     return paths;
-  }, [pointsByUser]);
+  }, [pointsByUser, activeMapUserId]);
 
   // Filtered users for search dropdown
   const filteredUsers = useMemo(() => {
@@ -238,10 +255,15 @@ export default function GPSHistoryPage() {
 
   // Handle table row click: fly to map marker popup + scroll to map
   const handleRowClick = (point: GPSPoint) => {
-    setMapCenter([point.lat, point.lng]);
-    setMapZoom(18);
-    setFlyTrigger(prev => prev + 1);
-    setFocusMarker(`gps-${point.id}`);
+    if (activeMapUserId === point.userId) {
+      setActiveMapUserId(null); // Click again to show all
+    } else {
+      setActiveMapUserId(point.userId);
+      setMapCenter([point.lat, point.lng]);
+      setMapZoom(15);
+      setFlyTrigger(prev => prev + 1);
+      setFocusMarker(null); 
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -526,7 +548,7 @@ export default function GPSHistoryPage() {
                   </tr>
                 ) : (
                   paginatedPoints.map((point, index) => (
-                    <tr key={point.id} className="hover:bg-zinc-50 cursor-pointer transition-colors" onClick={() => handleRowClick(point)}>
+                    <tr key={point.userId} className={`hover:bg-zinc-50 cursor-pointer transition-colors ${activeMapUserId === point.userId ? 'bg-orange-50' : ''}`} onClick={() => handleRowClick(point)}>
                       <td className="px-4 py-3 text-sm text-zinc-600">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -575,7 +597,7 @@ export default function GPSHistoryPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-100">
               <div className="text-sm text-zinc-500">
-                Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredPoints.length)} dari {filteredPoints.length} data
+                Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, tablePoints.length)} dari {tablePoints.length} petugas
               </div>
               <div className="flex items-center gap-1">
                 <Button
