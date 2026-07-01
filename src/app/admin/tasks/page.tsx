@@ -451,6 +451,10 @@ export default function AdminTasksPage() {
       doc.setFontSize(10);
       doc.text(subtitle, textStartX, 24);
 
+      // Horizontal line below header
+      doc.setLineWidth(0.5);
+      doc.line(14, 28, doc.internal.pageSize.getWidth() - 14, 28);
+
       // Group by Petugas ID and Name
       const grouped: Record<string, { id: string, name: string, tasks: typeof data }> = {};
       data.forEach(t => {
@@ -461,7 +465,7 @@ export default function AdminTasksPage() {
         grouped[key].tasks.push(t);
       });
 
-      let currentY = 40; // Increased distance between header and first Petugas
+      let currentY = 35; // Adjusted start Y since we added a line
       const groupKeys = Object.keys(grouped).sort((a, b) => {
         const idA = parseInt(grouped[a].id);
         const idB = parseInt(grouped[b].id);
@@ -518,9 +522,15 @@ export default function AdminTasksPage() {
             // Footer on each page
             doc.setFontSize(8);
             doc.setFont('helvetica', 'normal');
-            const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'}`;
+            const website = window.location.host;
+            const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'} | Website: ${website}`;
             const pageSize = doc.internal.pageSize;
             const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+            const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+            
+            doc.setLineWidth(0.2);
+            doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+            
             doc.text(footerText, data.settings.margin.left, pageHeight - 10);
           },
           didDrawCell: function(cellData) {
@@ -592,9 +602,15 @@ export default function AdminTasksPage() {
         didDrawPage: function (data) {
           doc.setFontSize(8);
           doc.setFont('helvetica', 'normal');
-          const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'}`;
+          const website = window.location.host;
+          const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'} | Website: ${website}`;
           const pageSize = doc.internal.pageSize;
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+          const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+          
+          doc.setLineWidth(0.2);
+          doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+          
           doc.text(footerText, data.settings.margin.left, pageHeight - 10);
         }
       });
