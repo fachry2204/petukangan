@@ -39,6 +39,9 @@ interface TaskItem {
   lng?: number | null;
   address?: string | null;
   photoUrl?: string | null;
+  photo_before?: string | null;
+  photo_during?: string | null;
+  photo_after?: string | null;
   createdAt?: string;
   updatedAt?: string;
   assignedTo?: { id: number; fullName?: string; photoUrl?: string } | null;
@@ -276,22 +279,23 @@ export default function AdminTasksPage() {
       return;
     }
     const excelData = data.map(t => ({
-      'Tanggal': t.createdAt ? new Date(t.createdAt).toLocaleDateString('id-ID') : '-',
+      'Waktu Tugas': t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
       'Petugas': t.assignedTo?.fullName || '-',
       'Judul Tugas': t.title,
       'Deskripsi': t.description || '-',
       'Status': STATUS_LABEL[t.status] || t.status,
-      'Prioritas': t.priority || 'MEDIUM',
       'Jenis Tugas': TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-      'Zona': t.zone?.name || '-',
-      'Koordinat': (t.lat && t.lng) ? `${t.lat}, ${t.lng}` : '-'
+      'Alamat': t.address || (t.lat && t.lng ? `${t.lat}, ${t.lng}` : '-'),
+      'Foto Belum': t.photo_before ? 'Ada' : 'Tidak Ada',
+      'Foto Saat': t.photo_during ? 'Ada' : 'Tidak Ada',
+      'Foto Selesai': t.photo_after || t.photoUrl ? 'Ada' : 'Tidak Ada',
     }));
 
     const ws = XLSX.utils.json_to_sheet(excelData);
     
     const colWidths = [
-      { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
-      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }
+      { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
+      { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
     ];
     ws['!cols'] = colWidths;
     
@@ -330,12 +334,19 @@ export default function AdminTasksPage() {
     try {
       // Pre-fetch images to base64
       const imageCache: Record<string, string> = {};
+      
+      const fetchImage = async (url: string) => {
+        if (url && !imageCache[url]) {
+          const b64 = await getBase64ImageFromUrl(url);
+          if (b64) imageCache[url] = b64;
+        }
+      };
+      
       for (let i = 0; i < data.length; i++) {
         const t = data[i];
-        if (t.photoUrl && !imageCache[t.photoUrl]) {
-          const b64 = await getBase64ImageFromUrl(t.photoUrl);
-          if (b64) imageCache[t.photoUrl] = b64;
-        }
+        if (t.photo_before) await fetchImage(t.photo_before);
+        if (t.photo_during) await fetchImage(t.photo_during);
+        if (t.photo_after || t.photoUrl) await fetchImage(t.photo_after || t.photoUrl || '');
         setPdfProgress(Math.round(((i + 1) / data.length) * 40));
       }
 
@@ -343,14 +354,19 @@ export default function AdminTasksPage() {
       await new Promise(r => setTimeout(r, 50));
 
       const doc = new jsPDF({ orientation: 'landscape' });
+      const systemName = 'Sistem Monitoring PJLP Petukangan Utara';
+      const exportDate = new Date().toLocaleDateString('id-ID');
       
       doc.setFontSize(16);
       doc.text('Laporan Tugas Lapangan (PJLP)', 14, 15);
       
       let subtitle = '';
       if (exportDateFrom || exportDateTo) {
-        subtitle += `Periode: ${exportDateFrom || '-'} s/d ${exportDateTo || '-'}  `;
+        subtitle += `Rentang Tanggal Upload: ${exportDateFrom ? new Date(exportDateFrom).toLocaleDateString('id-ID') : '-'} s/d ${exportDateTo ? new Date(exportDateTo).toLocaleDateString('id-ID') : '-'}  `;
+      } else {
+        subtitle += `Rentang Tanggal Upload: Semua Waktu  `;
       }
+      subtitle += `|  Sistem: ${systemName}`;
       doc.setFontSize(10);
       doc.text(subtitle, 14, 22);
 
@@ -378,43 +394,62 @@ export default function AdminTasksPage() {
         currentY += 5;
 
         const tableData = grouped[officer].map(t => [
+          t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
           t.title,
           (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
           STATUS_LABEL[t.status] || t.status,
-          t.priority || 'MEDIUM',
           TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-          t.zone?.name || '-',
-          t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-',
-          t.photoUrl && imageCache[t.photoUrl] ? '' : (t.photoUrl ? 'Gagal Dimuat' : 'Tidak Ada')
+          t.address || (t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-'),
+          t.photo_before && imageCache[t.photo_before] ? '' : (t.photo_before ? 'Gagal' : '-'),
+          t.photo_during && imageCache[t.photo_during] ? '' : (t.photo_during ? 'Gagal' : '-'),
+          (t.photo_after || t.photoUrl) && imageCache[t.photo_after || t.photoUrl || ''] ? '' : ((t.photo_after || t.photoUrl) ? 'Gagal' : '-')
         ]);
 
         const officerTasks = grouped[officer];
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Judul Tugas', 'Deskripsi', 'Status', 'Prioritas', 'Jenis Tugas', 'Zona', 'Koordinat', 'Foto']],
+          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Status', 'Jenis Tugas', 'Alamat', 'Belum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
           body: tableData as any,
           theme: 'grid',
           headStyles: { fillColor: [249, 115, 22] }, // orange-500
           styles: { fontSize: 8, valign: 'middle' },
           bodyStyles: { minCellHeight: 20 },
           columnStyles: {
-            0: { cellWidth: 35 },
-            1: { cellWidth: 50 },
-            6: { cellWidth: 25 },
-            7: { cellWidth: 25, halign: 'center' }
+            0: { cellWidth: 25 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 40 },
+            5: { cellWidth: 30 },
+            6: { cellWidth: 20, halign: 'center' },
+            7: { cellWidth: 20, halign: 'center' },
+            8: { cellWidth: 20, halign: 'center' }
+          },
+          didDrawPage: function (data) {
+            // Footer on each page
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'}`;
+            const pageSize = doc.internal.pageSize;
+            const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+            doc.text(footerText, data.settings.margin.left, pageHeight - 10);
           },
           didDrawCell: function(cellData) {
-            if (cellData.column.index === 7 && cellData.cell.section === 'body') {
+            if (cellData.cell.section === 'body') {
               const rowData = officerTasks[cellData.row.index];
-              if (rowData?.photoUrl && imageCache[rowData.photoUrl]) {
+              const colIndex = cellData.column.index;
+              
+              let photoToDraw = null;
+              if (colIndex === 6) photoToDraw = rowData?.photo_before;
+              else if (colIndex === 7) photoToDraw = rowData?.photo_during;
+              else if (colIndex === 8) photoToDraw = rowData?.photo_after || rowData?.photoUrl;
+              
+              if (photoToDraw && imageCache[photoToDraw]) {
                 try {
-                  const imgData = imageCache[rowData.photoUrl];
+                  const imgData = imageCache[photoToDraw];
                   const dim = 16;
                   const xPos = cellData.cell.x + (cellData.cell.width - dim) / 2;
                   const yPos = cellData.cell.y + (cellData.cell.height - dim) / 2;
                   
-                  // Extract image format from data URL if possible, otherwise use undefined so jsPDF guesses
                   let imgFormat = undefined;
                   if (imgData.startsWith('data:image/png')) imgFormat = 'PNG';
                   else if (imgData.startsWith('data:image/jpeg') || imgData.startsWith('data:image/jpg')) imgFormat = 'JPEG';
@@ -422,7 +457,6 @@ export default function AdminTasksPage() {
                   
                   doc.addImage(imgData, imgFormat as any, xPos, yPos, dim, dim);
                 } catch (e) {
-                  // Ignore image add errors
                   console.error('Error drawing image in PDF:', e);
                 }
               }

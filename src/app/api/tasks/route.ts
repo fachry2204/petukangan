@@ -16,7 +16,17 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = decoded.role === 'PJLP' ? decoded.sub : undefined;
-    let sql = `SELECT t.*, z.name as zoneName, u.fullName as assignedToName, u.photoUrl as assignedToPhotoUrl FROM tasks t LEFT JOIN zones z ON z.id = t.zoneId LEFT JOIN users u ON u.id = t.assignedToId`;
+    let sql = `
+      SELECT t.*, 
+             z.name as zoneName, 
+             u.fullName as assignedToName, 
+             u.photoUrl as assignedToPhotoUrl,
+             (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status IN ('NOT_STARTED', 'TASK_ACCEPTED', 'ARRIVED') AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_before,
+             (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status = 'WORKING' AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_during,
+             (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status = 'DONE' AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_after
+      FROM tasks t 
+      LEFT JOIN zones z ON z.id = t.zoneId 
+      LEFT JOIN users u ON u.id = t.assignedToId`;
     const params: any[] = [];
 
     if (userId) {
