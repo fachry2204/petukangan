@@ -116,6 +116,9 @@ export default function AdminTasksPage() {
   const [exportDateFrom, setExportDateFrom] = useState('');
   const [exportDateTo, setExportDateTo] = useState('');
   const [exportOfficer, setExportOfficer] = useState('ALL');
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [pdfReadyUrl, setPdfReadyUrl] = useState<string | null>(null);
 
   const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -316,15 +319,19 @@ export default function AdminTasksPage() {
       return;
     }
 
-    toast({ title: 'Memproses PDF', description: 'Mengunduh foto dan membuat PDF (Mungkin butuh beberapa saat)...' });
+    setPdfGenerating(true);
+    setPdfProgress(0);
+    setPdfReadyUrl(null);
 
     // Pre-fetch images to base64
     const imageCache: Record<string, string> = {};
-    for (const t of data) {
+    for (let i = 0; i < data.length; i++) {
+      const t = data[i];
       if (t.photoUrl && !imageCache[t.photoUrl]) {
         const b64 = await getBase64ImageFromUrl(t.photoUrl);
         if (b64) imageCache[t.photoUrl] = b64;
       }
+      setPdfProgress(Math.round(((i + 1) / data.length) * 50));
     }
 
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -348,8 +355,10 @@ export default function AdminTasksPage() {
     });
 
     let currentY = 28;
+    const officerKeys = Object.keys(grouped);
 
-    for (const officer of Object.keys(grouped)) {
+    for (let i = 0; i < officerKeys.length; i++) {
+      const officer = officerKeys[i];
       if (currentY > 170) {
         doc.addPage();
         currentY = 15;
@@ -407,10 +416,20 @@ export default function AdminTasksPage() {
       });
       
       currentY = (doc as any).lastAutoTable.finalY + 15;
+      setPdfProgress(50 + Math.round(((i + 1) / officerKeys.length) * 50));
     }
 
-    doc.save('Laporan_Tugas_Lapangan.pdf');
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    setPdfReadyUrl(pdfUrl);
+    setPdfGenerating(false);
+  };
+
+  const handleCloseExport = () => {
     setIsExportOpen(false);
+    setPdfGenerating(false);
+    setPdfProgress(0);
+    setPdfReadyUrl(null);
   };
 
   return (
@@ -854,7 +873,7 @@ export default function AdminTasksPage() {
       </Dialog>
 
       {/* Export Dialog */}
-      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+      <Dialog open={isExportOpen} onOpenChange={handleCloseExport}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -871,7 +890,8 @@ export default function AdminTasksPage() {
               <select
                 value={exportOfficer}
                 onChange={(e) => setExportOfficer(e.target.value)}
-                className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm focus:ring-2 focus:ring-green-500/30"
+                disabled={pdfGenerating || !!pdfReadyUrl}
+                className="mt-1 w-full h-10 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-sm focus:ring-2 focus:ring-green-500/30 disabled:opacity-50"
               >
                 <option value="ALL">Semua Petugas</option>
                 {uniqueOfficers.map((o: any) => (
@@ -882,24 +902,59 @@ export default function AdminTasksPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-bold text-zinc-500">Tanggal Mulai</label>
-                <Input type="date" value={exportDateFrom} onChange={(e) => setExportDateFrom(e.target.value)} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500" />
+                <Input type="date" value={exportDateFrom} onChange={(e) => setExportDateFrom(e.target.value)} disabled={pdfGenerating || !!pdfReadyUrl} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500 disabled:opacity-50" />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500">Tanggal Akhir</label>
-                <Input type="date" value={exportDateTo} onChange={(e) => setExportDateTo(e.target.value)} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500" />
+                <Input type="date" value={exportDateTo} onChange={(e) => setExportDateTo(e.target.value)} disabled={pdfGenerating || !!pdfReadyUrl} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500 disabled:opacity-50" />
               </div>
             </div>
+
+            {pdfGenerating && (
+              <div className="pt-2">
+                <div className="flex justify-between text-xs font-bold text-zinc-500 mb-1">
+                  <span>Memproses Dokumen...</span>
+                  <span>{pdfProgress}%</span>
+                </div>
+                <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-orange-500 transition-all duration-300" style={{ width: `${pdfProgress}%` }}></div>
+                </div>
+              </div>
+            )}
+            
+            {pdfReadyUrl && (
+              <div className="pt-2">
+                <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-bold text-green-700 dark:text-green-400">PDF Berhasil Dibuat!</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-between">
-            <Button variant="outline" onClick={() => setIsExportOpen(false)}>Batal</Button>
-            <div className="flex gap-2">
-              <Button onClick={handleExportPDF} className="bg-red-500 hover:bg-red-600 text-white gap-2">
-                <FileText className="w-4 h-4" /> PDF
-              </Button>
-              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-                <FileText className="w-4 h-4" /> Excel
-              </Button>
-            </div>
+            <Button variant="outline" onClick={handleCloseExport}>
+              {pdfReadyUrl ? 'Tutup' : 'Batal'}
+            </Button>
+            
+            {pdfReadyUrl ? (
+              <a href={pdfReadyUrl} download={`Laporan_Tugas_Lapangan_${new Date().toISOString().slice(0,10)}.pdf`}>
+                <Button className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto">
+                  <Download className="w-4 h-4" /> Unduh PDF
+                </Button>
+              </a>
+            ) : (
+              <div className="flex gap-2">
+                <Button onClick={handleExportPDF} disabled={pdfGenerating} className="bg-red-500 hover:bg-red-600 text-white gap-2">
+                  {pdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  PDF
+                </Button>
+                <Button onClick={handleExportExcel} disabled={pdfGenerating} className="bg-green-600 hover:bg-green-700 text-white gap-2">
+                  <FileText className="w-4 h-4" /> Excel
+                </Button>
+              </div>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
