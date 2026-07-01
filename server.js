@@ -105,6 +105,25 @@ app.prepare().then(async () => {
 
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
+    if (parsedUrl.pathname === '/internal/socket-emit' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          if (global.io) {
+            global.io.emit(payload.event, payload.data);
+          }
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: true }));
+        } catch (e) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
     handle(req, res, parsedUrl);
   });
 

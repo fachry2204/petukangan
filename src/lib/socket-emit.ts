@@ -9,8 +9,21 @@ declare global {
 }
 
 export function emitDataChange(entity: string, action: 'create' | 'update' | 'delete', data: any) {
+  const payload = {
+    event: 'dataChange',
+    data: { entity, action, data, timestamp: Date.now() }
+  };
+  
   if (global.io) {
-    global.io.emit('dataChange', { entity, action, data, timestamp: Date.now() });
+    global.io.emit(payload.event, payload.data);
+  } else {
+    // In Next.js API routes, global.io might be undefined, so we fallback to internal HTTP call
+    const port = process.env.PORT || 3000;
+    fetch(`http://localhost:${port}/internal/socket-emit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('[SocketEmit] Failed to emit via HTTP:', err));
   }
 }
 

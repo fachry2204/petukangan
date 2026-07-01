@@ -23,6 +23,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         `UPDATE attendance_requests SET status = ?, rejectionReason = ? WHERE id = ?`,
         [status, rejectionReason || null, id]
       );
+      emitAttendanceChange('update', { id: Number(id), status, isRequestTable });
       return NextResponse.json({ message: 'Status permintaan absen diupdate' });
     }
 

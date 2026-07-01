@@ -713,7 +713,7 @@ export default function PjlpHomePage() {
             {attendanceStatus === 'Menunggu Diterima' ? (
               <Button disabled className="w-full mt-4 bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed flex items-center justify-center gap-1.5 animate-pulse">
                 <Clock className="w-4.5 h-4.5 text-white" />
-                Permintaan Absen Masuk Sedang Ditinjau ⏳
+                Absen Lembur Ditinjau ⏳
               </Button>
             ) : ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus) && !hasApprovedRequest ? (
               <div className="space-y-3 mt-4">
