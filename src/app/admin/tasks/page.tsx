@@ -323,106 +323,125 @@ export default function AdminTasksPage() {
     setPdfProgress(0);
     setPdfReadyUrl(null);
 
-    // Pre-fetch images to base64
-    const imageCache: Record<string, string> = {};
-    for (let i = 0; i < data.length; i++) {
-      const t = data[i];
-      if (t.photoUrl && !imageCache[t.photoUrl]) {
-        const b64 = await getBase64ImageFromUrl(t.photoUrl);
-        if (b64) imageCache[t.photoUrl] = b64;
+    try {
+      // Pre-fetch images to base64
+      const imageCache: Record<string, string> = {};
+      for (let i = 0; i < data.length; i++) {
+        const t = data[i];
+        if (t.photoUrl && !imageCache[t.photoUrl]) {
+          const b64 = await getBase64ImageFromUrl(t.photoUrl);
+          if (b64) imageCache[t.photoUrl] = b64;
+        }
+        setPdfProgress(Math.round(((i + 1) / data.length) * 40));
       }
-      setPdfProgress(Math.round(((i + 1) / data.length) * 50));
-    }
 
-    const doc = new jsPDF({ orientation: 'landscape' });
-    
-    doc.setFontSize(16);
-    doc.text('Laporan Tugas Lapangan (PJLP)', 14, 15);
-    
-    let subtitle = '';
-    if (exportDateFrom || exportDateTo) {
-      subtitle += `Periode: ${exportDateFrom || '-'} s/d ${exportDateTo || '-'}  `;
-    }
-    doc.setFontSize(10);
-    doc.text(subtitle, 14, 22);
+      // Add a small delay to let UI render the 40% progress
+      await new Promise(r => setTimeout(r, 50));
 
-    // Group by Petugas
-    const grouped: Record<string, typeof data> = {};
-    data.forEach(t => {
-      const officer = t.assignedTo?.fullName || 'Tanpa Petugas';
-      if (!grouped[officer]) grouped[officer] = [];
-      grouped[officer].push(t);
-    });
-
-    let currentY = 28;
-    const officerKeys = Object.keys(grouped);
-
-    for (let i = 0; i < officerKeys.length; i++) {
-      const officer = officerKeys[i];
-      if (currentY > 170) {
-        doc.addPage();
-        currentY = 15;
-      }
+      const doc = new jsPDF({ orientation: 'landscape' });
       
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Petugas: ${officer}`, 14, currentY);
-      currentY += 5;
+      doc.setFontSize(16);
+      doc.text('Laporan Tugas Lapangan (PJLP)', 14, 15);
+      
+      let subtitle = '';
+      if (exportDateFrom || exportDateTo) {
+        subtitle += `Periode: ${exportDateFrom || '-'} s/d ${exportDateTo || '-'}  `;
+      }
+      doc.setFontSize(10);
+      doc.text(subtitle, 14, 22);
 
-      const tableData = grouped[officer].map(t => [
-        t.title,
-        (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
-        STATUS_LABEL[t.status] || t.status,
-        t.priority || 'MEDIUM',
-        TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-        t.zone?.name || '-',
-        t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-',
-        t.photoUrl && imageCache[t.photoUrl] ? '' : (t.photoUrl ? 'Gagal Dimuat' : 'Tidak Ada')
-      ]);
+      // Group by Petugas
+      const grouped: Record<string, typeof data> = {};
+      data.forEach(t => {
+        const officer = t.assignedTo?.fullName || 'Tanpa Petugas';
+        if (!grouped[officer]) grouped[officer] = [];
+        grouped[officer].push(t);
+      });
 
-      const officerTasks = grouped[officer];
+      let currentY = 28;
+      const officerKeys = Object.keys(grouped);
 
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Judul Tugas', 'Deskripsi', 'Status', 'Prioritas', 'Jenis Tugas', 'Zona', 'Koordinat', 'Foto']],
-        body: tableData as any,
-        theme: 'grid',
-        headStyles: { fillColor: [249, 115, 22] }, // orange-500
-        styles: { fontSize: 8, valign: 'middle' },
-        bodyStyles: { minCellHeight: 20 },
-        columnStyles: {
-          0: { cellWidth: 35 },
-          1: { cellWidth: 50 },
-          6: { cellWidth: 25 },
-          7: { cellWidth: 25, halign: 'center' }
-        },
-        didDrawCell: function(cellData) {
-          if (cellData.column.index === 7 && cellData.cell.section === 'body') {
-            const rowData = officerTasks[cellData.row.index];
-            if (rowData.photoUrl && imageCache[rowData.photoUrl]) {
-              try {
-                const imgData = imageCache[rowData.photoUrl];
-                const dim = 16;
-                // Center the image in the cell
-                const xPos = cellData.cell.x + (cellData.cell.width - dim) / 2;
-                const yPos = cellData.cell.y + (cellData.cell.height - dim) / 2;
-                doc.addImage(imgData, 'JPEG', xPos, yPos, dim, dim);
-              } catch (e) {
-                // Ignore image add errors
+      for (let i = 0; i < officerKeys.length; i++) {
+        const officer = officerKeys[i];
+        if (currentY > 170) {
+          doc.addPage();
+          currentY = 15;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Petugas: ${officer}`, 14, currentY);
+        currentY += 5;
+
+        const tableData = grouped[officer].map(t => [
+          t.title,
+          (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
+          STATUS_LABEL[t.status] || t.status,
+          t.priority || 'MEDIUM',
+          TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
+          t.zone?.name || '-',
+          t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-',
+          t.photoUrl && imageCache[t.photoUrl] ? '' : (t.photoUrl ? 'Gagal Dimuat' : 'Tidak Ada')
+        ]);
+
+        const officerTasks = grouped[officer];
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Judul Tugas', 'Deskripsi', 'Status', 'Prioritas', 'Jenis Tugas', 'Zona', 'Koordinat', 'Foto']],
+          body: tableData as any,
+          theme: 'grid',
+          headStyles: { fillColor: [249, 115, 22] }, // orange-500
+          styles: { fontSize: 8, valign: 'middle' },
+          bodyStyles: { minCellHeight: 20 },
+          columnStyles: {
+            0: { cellWidth: 35 },
+            1: { cellWidth: 50 },
+            6: { cellWidth: 25 },
+            7: { cellWidth: 25, halign: 'center' }
+          },
+          didDrawCell: function(cellData) {
+            if (cellData.column.index === 7 && cellData.cell.section === 'body') {
+              const rowData = officerTasks[cellData.row.index];
+              if (rowData.photoUrl && imageCache[rowData.photoUrl]) {
+                try {
+                  const imgData = imageCache[rowData.photoUrl];
+                  const dim = 16;
+                  const xPos = cellData.cell.x + (cellData.cell.width - dim) / 2;
+                  const yPos = cellData.cell.y + (cellData.cell.height - dim) / 2;
+                  
+                  // Extract image format from data URL if possible, otherwise use undefined so jsPDF guesses
+                  let imgFormat = undefined;
+                  if (imgData.startsWith('data:image/png')) imgFormat = 'PNG';
+                  else if (imgData.startsWith('data:image/jpeg') || imgData.startsWith('data:image/jpg')) imgFormat = 'JPEG';
+                  else if (imgData.startsWith('data:image/webp')) imgFormat = 'WEBP';
+                  
+                  doc.addImage(imgData, imgFormat as any, xPos, yPos, dim, dim);
+                } catch (e) {
+                  // Ignore image add errors
+                  console.error('Error drawing image in PDF:', e);
+                }
               }
             }
           }
-        }
-      });
-      
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-      setPdfProgress(50 + Math.round(((i + 1) / officerKeys.length) * 50));
-    }
+        });
+        
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+        
+        setPdfProgress(40 + Math.round(((i + 1) / officerKeys.length) * 60));
+        // Yield to event loop to allow UI to render progress
+        await new Promise(r => setTimeout(r, 10));
+      }
 
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    setPdfReadyUrl(pdfUrl);
-    setPdfGenerating(false);
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      setPdfReadyUrl(pdfUrl);
+    } catch (e: any) {
+      console.error('Error generating PDF:', e);
+      alert('Terjadi kesalahan saat membuat PDF: ' + (e.message || 'Unknown error'));
+    } finally {
+      setPdfGenerating(false);
+    }
   };
 
   const handleCloseExport = () => {
