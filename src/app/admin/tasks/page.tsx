@@ -294,12 +294,39 @@ export default function AdminTasksPage() {
     setIsExportOpen(false);
   };
 
-  const handleExportPDF = () => {
+  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string | null> => {
+    try {
+      const res = await fetch(imageUrl, { mode: 'cors' });
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener('load', () => resolve(reader.result as string));
+        reader.addEventListener('error', (err) => reject(err));
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const handleExportPDF = async () => {
     const data = getExportData();
     if (data.length === 0) {
       toast({ title: 'Kosong', description: 'Tidak ada data untuk diexport', variant: 'destructive' });
       return;
     }
+
+    toast({ title: 'Memproses PDF', description: 'Mengunduh foto dan membuat PDF (Mungkin butuh beberapa saat)...' });
+
+    // Pre-fetch images to base64
+    const imageCache: Record<string, string> = {};
+    for (const t of data) {
+      if (t.photoUrl && !imageCache[t.photoUrl]) {
+        const b64 = await getBase64ImageFromUrl(t.photoUrl);
+        if (b64) imageCache[t.photoUrl] = b64;
+      }
+    }
+
     const doc = new jsPDF({ orientation: 'landscape' });
     
     doc.setFontSize(16);
@@ -309,31 +336,78 @@ export default function AdminTasksPage() {
     if (exportDateFrom || exportDateTo) {
       subtitle += `Periode: ${exportDateFrom || '-'} s/d ${exportDateTo || '-'}  `;
     }
-    if (exportOfficer !== 'ALL') {
-      const officerName = uniqueOfficers.find((o: any) => o.id === Number(exportOfficer))?.name;
-      subtitle += `Petugas: ${officerName}`;
-    }
     doc.setFontSize(10);
     doc.text(subtitle, 14, 22);
 
-    const tableData = data.map(t => [
-      t.createdAt ? new Date(t.createdAt).toLocaleDateString('id-ID') : '-',
-      t.assignedTo?.fullName || '-',
-      t.title,
-      STATUS_LABEL[t.status] || t.status,
-      t.priority || 'MEDIUM',
-      TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
-      t.zone?.name || '-'
-    ]);
-
-    autoTable(doc, {
-      startY: 28,
-      head: [['Tanggal', 'Petugas', 'Judul Tugas', 'Status', 'Prioritas', 'Jenis', 'Zona']],
-      body: tableData as any,
-      theme: 'grid',
-      headStyles: { fillColor: [249, 115, 22] }, // orange-500
-      styles: { fontSize: 8 }
+    // Group by Petugas
+    const grouped: Record<string, typeof data> = {};
+    data.forEach(t => {
+      const officer = t.assignedTo?.fullName || 'Tanpa Petugas';
+      if (!grouped[officer]) grouped[officer] = [];
+      grouped[officer].push(t);
     });
+
+    let currentY = 28;
+
+    for (const officer of Object.keys(grouped)) {
+      if (currentY > 170) {
+        doc.addPage();
+        currentY = 15;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Petugas: ${officer}`, 14, currentY);
+      currentY += 5;
+
+      const tableData = grouped[officer].map(t => [
+        t.title,
+        (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
+        STATUS_LABEL[t.status] || t.status,
+        t.priority || 'MEDIUM',
+        TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
+        t.zone?.name || '-',
+        t.lat && t.lng ? `${Number(t.lat).toFixed(5)}\n${Number(t.lng).toFixed(5)}` : '-',
+        t.photoUrl && imageCache[t.photoUrl] ? '' : (t.photoUrl ? 'Gagal Dimuat' : 'Tidak Ada')
+      ]);
+
+      const officerTasks = grouped[officer];
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Judul Tugas', 'Deskripsi', 'Status', 'Prioritas', 'Jenis Tugas', 'Zona', 'Koordinat', 'Foto']],
+        body: tableData as any,
+        theme: 'grid',
+        headStyles: { fillColor: [249, 115, 22] }, // orange-500
+        styles: { fontSize: 8, valign: 'middle' },
+        bodyStyles: { minCellHeight: 20 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 50 },
+          6: { cellWidth: 25 },
+          7: { cellWidth: 25, halign: 'center' }
+        },
+        didDrawCell: function(cellData) {
+          if (cellData.column.index === 7 && cellData.cell.section === 'body') {
+            const rowData = officerTasks[cellData.row.index];
+            if (rowData.photoUrl && imageCache[rowData.photoUrl]) {
+              try {
+                const imgData = imageCache[rowData.photoUrl];
+                const dim = 16;
+                // Center the image in the cell
+                const xPos = cellData.cell.x + (cellData.cell.width - dim) / 2;
+                const yPos = cellData.cell.y + (cellData.cell.height - dim) / 2;
+                doc.addImage(imgData, 'JPEG', xPos, yPos, dim, dim);
+              } catch (e) {
+                // Ignore image add errors
+              }
+            }
+          }
+        }
+      });
+      
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
 
     doc.save('Laporan_Tugas_Lapangan.pdf');
     setIsExportOpen(false);
