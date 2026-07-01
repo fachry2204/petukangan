@@ -502,6 +502,7 @@ export default function AdminTasksPage() {
 
         autoTable(doc, {
           startY: currentY,
+          margin: { bottom: 25 },
           head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Sebelum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
           body: tableData as any,
           theme: 'grid',
@@ -588,6 +589,7 @@ export default function AdminTasksPage() {
 
       autoTable(doc, {
         startY: 25,
+        margin: { bottom: 25 },
         head: [['No', 'User ID', 'Nama Petugas', 'Total Tugas']],
         body: summaryData,
         theme: 'grid',
@@ -639,6 +641,7 @@ export default function AdminTasksPage() {
 
       autoTable(doc, {
         startY: top3StartY + 8,
+        margin: { bottom: 25 },
         head: [['Peringkat', 'User ID', 'Nama Petugas', 'Total Tugas']],
         body: top3Data,
         theme: 'grid',

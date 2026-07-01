@@ -22,7 +22,7 @@ export async function GET(req: Request) {
              u.fullName as assignedToName, 
              u.photoUrl as assignedToPhotoUrl,
              u.username as assignedToUsername,
-             (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status IN ('NOT_STARTED', 'TASK_ACCEPTED', 'ARRIVED') AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_before,
+             COALESCE((SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status IN ('NOT_STARTED', 'TASK_ACCEPTED', 'ARRIVED') AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1), t.photoUrl) as photo_before,
              (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status = 'WORKING' AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_during,
              (SELECT photoUrl FROM task_logs WHERE taskId = t.id AND status = 'DONE' AND photoUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as photo_after,
              (SELECT lat FROM task_logs WHERE taskId = t.id AND lat IS NOT NULL ORDER BY createdAt DESC LIMIT 1) as lat_done,
