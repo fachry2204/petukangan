@@ -24,6 +24,8 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [resolutionPhoto, setResolutionPhoto] = useState<File | null>(null);
 
   const [search, setSearch] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -89,6 +91,45 @@ export default function AdminReportsPage() {
       return tb - ta;
     });
   }, [reports, search, filterStartDate, filterEndDate, statusFilter]);
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedReport) return;
+    if (status === 'RESOLVED' && !resolutionPhoto) {
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Silakan unggah foto bukti saat menyelesaikan laporan.' });
+      return;
+    }
+    
+    setUpdatingStatus(true);
+    try {
+      let photoUrl = null;
+      if (status === 'RESOLVED' && resolutionPhoto) {
+        const formData = new FormData();
+        formData.append('file', resolutionPhoto);
+        formData.append('type', 'report');
+        const uploadRes = await axios.post(`${apiUrl}/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (uploadRes.data.success) {
+          photoUrl = uploadRes.data.url;
+        } else {
+          throw new Error('Gagal mengunggah foto penyelesaian');
+        }
+      }
+
+      await axios.put(`${apiUrl}/reports/${selectedReport.id}`, { status, photoUrl }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast({ title: 'Berhasil', description: 'Status laporan diperbarui' });
+      setSelectedReport(null);
+      setResolutionPhoto(null);
+      fetchReports();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Gagal', description: err?.response?.data?.error || err?.response?.data?.message || err.message || 'Gagal memperbarui status' });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Apakah Anda yakin ingin menghapus laporan ini?')) return;
@@ -379,11 +420,61 @@ export default function AdminReportsPage() {
 
               {/* Status */}
               <div>
-                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status</p>
+                <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Status Saat Ini</p>
                 <Badge className={`${STATUS_COLOR[selectedReport.status || 'PENDING']} border-none font-bold text-[11px] mt-1`}>
                   {STATUS_LABEL[selectedReport.status || 'PENDING']}
                 </Badge>
               </div>
+              
+              {/* Actions for Admin to change status */}
+              {selectedReport.status !== 'RESOLVED' && selectedReport.status !== 'REJECTED' && (
+                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Tindakan Admin</p>
+                  
+                  {selectedReport.status === 'PENDING' && (
+                    <div className="flex gap-2">
+                      <Button 
+                        disabled={updatingStatus}
+                        onClick={() => handleUpdateStatus('REVIEWED')} 
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                      >
+                        {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Terima Laporan (Ditinjau)
+                      </Button>
+                      <Button 
+                        disabled={updatingStatus}
+                        onClick={() => handleUpdateStatus('REJECTED')} 
+                        variant="destructive"
+                      >
+                        {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Tolak Laporan
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedReport.status === 'REVIEWED' && (
+                    <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                      <div>
+                        <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1 block">Foto Bukti Penyelesaian (Wajib)</label>
+                        <Input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => setResolutionPhoto(e.target.files?.[0] || null)} 
+                          className="bg-white dark:bg-zinc-900 border-zinc-200"
+                        />
+                      </div>
+                      <Button 
+                        disabled={updatingStatus || !resolutionPhoto}
+                        onClick={() => handleUpdateStatus('RESOLVED')} 
+                        className="w-full bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Selesaikan Laporan
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

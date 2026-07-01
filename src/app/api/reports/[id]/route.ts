@@ -218,3 +218,57 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await context.params;
+    const decoded = getUserFromToken(req);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const role = String((decoded as any).role || '');
+    if (role !== 'ADMIN' && role !== 'STAFF') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { status, photoUrl } = body;
+    if (!status) return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+
+    const conn = (await getDbConnection()) as unknown as Connection;
+    try {
+      const reportCols = await getColumnsByName(conn, 'reports');
+      const reportStatusCol = resolveColumn(reportCols, ['status']);
+      if (!reportStatusCol) return NextResponse.json({ error: 'Skema tabel reports tidak sesuai' }, { status: 500 });
+
+      await conn.execute<ResultSetHeader>(
+        `UPDATE reports SET \`${reportStatusCol}\` = ? WHERE id = ?`,
+        [status, id as unknown as SqlValue]
+      );
+
+      if (status === 'RESOLVED' && photoUrl) {
+        let photoCols: Record<string, ColumnInfo> = {};
+        try {
+          photoCols = await getColumnsByName(conn, 'report_photos');
+        } catch {
+          photoCols = {};
+        }
+        const photoReportIdCol = resolveColumn(photoCols, ['reportId', 'report_id']);
+        const photoUrlCol = resolveColumn(photoCols, ['photoUrl', 'photo_url', 'url']);
+        if (photoReportIdCol && photoUrlCol) {
+          await conn.execute<ResultSetHeader>(
+            `INSERT INTO report_photos (\`${photoReportIdCol}\`, \`${photoUrlCol}\`) VALUES (?, ?)`,
+            [id as unknown as SqlValue, photoUrl as unknown as SqlValue]
+          );
+        }
+      }
+
+      emitReportChange('update', { id: Number(id) });
+      return NextResponse.json({ message: 'Status laporan berhasil diperbarui' });
+    } finally {
+      await conn.end();
+    }
+  } catch (err: any) {
+    console.error('[PUT /api/reports/:id] error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
