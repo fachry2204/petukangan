@@ -252,6 +252,13 @@ app.prepare().then(async () => {
       });
     });
 
+    socket.on('callOfficer', (data) => {
+      if (data && data.userId) {
+        console.log('[Socket] callOfficer triggered for user:', data.userId, 'message:', data.message);
+        io.emit('callOfficerReceived', data); // Broadcast to all, PJLP client will filter by userId
+      }
+    });
+
     socket.on('forceLogoutUser', async (data) => {
       if (data && data.userId) {
         const userIdStr = String(data.userId);

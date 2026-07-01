@@ -41,6 +41,7 @@ export async function GET(req: Request) {
       ipAddress: r.ipAddress,
       wifiName: r.wifiName,
       provider: r.provider,
+      deviceInfo: r.deviceInfo,
       statusAbsen: r.statusAbsen,
       timestamp: r.timestamp,
       fullName: r.fullName || `Petugas ${r.userId}`,

@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
@@ -26,12 +28,26 @@ function AdminMonitoringContent() {
   const [activeZoom, setActiveZoom] = useState<number>(12);
   const { token } = useAuthStore();
   const socketRef = useRef<any>(null);
+  const { toast } = useToast();
+
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [callTargetId, setCallTargetId] = useState<number | null>(null);
+  const [callTargetName, setCallTargetName] = useState('');
+  const [callMessage, setCallMessage] = useState('');
 
   const searchParams = useSearchParams();
   const focusUserId = searchParams.get('focus');
 
   useEffect(() => {
     const abortController = new AbortController();
+
+    // Register global function for map popup button
+    (window as any).openCallOfficerModal = (userId: number, name: string) => {
+      setCallTargetId(userId);
+      setCallTargetName(name);
+      setCallMessage('');
+      setIsCallModalOpen(true);
+    };
 
     // 1. Fetch active officers from REST API as initial data / fallback
     const fetchActiveOfficers = async () => {
@@ -226,6 +242,17 @@ function AdminMonitoringContent() {
       }
     };
   }, [token]);
+
+  const handleSendCall = () => {
+    if (!callTargetId || !socketRef.current) return;
+    socketRef.current.emit('callOfficer', {
+      userId: callTargetId,
+      message: callMessage || 'Harap segera hubungi Admin atau staf yang bertugas.'
+    });
+    toast({ title: 'Panggilan Terkirim', description: `Notifikasi telah dikirimkan ke device ${callTargetName}.` });
+    setIsCallModalOpen(false);
+    setCallMessage('');
+  };
 
   // Separate live officers from SOS-only officers
   const liveOfficers = officers.filter(o => !o.isSOS);
@@ -502,6 +529,33 @@ function AdminMonitoringContent() {
 
         </div>
       </div>
+
+      {/* Call Officer Modal */}
+      <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Panggil Petugas</DialogTitle>
+            <DialogDescription>
+              Kirimkan notifikasi panggilan dan suara ke device <strong>{callTargetName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2 block">Pesan (Opsional)</label>
+            <Input
+              placeholder="Tulis pesan untuk petugas..."
+              value={callMessage}
+              onChange={(e) => setCallMessage(e.target.value)}
+              className="rounded-xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="rounded-xl">Batal</Button>
+            <Button onClick={handleSendCall} className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold">
+              Kirim Panggilan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

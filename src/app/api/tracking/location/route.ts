@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         speed DECIMAL(5,2) DEFAULT NULL,
         batteryLevel INT DEFAULT NULL,
         isMock TINYINT(1) DEFAULT 0,
+        deviceInfo VARCHAR(255) DEFAULT NULL,
         ipAddress VARCHAR(45) DEFAULT NULL,
         wifiName VARCHAR(100) DEFAULT NULL,
         provider VARCHAR(50) DEFAULT NULL,
@@ -38,8 +39,8 @@ export async function POST(req: Request) {
     `);
 
     await queryDb(
-      `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, ipAddress, wifiName, provider, statusAbsen)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, deviceInfo, ipAddress, wifiName, provider, statusAbsen)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         data.lat,
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
         data.speed || null,
         data.batteryLevel || null,
         data.isMock ? 1 : 0,
+        data.deviceInfo || null,
         data.ipAddress || null,
         data.wifiName || null,
         data.provider || null,

@@ -108,16 +108,42 @@ export default function MapComponent({
     return `
       <div style="min-width:220px;font-family:system-ui,sans-serif;padding:4px;">
         <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">
-          ${p.name || 'Petugas'}
+          ${p.fullName || p.name || 'Petugas'}
         </div>
         <div style="display:grid;gap:3px;font-size:12px;color:#374151;">
           <div style="display:flex;align-items:center;gap:4px;">
             <span style="color:#6b7280;font-size:10px;width:70px;">Status</span>
             <span style="font-weight:600;color:${statusColor};">${p.status || 'Online'}</span>
           </div>
+          ${(p.deviceInfo || p.device || p.os) ? `<div style="display:flex;align-items:center;gap:4px;">
+            <span style="color:#6b7280;font-size:10px;width:70px;">Device</span>
+            <span style="font-weight:600;color:#374151;">${p.deviceInfo || `${p.device || ''} ${p.os || ''}`.trim()}</span>
+          </div>` : ''}
+          ${p.ipAddress ? `<div style="display:flex;align-items:center;gap:4px;">
+            <span style="color:#6b7280;font-size:10px;width:70px;">IP Address</span>
+            <span style="font-weight:600;color:#374151;">${p.ipAddress}</span>
+          </div>` : ''}
+          ${p.provider ? `<div style="display:flex;align-items:center;gap:4px;">
+            <span style="color:#6b7280;font-size:10px;width:70px;">Provider</span>
+            <span style="font-weight:600;color:#374151;">${p.provider}</span>
+          </div>` : ''}
+          ${(p.wifiName && p.wifiName !== 'Tidak Terhubung WiFi') ? `<div style="display:flex;align-items:center;gap:4px;">
+            <span style="color:#6b7280;font-size:10px;width:70px;">WiFi</span>
+            <span style="font-weight:600;color:#374151;">${p.wifiName}</span>
+          </div>` : ''}
           ${p.address ? `<div style="margin-top:4px;padding-top:4px;border-top:1px dashed #e5e7eb;font-size:10px;color:#ef4444;font-weight:500;">
             📍 ${p.address}
           </div>` : ''}
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;display:flex;justify-content:center;">
+          <button 
+            onclick="window.openCallOfficerModal(${p.userId || (p.id ? p.id.toString().replace('officer-','') : '0')}, '${(p.fullName || p.name || 'Petugas').replace(/'/g, "\\'")}')"
+            style="width:100%;padding:6px;background:#f97316;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;"
+            onmouseover="this.style.backgroundColor='#ea580c'"
+            onmouseout="this.style.backgroundColor='#f97316'"
+          >
+            🔔 Panggil Petugas
+          </button>
         </div>
       </div>
     `;

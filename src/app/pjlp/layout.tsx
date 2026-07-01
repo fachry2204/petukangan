@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
@@ -36,6 +37,7 @@ export default function PjlpLayout({
 }) {
   const settings = useSettingsStore();
   const { token, user } = useAuthStore();
+  const { toast } = useToast();
   const socketRef = useRef<any>(null);
   const attendanceStatusRef = useRef<string>('Online');
   // Last known GPS — used to re-emit heartbeats so admin map keeps the marker alive
@@ -316,6 +318,44 @@ export default function PjlpLayout({
           socket.disconnect();
           useAuthStore.getState().logout();
           window.location.href = '/login';
+        }
+      });
+
+      socket.on('callOfficerReceived', (data: any) => {
+        if (data && String(data.userId) === String(user.id)) {
+          // Play ringtone/beep
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(1, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.6);
+          } catch (e) { console.warn('Audio play failed', e); }
+
+          // Show Toast
+          toast({
+            title: 'Panggilan dari Admin 🔔',
+            description: data.message,
+            duration: 10000,
+          });
+
+          // Show Native Notification
+          if (Notification.permission === 'granted') {
+            new Notification('Panggilan dari Admin 🔔', { body: data.message });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('Panggilan dari Admin 🔔', { body: data.message });
+              }
+            });
+          }
         }
       });
     };
