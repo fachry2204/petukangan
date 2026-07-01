@@ -106,8 +106,11 @@ export default function PjlpCreateTaskPage() {
     }
   };
 
-  const fetchLocation = () => {
+  const fetchLocation = async () => {
     setIsFetchingLocation(true);
+    setLocation(null);
+    setAddress('Mencari koordinat satelit...');
+    
     if (!navigator.geolocation) {
       toast({
         variant: 'destructive',
@@ -115,77 +118,43 @@ export default function PjlpCreateTaskPage() {
         description: 'Perangkat Anda tidak mendukung geolocation GPS.'
       });
       setIsFetchingLocation(false);
+      setAddress('GPS Tidak Didukung');
       return;
     }
 
-    // Clear any previous watch/timer before starting fresh
-    clearLocationWatch();
-
-    const gotInitialRef = { current: false };
-
-    // Step 1: INSTANT cached position — accept ANY cached location, no matter how old
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        // Show position immediately so map renders fast
-        gotInitialRef.current = true;
-        setLocation({ lat, lng });
-        setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
-        // If accuracy is decent, stop right away
-        if (pos.coords.accuracy && pos.coords.accuracy < 100) {
-          setIsFetchingLocation(false);
-          clearLocationWatch();
-        }
-      },
-      (err) => {
-        console.warn('Cached GPS failed:', err?.code, err?.message);
-        // If even cached fails, we'll still try watchPosition below
-      },
-      { enableHighAccuracy: false, timeout: 1500, maximumAge: Infinity }
-    );
-
-    // Step 2: Refinement via watchPosition — updates as accuracy improves
     try {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          gotInitialRef.current = true;
-          setLocation({ lat, lng });
-          setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
-          // Stop when accuracy is acceptable (< 50m)
-          if (pos.coords.accuracy && pos.coords.accuracy < 50) {
-            setIsFetchingLocation(false);
-            clearLocationWatch();
-          }
-        },
-        (err) => {
-          console.warn('GPS watch error:', err?.code, err?.message);
-          // Keep whatever we have and stop loading
-          if (gotInitialRef.current) {
-            setIsFetchingLocation(false);
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 0 }
-      );
-    } catch (e) {
-      console.error('watchPosition failed:', e);
-    }
-
-    // Safety: stop spinner after 5s max — enough time for any reasonable GPS
-    safetyTimerRef.current = setTimeout(() => {
-      setIsFetchingLocation(false);
-      clearLocationWatch();
-      // If still no location at all, warn user
-      if (!gotInitialRef.current) {
-        toast({
-          variant: 'destructive',
-          title: 'GPS Tidak Ditemukan',
-          description: 'Tidak dapat mendapatkan lokasi. Pastikan izin GPS aktif dan coba ulangi.'
+      const pos: any = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 10000
         });
+      });
+
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setLocation({ lat, lng, isMock: pos.mocked || false });
+      
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+          headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
+        });
+        const data = await response.json();
+        setAddress(data.display_name || `Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+      } catch (err) {
+        setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
       }
-    }, 5000);
+    } catch (err: any) {
+      console.error('GPS error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'GPS Tidak Ditemukan',
+        description: 'Tidak dapat mendapatkan lokasi. Pastikan izin GPS aktif.'
+      });
+      setAddress('Gagal mendapatkan lokasi GPS');
+    } finally {
+      setIsFetchingLocation(false);
+    }
   };
 
   const [isHydrated, setIsHydrated] = useState(false);
@@ -235,15 +204,8 @@ export default function PjlpCreateTaskPage() {
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const enumerateVideoInputs = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videos = devices.filter((d) => d.kind === 'videoinput');
-      setVideoDevices(videos);
-      return videos;
-    } catch (err) {
-      console.error('enumerateDevices failed', err);
-      return [] as MediaDeviceInfo[];
-    }
+    // Unused now but kept for compatibility
+    return [];
   };
 
   const tryGetUserMedia = async (
@@ -266,46 +228,25 @@ export default function PjlpCreateTaskPage() {
     throw lastErr;
   };
 
-  const startCamera = async (
-    opts: { deviceId?: string; mode?: 'user' | 'environment' } = {},
-  ) => {
+  const startCamera = async (opts: { mode?: 'user' | 'environment' } = {}) => {
     try {
       stopCamera();
       await sleep(150);
       setIsCapturing(true);
 
-      const constraints: MediaStreamConstraints = opts.deviceId
-        ? { video: { deviceId: { exact: opts.deviceId } } }
-        : { video: { facingMode: opts.mode || facingMode } };
-
-      const stream = await tryGetUserMedia(constraints);
+      const targetMode = opts.mode || facingMode;
+      const stream = await tryGetUserMedia({ video: { facingMode: targetMode } });
+      
       setTimeout(() => {
         if (videoRef.current) videoRef.current.srcObject = stream;
       }, 100);
 
-      const videos = await enumerateVideoInputs();
-      if (opts.deviceId) {
-        const idx = videos.findIndex((d) => d.deviceId === opts.deviceId);
-        if (idx >= 0) setCurrentDeviceIndex(idx);
-      }
     } catch (err: any) {
-      const name = err?.name || 'Error';
-      const message = err?.message || String(err);
-      console.error('Camera access failed:', name, message, err);
-
-      let desc = 'Tidak dapat mengakses kamera Anda.';
-      if (name === 'NotAllowedError' || name === 'SecurityError') {
-        desc = 'Izin kamera ditolak. Buka pengaturan situs di browser dan izinkan akses Kamera.';
-      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-        desc = 'Kamera yang diminta tidak tersedia. Coba ganti ke kamera lain.';
-      } else if (name === 'NotReadableError') {
-        desc = 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut, lalu coba lagi.';
-      }
-
+      console.error('Camera access failed:', err);
       toast({
         variant: 'destructive',
-        title: `Kamera Gagal (${name})`,
-        description: desc,
+        title: 'Kamera Gagal',
+        description: 'Tidak dapat mengakses kamera Anda. Pastikan izin kamera telah diberikan.',
       });
       setIsCapturing(false);
     }
@@ -321,19 +262,20 @@ export default function PjlpCreateTaskPage() {
   };
 
   const toggleCameraFacing = async () => {
-    let devices = videoDevices;
-    if (devices.length < 2) devices = await enumerateVideoInputs();
+    stopCamera();
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
 
-    if (devices.length < 2) {
-      const next = facingMode === 'environment' ? 'user' : 'environment';
-      setFacingMode(next);
-      if (isCapturing) await startCamera({ mode: next });
-      return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextMode }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Failed to toggle camera:', err);
     }
-
-    const nextIndex = (currentDeviceIndex + 1) % devices.length;
-    setCurrentDeviceIndex(nextIndex);
-    await startCamera({ deviceId: devices[nextIndex].deviceId });
   };
 
   const capturePhoto = async () => {
@@ -645,6 +587,11 @@ export default function PjlpCreateTaskPage() {
                 <p className="text-xs font-bold text-zinc-800 dark:text-zinc-100 truncate leading-tight mt-0.5">
                   {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Mencari lokasi GPS...'}
                 </p>
+                {location && (
+                  <p className="text-[10px] text-zinc-500 leading-tight mt-1 line-clamp-2">
+                    {address}
+                  </p>
+                )}
               </div>
               <Badge className="bg-green-100 text-green-600 border-none font-bold text-[9px]">Akurat</Badge>
             </CardContent>
@@ -658,10 +605,16 @@ export default function PjlpCreateTaskPage() {
                 zoom={16} 
                 points={[{ lat: location.lat, lng: location.lng, name: 'Lokasi Anda', status: 'Lokasi Temuan Tugas' }]} 
               />
-            ) : (
+            ) : isFetchingLocation ? (
               <div className="w-full h-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center flex-col gap-2">
                 <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
                 <p className="text-zinc-400 text-xs font-bold">Mencari koordinat satelit...</p>
+              </div>
+            ) : (
+              <div className="w-full h-full bg-red-50 dark:bg-red-950/20 flex items-center justify-center flex-col gap-2 p-4 text-center">
+                <MapPin className="w-6 h-6 text-red-400" />
+                <p className="text-red-500 text-xs font-bold">Gagal menemukan lokasi GPS</p>
+                <p className="text-red-400/80 text-[10px]">Ketuk "Ulangi GPS" di atas untuk mencoba lagi.</p>
               </div>
             )}
           </div>

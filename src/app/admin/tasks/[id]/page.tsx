@@ -132,6 +132,7 @@ export default function AdminTaskDetailPage() {
 
   const getTaskLogLabel = (status: string) => {
     switch (status) {
+      case 'TASK_NEW': return 'Sebelum Dikerjakan';
       case 'TASK_ACCEPTED': return 'Tugas Diterima';
       case 'ARRIVED': return 'Sampai Di Lokasi';
       case 'NOT_STARTED': return 'Belum Di Kerjakan';
@@ -155,6 +156,18 @@ export default function AdminTaskDetailPage() {
     .filter((l: any) => !!l?.photoUrl)
     .slice()
     .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    
+  if (task?.photoUrl) {
+    logsWithPhoto.unshift({
+      id: `initial-${task?.id}`,
+      status: 'TASK_NEW',
+      photoUrl: task.photoUrl,
+      lat: task.lat,
+      lng: task.lng,
+      address: task.address,
+      createdAt: task.createdAt
+    });
+  }
 
   return (
     <div className="pb-8 min-h-screen bg-zinc-50 dark:bg-zinc-950">
