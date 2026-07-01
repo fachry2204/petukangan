@@ -11,6 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
 import { socketUrl } from '@/lib/socket-config';
 
+let globalAudioCtx: any = null;
+const getAudioCtx = () => {
+  if (typeof window === 'undefined') return null;
+  if (!globalAudioCtx) {
+    globalAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return globalAudioCtx;
+};
+
 // Map attendance status to a simplified status string for the map marker
 function resolveMapStatus(attendanceStatus: string): string {
   const s = (attendanceStatus || '').toLowerCase();
@@ -60,7 +69,13 @@ export default function PjlpLayout({
     const playAndVibrate = () => {
       if ('vibrate' in navigator) navigator.vibrate([500, 250, 500, 250]);
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
         const osc = ctx.createOscillator();
         const gainNode = ctx.createGain();
         osc.type = 'sine';
