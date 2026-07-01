@@ -247,6 +247,10 @@ export default function AdminTasksPage() {
 
   const getExportData = () => {
     let data = tasks;
+    
+    // Hanya export tugas yang sudah selesai
+    data = data.filter(t => t.status === 'DONE');
+    
     if (exportDateFrom) {
       const from = new Date(exportDateFrom + 'T00:00:00');
       data = data.filter(t => t.createdAt && new Date(t.createdAt) >= from);
@@ -268,7 +272,7 @@ export default function AdminTasksPage() {
   const handleExportExcel = () => {
     const data = getExportData();
     if (data.length === 0) {
-      toast({ title: 'Kosong', description: 'Tidak ada data untuk diexport', variant: 'destructive' });
+      alert('Tidak ada data tugas selesai untuk rentang waktu dan petugas yang dipilih.');
       return;
     }
     const excelData = data.map(t => ({
@@ -315,7 +319,7 @@ export default function AdminTasksPage() {
   const handleExportPDF = async () => {
     const data = getExportData();
     if (data.length === 0) {
-      toast({ title: 'Kosong', description: 'Tidak ada data untuk diexport', variant: 'destructive' });
+      alert('Tidak ada data tugas selesai untuk rentang waktu dan petugas yang dipilih.');
       return;
     }
 
@@ -403,7 +407,7 @@ export default function AdminTasksPage() {
           didDrawCell: function(cellData) {
             if (cellData.column.index === 7 && cellData.cell.section === 'body') {
               const rowData = officerTasks[cellData.row.index];
-              if (rowData.photoUrl && imageCache[rowData.photoUrl]) {
+              if (rowData?.photoUrl && imageCache[rowData.photoUrl]) {
                 try {
                   const imgData = imageCache[rowData.photoUrl];
                   const dim = 16;
@@ -927,6 +931,13 @@ export default function AdminTasksPage() {
                 <label className="text-xs font-bold text-zinc-500">Tanggal Akhir</label>
                 <Input type="date" value={exportDateTo} onChange={(e) => setExportDateTo(e.target.value)} disabled={pdfGenerating || !!pdfReadyUrl} className="mt-1 border-zinc-200 dark:border-zinc-800 focus-visible:ring-green-500 disabled:opacity-50" />
               </div>
+            </div>
+
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-xl p-3 flex gap-2.5 items-start mt-2">
+              <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                <strong>Informasi:</strong> Hanya tugas dengan status <strong>Tugas Selesai</strong> yang akan diexport ke PDF/Excel. Tugas yang sedang dikerjakan atau dibatalkan akan diabaikan.
+              </p>
             </div>
 
             {pdfGenerating && (
