@@ -325,6 +325,7 @@ export default function AdminTasksPage() {
       'Deskripsi': t.description || '-',
       'Jenis Tugas': TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
       'Alamat Lengkap': getAddressText(t),
+      'Foto Belum': t.photo_before ? 'Ada' : 'Tidak Ada',
       'Foto Saat': t.photo_during ? 'Ada' : 'Tidak Ada',
       'Foto Selesai': t.photo_after || t.photoUrl ? 'Ada' : 'Tidak Ada',
     }));
@@ -333,7 +334,7 @@ export default function AdminTasksPage() {
     
     const colWidths = [
       { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
-      { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }
+      { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
     ];
     ws['!cols'] = colWidths;
     
@@ -387,6 +388,7 @@ export default function AdminTasksPage() {
       
       for (let i = 0; i < data.length; i++) {
         const t = data[i];
+        if (t.photo_before) await fetchImage(t.photo_before);
         if (t.photo_during) await fetchImage(t.photo_during);
         if (t.photo_after || t.photoUrl) await fetchImage(t.photo_after || t.photoUrl || '');
         
@@ -449,19 +451,26 @@ export default function AdminTasksPage() {
       doc.setFontSize(10);
       doc.text(subtitle, textStartX, 24);
 
-      // Group by Petugas
-      const grouped: Record<string, typeof data> = {};
+      // Group by Petugas ID and Name
+      const grouped: Record<string, { id: string, name: string, tasks: typeof data }> = {};
       data.forEach(t => {
-        const officer = t.assignedTo?.fullName || 'Tanpa Petugas';
-        if (!grouped[officer]) grouped[officer] = [];
-        grouped[officer].push(t);
+        const id = t.assignedTo?.id ? String(t.assignedTo.id) : '-';
+        const name = t.assignedTo?.fullName || 'Tanpa Petugas';
+        const key = `${id}_${name}`;
+        if (!grouped[key]) grouped[key] = { id, name, tasks: [] };
+        grouped[key].tasks.push(t);
       });
 
       let currentY = 40; // Increased distance between header and first Petugas
-      const officerKeys = Object.keys(grouped);
+      const groupKeys = Object.keys(grouped).sort((a, b) => {
+        const idA = parseInt(grouped[a].id);
+        const idB = parseInt(grouped[b].id);
+        if (!isNaN(idA) && !isNaN(idB)) return idA - idB;
+        return grouped[a].id.localeCompare(grouped[b].id);
+      });
 
-      for (let i = 0; i < officerKeys.length; i++) {
-        const officer = officerKeys[i];
+      for (let i = 0; i < groupKeys.length; i++) {
+        const group = grouped[groupKeys[i]];
         if (currentY > 170) {
           doc.addPage();
           currentY = 15;
@@ -469,25 +478,27 @@ export default function AdminTasksPage() {
         
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        const totalTugas = grouped[officer].length;
-        doc.text(`Petugas: ${officer} (Total Tugas: ${totalTugas})`, 14, currentY);
+        const totalTugas = group.tasks.length;
+        const officerDisplay = group.id !== '-' ? `${group.id} - ${group.name}` : group.name;
+        doc.text(`Petugas: ${officerDisplay} (Total Tugas: ${totalTugas})`, 14, currentY);
         currentY += 5;
 
-        const tableData = grouped[officer].map(t => [
+        const tableData = group.tasks.map(t => [
           t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
           t.title,
           (t.description || '').substring(0, 60) + ((t.description || '').length > 60 ? '...' : ''),
           TASK_TYPE_LABEL[t.taskType || 'ASSIGNED'] || t.taskType,
           getAddressText(t),
+          t.photo_before && imageCache[t.photo_before] ? '' : (t.photo_before ? 'Gagal' : '-'),
           t.photo_during && imageCache[t.photo_during] ? '' : (t.photo_during ? 'Gagal' : '-'),
           (t.photo_after || t.photoUrl) && imageCache[t.photo_after || t.photoUrl || ''] ? '' : ((t.photo_after || t.photoUrl) ? 'Gagal' : '-')
         ]);
 
-        const officerTasks = grouped[officer];
+        const officerTasks = group.tasks;
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Saat Dikerjakan', 'Selesai']],
+          head: [['Waktu Tugas', 'Judul Tugas', 'Deskripsi', 'Jenis Tugas', 'Alamat Lengkap', 'Belum Dikerjakan', 'Saat Dikerjakan', 'Selesai']],
           body: tableData as any,
           theme: 'grid',
           headStyles: { fillColor: [249, 115, 22] }, // orange-500
@@ -498,9 +509,10 @@ export default function AdminTasksPage() {
             1: { cellWidth: 35 },
             2: { cellWidth: 45 },
             3: { cellWidth: 20 },
-            4: { cellWidth: 40 },
-            5: { cellWidth: 25, halign: 'center' },
-            6: { cellWidth: 25, halign: 'center' }
+            4: { cellWidth: 70 }, // Lebarkan Alamat
+            5: { cellWidth: 20, halign: 'center' },
+            6: { cellWidth: 20, halign: 'center' },
+            7: { cellWidth: 20, halign: 'center' }
           },
           didDrawPage: function (data) {
             // Footer on each page
@@ -517,8 +529,9 @@ export default function AdminTasksPage() {
               const colIndex = cellData.column.index;
               
               let photoToDraw = null;
-              if (colIndex === 5) photoToDraw = rowData?.photo_during;
-              else if (colIndex === 6) photoToDraw = rowData?.photo_after || rowData?.photoUrl;
+              if (colIndex === 5) photoToDraw = rowData?.photo_before;
+              else if (colIndex === 6) photoToDraw = rowData?.photo_during;
+              else if (colIndex === 7) photoToDraw = rowData?.photo_after || rowData?.photoUrl;
               
               if (photoToDraw && imageCache[photoToDraw]) {
                 try {
@@ -543,10 +556,48 @@ export default function AdminTasksPage() {
         
         currentY = (doc as any).lastAutoTable.finalY + 15;
         
-        setPdfProgress(40 + Math.round(((i + 1) / officerKeys.length) * 60));
+        setPdfProgress(40 + Math.round(((i + 1) / groupKeys.length) * 50)); // reserve 10% for summary
         // Yield to event loop to allow UI to render progress
         await new Promise(r => setTimeout(r, 10));
       }
+
+      // ----------------- SUMMARY PAGE -----------------
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text('Rekapitulasi Tugas per Petugas', 14, 15);
+      
+      const summaryData = groupKeys.map((key, idx) => {
+        const group = grouped[key];
+        return [
+          (idx + 1).toString(),
+          group.id,
+          group.name,
+          group.tasks.length.toString()
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 25,
+        head: [['No', 'ID Petugas', 'Nama Petugas', 'Total Tugas']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [249, 115, 22] },
+        styles: { fontSize: 10, valign: 'middle' },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 100 },
+          3: { cellWidth: 30, halign: 'center' }
+        },
+        didDrawPage: function (data) {
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'}`;
+          const pageSize = doc.internal.pageSize;
+          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+          doc.text(footerText, data.settings.margin.left, pageHeight - 10);
+        }
+      });
 
       const pdfBlob = doc.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
