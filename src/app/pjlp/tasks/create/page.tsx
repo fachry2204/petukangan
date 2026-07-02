@@ -140,9 +140,26 @@ export default function PjlpCreateTaskPage() {
           headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
         });
         const data = await response.json();
-        setAddress(data.display_name || `Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        if (data.display_name) {
+          setAddress(data.display_name);
+        } else {
+          throw new Error('No display_name');
+        }
       } catch (err) {
-        setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        // Fallback to backend API
+        try {
+          const res = await fetch(`${apiUrl}/geocode/reverse?lat=${lat}&lng=${lng}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined
+          });
+          const data = await res.json();
+          if (data.address) {
+            setAddress(data.address);
+          } else {
+            throw new Error('No address');
+          }
+        } catch (fallbackErr) {
+          setAddress(`Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        }
       }
     } catch (err: any) {
       console.error('GPS error:', err);
@@ -262,17 +279,21 @@ export default function PjlpCreateTaskPage() {
   };
 
   const toggleCameraFacing = async () => {
-    stopCamera();
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    
     const nextMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(nextMode);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: nextMode }
-      });
+      const stream = await tryGetUserMedia({ video: { facingMode: nextMode } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+      setIsCapturing(true);
     } catch (err) {
       console.error('Failed to toggle camera:', err);
     }

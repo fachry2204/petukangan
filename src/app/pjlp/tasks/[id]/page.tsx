@@ -83,12 +83,21 @@ export default function PjlpTaskDetailPage() {
         headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
       });
       const data = await response.json();
-      const addr = typeof data?.display_name === 'string' ? data.display_name.trim() : '';
-      return addr || null;
+      if (data.display_name) return data.display_name.trim();
+      throw new Error('No display_name');
     } catch {
-      return null;
+      try {
+        const res = await fetch(`${apiUrl}/geocode/reverse?lat=${lat}&lng=${lng}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+        const data = await res.json();
+        if (data.address) return data.address.trim();
+      } catch (fallbackErr) {
+        // Ignore and fallback to coordinates
+      }
+      return `Lokasi Petugas (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
     }
-  }, []);
+  }, [token]);
 
   const refreshGps = useCallback(async (opts: { mode?: 'cached' | 'accurate'; silent?: boolean; showSpinner?: boolean } = {}) => {
     const mode = opts.mode || 'accurate';
