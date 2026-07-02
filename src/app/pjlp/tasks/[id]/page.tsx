@@ -121,21 +121,27 @@ export default function PjlpTaskDetailPage() {
         });
 
       let pos: GeolocationPosition | null = null;
-      try {
+
+      if (mode === 'accurate') {
+        try {
+          pos = await getPos({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          });
+        } catch (err: any) {
+          console.warn('High accuracy GPS failed, falling back to low accuracy', err);
+          pos = await getPos({
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: Infinity,
+          });
+        }
+      } else {
         pos = await getPos({
           enableHighAccuracy: false,
-          timeout: 2000,
+          timeout: 5000,
           maximumAge: Infinity,
-        });
-      } catch {
-        pos = null;
-      }
-
-      if (!pos || mode === 'accurate') {
-        pos = await getPos({
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
         });
       }
 

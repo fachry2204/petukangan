@@ -37,7 +37,7 @@ export default function HistoryMap({ tracks }: { tracks: Track[] }) {
         zoom: 13,
         zoomControl: true,
       });
-      L.tileLayer('http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         attribution: '&copy; Google Maps',
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         maxZoom: 20,

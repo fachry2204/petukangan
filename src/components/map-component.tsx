@@ -29,6 +29,10 @@ export default function MapComponent({
   const polylinesRef = useRef<any[]>([]);
   const LRef = useRef<any>(null);
 
+  const prevCenterRef = useRef<string>('');
+  const prevZoomRef = useRef<number>(0);
+  const prevFlyTriggerRef = useRef<number>(0);
+
   // Memoize points to avoid unnecessary re-renders
   const memoizedPoints = useMemo(() => points, [JSON.stringify(points)]);
   const memoizedPaths = useMemo(() => paths, [JSON.stringify(paths)]);
@@ -264,7 +268,7 @@ export default function MapComponent({
         });
       }
 
-      L.tileLayer('http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         attribution: '&copy; Google Maps',
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         maxZoom: 20,
@@ -287,7 +291,18 @@ export default function MapComponent({
   }, [renderMapContent, flyTrigger]);
 
   useEffect(() => {
-    if (mapInstanceRef.current && center && flyToCenter) {
+    if (!mapInstanceRef.current || !center || !flyToCenter) return;
+    
+    const centerStr = `${center[0]},${center[1]}`;
+    const triggerChanged = flyTrigger !== prevFlyTriggerRef.current;
+    const centerChanged = centerStr !== prevCenterRef.current;
+    const zoomChanged = zoom !== prevZoomRef.current;
+    
+    if (triggerChanged || centerChanged || zoomChanged) {
+      prevCenterRef.current = centerStr;
+      prevZoomRef.current = zoom;
+      if (flyTrigger !== undefined) prevFlyTriggerRef.current = flyTrigger;
+      
       mapInstanceRef.current.flyTo(center, zoom, { animate: true, duration: 1.5 });
     }
   }, [center, zoom, flyToCenter, flyTrigger]);
