@@ -79,24 +79,16 @@ export default function PjlpTaskDetailPage() {
 
   const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string | null> => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch(
-        `${apiUrl}/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          signal: controller.signal,
-        },
-      );
-      clearTimeout(timeoutId);
-      if (!res.ok) return null;
-      const data: any = await res.json();
-      const addr = typeof data?.address === 'string' ? data.address.trim() : '';
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
+      });
+      const data = await response.json();
+      const addr = typeof data?.display_name === 'string' ? data.display_name.trim() : '';
       return addr || null;
     } catch {
       return null;
     }
-  }, [token]);
+  }, []);
 
   const refreshGps = useCallback(async (opts: { mode?: 'cached' | 'accurate'; silent?: boolean; showSpinner?: boolean } = {}) => {
     const mode = opts.mode || 'accurate';
@@ -126,21 +118,21 @@ export default function PjlpTaskDetailPage() {
         try {
           pos = await getPos({
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
+            timeout: 30000,
+            maximumAge: 10000,
           });
         } catch (err: any) {
           console.warn('High accuracy GPS failed, falling back to low accuracy', err);
           pos = await getPos({
             enableHighAccuracy: false,
-            timeout: 5000,
+            timeout: 15000,
             maximumAge: Infinity,
           });
         }
       } else {
         pos = await getPos({
           enableHighAccuracy: false,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: Infinity,
         });
       }
@@ -319,15 +311,7 @@ export default function PjlpTaskDetailPage() {
     if (videoRef.current && canvasRef.current) {
       const gpsAtCapture = currentGps;
       const addressForPhoto = gpsAtCapture ? normalizeAddress(gpsAtCapture.address) : null;
-      if (!gpsAtCapture || !addressForPhoto) {
-        void refreshGps({ mode: 'accurate', silent: false });
-        toast({
-          variant: 'destructive',
-          title: 'Alamat GPS Belum Siap',
-          description: 'Tunggu alamat muncul (atau tekan Refresh GPS) lalu ambil foto.',
-        });
-        return;
-      }
+
 
       const context = canvasRef.current.getContext('2d');
       if (context) {
@@ -411,7 +395,7 @@ export default function PjlpTaskDetailPage() {
 
         if (uploadRes.data.success) {
           setPhoto(uploadRes.data.url);
-          setPhotoMeta({ ...gpsAtCapture, address: addressForPhoto });
+          setPhotoMeta(gpsAtCapture ? { ...gpsAtCapture, address: addressForPhoto } : null);
         }
 
         stopCameraStream();
