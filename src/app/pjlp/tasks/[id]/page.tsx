@@ -284,20 +284,21 @@ export default function PjlpTaskDetailPage() {
   };
 
   const switchCamera = async () => {
-    let devices = videoDevices;
-    if (devices.length < 2) devices = await enumerateVideoInputs();
+    stopCameraStream();
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
 
-    if (devices.length < 2) {
-      // Fallback: toggle facingMode if only one device is reported (mobile browsers).
-      const next = facingMode === 'environment' ? 'user' : 'environment';
-      setFacingMode(next);
-      await openCamera({ mode: next });
-      return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextMode }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCapturing(true);
+    } catch (err) {
+      console.error('Failed to switch camera:', err);
     }
-
-    const nextIndex = (currentDeviceIndex + 1) % devices.length;
-    setCurrentDeviceIndex(nextIndex);
-    await openCamera({ deviceId: devices[nextIndex].deviceId });
   };
 
   // Cleanup on unmount
@@ -323,20 +324,18 @@ export default function PjlpTaskDetailPage() {
         canvasRef.current.height = Math.round(videoHeight * scale);
         context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
 
-        const pad = Math.max(14, Math.round(canvasRef.current.width * 0.02));
-        const fontSize = Math.max(14, Math.round(canvasRef.current.width * 0.024));
-        const lineHeight = Math.round(fontSize * 1.25);
-        const maxTextWidth = canvasRef.current.width - pad * 2;
+        const pad = 12;
+        const fontSize = Math.max(12, Math.floor(canvasRef.current.width * 0.025));
+        const maxTextWidth = canvasRef.current.width - (pad * 2);
+        const lineHeight = fontSize * 1.4;
 
-        const formatTimestamp = (d: Date) =>
-          d.toLocaleString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          });
+        const formatTimestamp = (date: Date) => {
+          return new Intl.DateTimeFormat('id-ID', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            timeZoneName: 'short'
+          }).format(date);
+        };
 
         const wrapText = (text: string, maxWidth: number) => {
           const words = text.split(/\s+/).filter(Boolean);
@@ -357,7 +356,7 @@ export default function PjlpTaskDetailPage() {
 
         const tsLine = `Tanggal - Waktu: ${formatTimestamp(new Date())}`;
         const addressLine = addressForPhoto ? `Alamat: ${addressForPhoto}` : 'Alamat: (tidak tersedia)';
-        const headerLine = (systemName || 'SIPETUT').trim();
+        const headerLine = 'Sistem Monitoring PJLP Kelurahan Petukangan Utara';
 
         context.save();
         context.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
