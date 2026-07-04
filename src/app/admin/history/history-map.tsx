@@ -113,7 +113,6 @@ export default function HistoryMap({ tracks }: { tracks: Track[] }) {
 
         const html = `
           <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;inset:0;border-radius:50%;background:${t.color};opacity:0.35;animation:hist-ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></div>
             <div style="position:relative;width:36px;height:36px;border-radius:50%;border:2.5px solid ${t.color};overflow:hidden;display:flex;align-items:center;justify-content:center;background:#374151;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
               ${innerHtml}
             </div>
