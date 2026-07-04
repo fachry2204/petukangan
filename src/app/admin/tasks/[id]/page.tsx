@@ -60,6 +60,7 @@ export default function AdminTaskDetailPage() {
   const { token } = useAuthStore();
   const { toast } = useToast();
   const [task, setTask] = useState<any>(null);
+  const [fullAddress, setFullAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
@@ -74,6 +75,19 @@ export default function AdminTaskDetailPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTask(res.data);
+      
+      const t = res.data;
+      if (t.lat && t.lng && (!t.address || t.address.startsWith('Lokasi Petugas'))) {
+        try {
+          const mapRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${t.lat}&lon=${t.lng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
+          });
+          const data = await mapRes.json();
+          if (data.display_name) setFullAddress(data.display_name.trim());
+        } catch (e) {
+          // ignore
+        }
+      }
     } catch (err) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memuat detail tugas' });
     } finally {
@@ -181,7 +195,7 @@ export default function AdminTaskDetailPage() {
             <h2 className="text-2xl font-black text-zinc-800 dark:text-white leading-tight">{task.title}</h2>
             <div className="flex items-center gap-1.5 text-zinc-450 dark:text-zinc-550 text-xs">
               <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              <span className="truncate font-semibold">{task.address || 'Petukangan Utara'}</span>
+              <span className="truncate font-semibold">{fullAddress || task.address || 'Petukangan Utara'}</span>
             </div>
           </div>
           <Badge className={`${STATUS_COLOR[task.status] || 'bg-zinc-100 text-zinc-700'} border-none text-[10px] font-black uppercase flex-shrink-0 px-2.5 py-1`}>
@@ -202,75 +216,6 @@ export default function AdminTaskDetailPage() {
           <Badge className={`${TASK_TYPE_COLOR[task.taskType || 'ASSIGNED']} border-none font-bold text-xs px-3 py-1`}>
             {TASK_TYPE_LABEL[task.taskType || 'ASSIGNED']}
           </Badge>
-        </div>
-
-        {/* Photo */}
-        {task.photoUrl && (
-          <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
-            <img
-              src={task.photoUrl}
-              alt="Foto tugas"
-              className="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => window.open(task.photoUrl, '_blank')}
-            />
-          </Card>
-        )}
-
-        {/* Bukti Foto Berdasarkan Status (untuk admin) */}
-        <div>
-          <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-2">Bukti Foto Berdasarkan Status</p>
-          {logsWithPhoto.length === 0 ? (
-            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 font-semibold">
-              Belum ada foto bukti yang diunggah untuk tugas ini.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {logsWithPhoto.map((log: any) => (
-                <div
-                  key={log.id || `${log.status}-${log.createdAt}`}
-                  className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden"
-                >
-                  <div className="p-3 flex items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800">
-                    <Badge className={`${STATUS_COLOR[log.status] || 'bg-zinc-100 text-zinc-700'} border-none text-[10px] font-black uppercase px-2 py-0.5`}>
-                      {getTaskLogLabel(log.status)}
-                    </Badge>
-                    <span className="text-[10px] font-bold text-zinc-400 whitespace-nowrap">
-                      {log.createdAt ? new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setViewingPhoto(log.photoUrl)}
-                    className="w-full bg-zinc-950/5 dark:bg-black/30"
-                  >
-                    <img
-                      src={log.photoUrl}
-                      alt={getTaskLogLabel(log.status)}
-                      className="w-full h-44 object-cover"
-                    />
-                  </button>
-                  <div className="p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase">
-                        GPS
-                      </Badge>
-                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 font-mono truncate">
-                        {log.lat != null && log.lng != null ? `${Number(log.lat).toFixed(6)}, ${Number(log.lng).toFixed(6)}` : '-'}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-none font-black text-[9px] px-2 py-0.5 uppercase shrink-0">
-                        Alamat
-                      </Badge>
-                      <p className="text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
-                        {normalizeAddress(log.address) || 'Alamat belum tersedia'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Info Grid */}
@@ -312,6 +257,72 @@ export default function AdminTaskDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Bukti Foto Berdasarkan Status (untuk admin) */}
+        <div>
+          <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider mb-2">Bukti Foto Berdasarkan Status</p>
+          {logsWithPhoto.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 font-semibold">
+              Belum ada foto bukti yang diunggah untuk tugas ini.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-100 dark:border-zinc-800 uppercase text-[10px] font-black text-zinc-400 tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Waktu</th>
+                    <th className="px-4 py-3">Foto</th>
+                    <th className="px-4 py-3">GPS & Alamat</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
+                  {logsWithPhoto.map((log: any) => (
+                    <tr key={log.id || `${log.status}-${log.createdAt}`} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-4 py-4 align-top">
+                        <Badge className={`${STATUS_COLOR[log.status] || 'bg-zinc-100 text-zinc-700'} border-none text-[10px] font-black uppercase px-2 py-0.5`}>
+                          {getTaskLogLabel(log.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4 align-top font-semibold text-zinc-600 dark:text-zinc-400">
+                        {log.createdAt ? new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <button
+                          type="button"
+                          onClick={() => setViewingPhoto(log.photoUrl)}
+                          className="relative group rounded-xl overflow-hidden block w-24 h-24 border border-zinc-200 dark:border-zinc-800 shadow-sm"
+                        >
+                          <img
+                            src={log.photoUrl}
+                            alt={getTaskLogLabel(log.status)}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </button>
+                      </td>
+                      <td className="px-4 py-4 align-top whitespace-normal min-w-[200px]">
+                        <div className="space-y-2">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">GPS</span>
+                            <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                              {log.lat != null && log.lng != null ? `${Number(log.lat).toFixed(6)}, ${Number(log.lng).toFixed(6)}` : '-'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Alamat</span>
+                            <span className="text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+                              {normalizeAddress(log.address) || 'Alamat belum tersedia'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Lokasi */}
         <Card className="border-none shadow-sm rounded-2xl bg-blue-50 dark:bg-blue-950/20">
           <CardContent className="p-5">
@@ -321,7 +332,7 @@ export default function AdminTaskDetailPage() {
                 <p className="font-mono font-semibold text-zinc-900 dark:text-white">
                   {task.lat && task.lng ? `${Number(task.lat).toFixed(6)}, ${Number(task.lng).toFixed(6)}` : '—'}
                 </p>
-                {task.address && <p className="text-sm text-zinc-500 mt-0.5">{task.address}</p>}
+                {(fullAddress || task.address) && <p className="text-sm text-zinc-500 mt-0.5">{fullAddress || task.address}</p>}
               </div>
               {task.lat && task.lng && (
                 <a
