@@ -119,7 +119,7 @@ export default function LoginPage() {
       style={(settings.bgType === 'image' || hasVideoError || (settings.bgType === 'video' && (!settings.bgVideo || !getYoutubeId(settings.bgVideo)))) ? {
         backgroundImage: `url(${settings.bgImage || '/bg.jpg'})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center bottom',
       } : {}}
     >
       {settings.bgType === 'video' && settings.bgVideo && getYoutubeId(settings.bgVideo) && !hasVideoError && (
@@ -170,74 +170,73 @@ export default function LoginPage() {
       )}
 
       {/* Dark Overlay for better contrast */}
-      <div className="absolute inset-0 bg-black/40 md:bg-black/50 z-0" />
+      <div className="absolute inset-0 bg-black/10 md:bg-black/50 z-0" />
 
-      <Card className="w-full max-w-md border-none shadow-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-3xl overflow-hidden relative z-10 flex flex-col justify-center py-6 md:py-0">
-
+      <Card className="w-full max-w-sm border-none shadow-2xl bg-white dark:bg-zinc-900 rounded-[32px] overflow-hidden relative z-10 flex flex-col justify-center mb-10 md:mb-0">
         {/* Ornament Top */}
-        <div className="absolute top-0 left-0 w-full z-0">
-          <Image
+        <div className="absolute top-0 left-0 w-full z-0 h-10 md:h-12 overflow-hidden">
+          <img
             src="/gambar/ornamen.png"
             alt="Ornamen"
-            width={500}
-            height={50}
-            className="w-full h-auto object-cover object-top"
-            priority
+            className="w-full h-full object-cover object-top opacity-90"
           />
         </div>
-        <CardHeader className="text-center pt-14 relative z-10">
-          <div className="mx-auto mb-4 flex justify-center">
+        <CardHeader className="text-center pt-14 pb-4 relative z-10">
+          <div className="mx-auto mb-3 flex justify-center">
             <img
               src={settings.logoUrl || "/logodki.png"}
               alt="Logo System"
-              className="object-contain w-20 h-20"
+              className="object-contain w-14 h-14 drop-shadow-sm"
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-zinc-900 dark:text-white">{settings.systemName}</CardTitle>
-          <CardDescription className="text-zinc-500">{settings.systemDescription}</CardDescription>
+          <CardTitle className="text-xl font-bold text-zinc-900 dark:text-white">Si Petut</CardTitle>
+          <CardDescription className="text-[10px] text-zinc-500 font-semibold uppercase tracking-[0.15em] mt-1">
+            PJLP SMART MONITORING
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pb-8">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+        <CardContent className="pb-8 px-6">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-xs font-bold text-zinc-800 dark:text-zinc-200 ml-1">Username</Label>
               <Input
                 id="username"
-                placeholder="Masukkan username"
-                className="h-14 text-lg rounded-xl border-zinc-200 dark:border-zinc-800 focus:ring-orange-500"
+                placeholder="PPSU001"
+                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs font-bold text-zinc-800 dark:text-zinc-200 ml-1">Password</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className="h-14 text-lg rounded-xl border-zinc-200 dark:border-zinc-800 focus:ring-orange-500"
+                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-orange-500/20"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : null}
-              Masuk ke Sistem
-            </Button>
+            <div className="pt-2">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-[#ff6b00] hover:bg-[#e66000] text-white rounded-2xl font-bold transition-all duration-300 shadow-lg shadow-orange-500/25 text-sm"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Masuk ke Sistem
+              </Button>
+            </div>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 text-center">
+          <div className="mt-6 text-center">
             {settings.footerShowOnLogin !== false && (
-              <p className="text-xs text-zinc-400 flex items-center justify-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {settings.footerText || 'Kelurahan Petukangan Utara © 2026'}
+              <p className="text-[10px] text-zinc-400">
+                {settings.footerText || '© Sistem Informasi Pjlp©2026'}
               </p>
             )}
           </div>
