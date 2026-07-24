@@ -54,29 +54,32 @@ export async function POST(request: Request) {
     const year = now.getFullYear();
     const dateFolder = `${day}-${month}-${year}`;
 
-    let baseDir: string;
+    const subSegments: string[] = ['public', 'gambar'];
     switch (type) {
       case 'petugas':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'petugas', userFolder);
+        subSegments.push('petugas', userFolder);
         break;
       case 'absensi':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'absensi', userFolder, dateFolder);
+        subSegments.push('absensi', userFolder, dateFolder);
         break;
       case 'tugas':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'tugas', userFolder, dateFolder);
+        subSegments.push('tugas', userFolder, dateFolder);
         break;
       case 'laporan':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'laporan', userFolder, dateFolder);
+        subSegments.push('laporan', userFolder, dateFolder);
         break;
       case 'izin':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'izin', userFolder, dateFolder);
+        subSegments.push('izin', userFolder, dateFolder);
         break;
       case 'system':
-        baseDir = path.join(process.cwd(), 'public', 'gambar', 'system');
+        subSegments.push('system');
         break;
       default:
         return NextResponse.json({ success: false, error: 'Invalid upload type' }, { status: 400 });
     }
+
+    // Build absolute base directory dynamically to prevent bundler AST static file globbing
+    const baseDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ...subSegments);
 
     // Create all necessary folders recursively
     if (!fs.existsSync(baseDir)) {
@@ -89,11 +92,8 @@ export async function POST(request: Request) {
 
     fs.writeFileSync(filePath, buffer);
 
-    // Build the public URL
-    const urlPath = baseDir
-      .replace(path.join(process.cwd(), 'public'), '')
-      .split(path.sep)
-      .join('/');
+    // Build the public URL directly from subSegments (skipping 'public')
+    const urlPath = '/' + subSegments.slice(1).join('/');
     const fileUrl = `${urlPath}/${uniqueName}`;
 
     return NextResponse.json({ success: true, url: fileUrl });
