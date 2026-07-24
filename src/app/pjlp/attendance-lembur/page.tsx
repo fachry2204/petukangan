@@ -468,7 +468,7 @@ export default function PjlpAttendanceLemburPage() {
     if (!photo || !location) return;
     setIsLoading(true);
 
-    const isCheckOut = attendanceStatus === 'Selesai Istirahat';
+    const isCheckOut = attendanceStatus !== 'Belum Absen';
     const endpoint = isCheckOut ? 'check-out' : 'check-in';
 
     try {
@@ -512,7 +512,7 @@ export default function PjlpAttendanceLemburPage() {
     );
   }
 
-  const isCheckOut = attendanceStatus === 'Selesai Istirahat';
+  const isCheckOut = attendanceStatus !== 'Belum Absen';
 
   const getHeaderInfo = () => {
     switch (attendanceStatus) {

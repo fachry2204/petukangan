@@ -180,11 +180,16 @@ export default function PjlpHomePage() {
         .filter((s: any) => s.assignedUsers.some((au: any) => au.id === user.id));
       setAllSchedules(mySchedules);
 
-      // Match today's schedule
+      // Match today's schedule (or active night shift session schedule)
       const localTodayStr = getJakartaTodayString();
+      const sessionDateStr = resAtt.data.sessionDate;
+      const currentAttStatus = resAtt.data.status;
+      const isActiveSession = currentAttStatus && !['Belum Absen', 'Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(currentAttStatus);
+      const targetDateStr = (isActiveSession && sessionDateStr) ? sessionDateStr : localTodayStr;
+
       const todaySched = mySchedules.find((s: any) => {
         const sDateStr = s.date ? getLocalDateString(s.date) : '';
-        return sDateStr === localTodayStr;
+        return sDateStr === targetDateStr;
       });
       setTodaySchedule(todaySched || null);
 

@@ -377,18 +377,54 @@ export default function AdminAttendancePage() {
     !!item.isLembur
   );
 
-  // Helper to group records by user and date
+  // Helper to group records by user and attendance session (supporting night shift)
   const getGroupedLogs = (logs: AttendanceItem[]) => {
-    const groups: { [key: string]: AttendanceItem[] } = {};
-    
+    const userMap: { [userId: number]: AttendanceItem[] } = {};
+
     logs.forEach(item => {
       if (!item.user) return;
-      const dateStr = item.timestamp ? getLocalDateString(new Date(item.timestamp)) : '';
-      const key = `${item.user.id}_${dateStr}`;
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(item);
+      if (!userMap[item.user.id]) userMap[item.user.id] = [];
+      userMap[item.user.id].push(item);
+    });
+
+    const groups: { [key: string]: AttendanceItem[] } = {};
+
+    Object.keys(userMap).forEach(uIdStr => {
+      const uLogs = userMap[Number(uIdStr)];
+      uLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      let currentSessionKey: string | null = null;
+      let currentSessionInTime: number | null = null;
+      let isCurrentSessionClosed = true;
+
+      uLogs.forEach(item => {
+        const itemDateStr = item.timestamp ? getLocalDateString(new Date(item.timestamp)) : '';
+        const itemTime = new Date(item.timestamp).getTime();
+
+        if (item.type === 'IN' || item.type === 'PERMIT') {
+          currentSessionKey = `${item.user.id}_${itemDateStr}`;
+          currentSessionInTime = itemTime;
+          isCurrentSessionClosed = false;
+          if (!groups[currentSessionKey]) groups[currentSessionKey] = [];
+          groups[currentSessionKey].push(item);
+        } else if (!isCurrentSessionClosed && currentSessionKey) {
+          groups[currentSessionKey].push(item);
+          if (item.type === 'OUT' || item.type === 'EARLY_OUT') {
+            isCurrentSessionClosed = true;
+          }
+        } else {
+          if (currentSessionKey && currentSessionInTime && (itemTime - currentSessionInTime <= 14 * 3600 * 1000)) {
+            groups[currentSessionKey].push(item);
+            if (item.type === 'OUT' || item.type === 'EARLY_OUT') {
+              isCurrentSessionClosed = true;
+            }
+          } else {
+            const key = `${item.user.id}_${itemDateStr}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(item);
+          }
+        }
+      });
     });
 
     // Map each group to a single representative item

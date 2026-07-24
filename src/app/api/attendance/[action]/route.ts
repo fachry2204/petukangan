@@ -66,7 +66,37 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
         return NextResponse.json({ message: 'Permintaan absen berhasil dikirim', type, status: 'PENDING' });
       }
 
-      const table = hasApprovedRequest ? 'lembur' : 'attendance';
+      let table = 'attendance';
+      if (type !== 'IN' && type !== 'PERMIT') {
+        const [openLembur]: any = await conn.execute(
+          `SELECT type FROM lembur WHERE userId = ? ORDER BY id DESC LIMIT 10`,
+          [userId]
+        );
+        const [openAttendance]: any = await conn.execute(
+          `SELECT type FROM attendance WHERE userId = ? ORDER BY id DESC LIMIT 10`,
+          [userId]
+        );
+
+        const isOpenSession = (rows: any[]) => {
+          if (!rows || rows.length === 0) return false;
+          const lastInIdx = rows.findIndex((r: any) => r.type === 'IN');
+          if (lastInIdx === -1) return false;
+          const eventsAfterIn = rows.slice(0, lastInIdx);
+          const hasOut = eventsAfterIn.some((r: any) => r.type === 'OUT' || r.type === 'EARLY_OUT');
+          return !hasOut;
+        };
+
+        if (isOpenSession(openLembur)) {
+          table = 'lembur';
+        } else if (isOpenSession(openAttendance)) {
+          table = 'attendance';
+        } else {
+          table = hasApprovedRequest ? 'lembur' : 'attendance';
+        }
+      } else {
+        table = hasApprovedRequest ? 'lembur' : 'attendance';
+      }
+
       const isPermitType = ['PERMIT', 'EARLY_OUT'].includes(type);
       const status = isPermitType ? 'PENDING' : 'VALID';
 
