@@ -24,7 +24,9 @@ export async function hashPassword(plain: string) {
   return bcrypt.hash(plain, 10);
 }
 
+let adminTableEnsured = false;
 async function ensureAdminUsersTable() {
+  if (adminTableEnsured) return;
   try {
     await queryDb(`
       CREATE TABLE IF NOT EXISTS admin_users (
@@ -40,6 +42,7 @@ async function ensureAdminUsersTable() {
         updatedAt DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    adminTableEnsured = true;
   } catch {
     // ignore
   }

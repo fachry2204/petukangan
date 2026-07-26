@@ -1,24 +1,32 @@
 import mysql from 'mysql2/promise';
 
-const dbConfig = {
+const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'ppsu_monitoring',
-  connectTimeout: 5000,
-};
+  connectTimeout: 10000,
+  waitForConnections: true,
+  connectionLimit: 25,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+});
 
 export async function getDbConnection() {
-  return mysql.createConnection(dbConfig);
+  const conn = await pool.getConnection();
+  // Safe wrapper: if caller code calls conn.end(), release back to connection pool
+  (conn as any).end = async function () {
+    conn.release();
+    return Promise.resolve();
+  };
+  return conn;
 }
 
 export async function queryDb(sql: string, values?: any[]) {
-  const conn = await getDbConnection();
-  try {
-    const [rows] = await conn.execute(sql, values);
-    return rows;
-  } finally {
-    await conn.end();
-  }
+  const [rows] = await pool.execute(sql, values);
+  return rows;
 }
+
+export default pool;
