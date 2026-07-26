@@ -310,6 +310,11 @@ export default function PjlpAttendanceLemburPage() {
       setHasApprovedRequest(!!res.data.hasApprovedRequest);
       setTodayRecords(res.data.records || []);
 
+      if (isInitial && !res.data.hasApprovedRequest) {
+        router.replace('/pjlp/attendance');
+        return;
+      }
+
       // Automatically launch camera on mount for lembur if they haven't check in or out
       if (isInitial && (status === 'Belum Absen' || status === 'Selesai Istirahat')) {
         startAttendanceFlow();

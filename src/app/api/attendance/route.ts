@@ -26,22 +26,6 @@ export async function GET(req: Request) {
     const yesterdayWib = new Date(todayWib.getTime() - (24 * 60 * 60 * 1000));
     const yesterdayStr = yesterdayWib.toISOString().split('T')[0];
 
-    // Check requests
-    const requests: any = await queryDb(
-      `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) >= ? ORDER BY id DESC`,
-      [userId, yesterdayStr]
-    );
-
-    const latestRequest = requests?.[0];
-    const todayRequest = (requests || []).find((r: any) => {
-      const rDate = r.timestamp ? new Date(r.timestamp).toISOString().split('T')[0] : '';
-      return rDate === todayStr;
-    });
-
-    const hasApprovedRequest = (todayRequest || latestRequest)?.status === 'APPROVED';
-    const hasPendingRequest = (todayRequest || latestRequest)?.status === 'PENDING';
-    const rejectedRequest = (todayRequest || latestRequest)?.status === 'REJECTED' ? (todayRequest || latestRequest) : null;
-
     // Get records from yesterday and today
     const regular: any = await queryDb(
       `SELECT a.*, u.fullName as userName FROM attendance a JOIN users u ON u.id = a.userId WHERE a.userId = ? AND DATE(a.timestamp) >= ? ORDER BY a.id ASC`,
@@ -52,6 +36,38 @@ export async function GET(req: Request) {
       `SELECT l.*, u.fullName as userName FROM lembur l JOIN users u ON u.id = l.userId WHERE l.userId = ? AND DATE(l.timestamp) >= ? ORDER BY l.id ASC`,
       [userId, yesterdayStr]
     );
+
+    // Check requests: only consider approved request active if no OUT/EARLY_OUT exists after its timestamp
+    const requests: any = await queryDb(
+      `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) >= ? ORDER BY id DESC`,
+      [userId, yesterdayStr]
+    );
+
+    const approvedRequest = (requests || []).find((r: any) => r.status === 'APPROVED');
+    const pendingRequest = (requests || []).find((r: any) => r.status === 'PENDING');
+    const rejectedReq = (requests || []).find((r: any) => r.status === 'REJECTED');
+
+    let hasApprovedRequest = false;
+    if (approvedRequest) {
+      const reqTime = new Date(approvedRequest.timestamp).getTime();
+      const reqDateStr = new Date(approvedRequest.timestamp).toISOString().split('T')[0];
+
+      const hasOutAfterReq = [...regular, ...lembur].some((r: any) =>
+        (r.type === 'OUT' || r.type === 'EARLY_OUT') && new Date(r.timestamp).getTime() >= reqTime
+      );
+
+      if (!hasOutAfterReq && (reqDateStr === todayStr || reqDateStr === yesterdayStr)) {
+        hasApprovedRequest = true;
+      }
+    }
+
+    const todayRequest = (requests || []).find((r: any) => {
+      const rDate = r.timestamp ? new Date(r.timestamp).toISOString().split('T')[0] : '';
+      return rDate === todayStr;
+    });
+
+    const hasPendingRequest = (todayRequest || pendingRequest)?.status === 'PENDING';
+    const rejectedRequest = (todayRequest || rejectedReq)?.status === 'REJECTED' ? (todayRequest || rejectedReq) : null;
 
     // Helper to evaluate session records from a dataset
     const evaluateSession = (allRecords: any[]) => {
@@ -64,7 +80,7 @@ export async function GET(req: Request) {
           return rDate === todayStr;
         });
         if (todayRecords.length > 0) {
-          return { records: todayRecords, isClosed: true, sessionDate: todayStr };
+          return { records: todayRecords, isClosed: true, sessionDate: todayStr, lastInTime: 0 };
         }
         return null;
       }
@@ -77,12 +93,12 @@ export async function GET(req: Request) {
       const hasOut = sessionRecords.some((r: any) => r.type === 'OUT' || r.type === 'EARLY_OUT');
 
       if (!hasOut) {
-        return { records: sessionRecords, isClosed: false, sessionDate: inDateStr };
+        return { records: sessionRecords, isClosed: false, sessionDate: inDateStr, lastInTime };
       } else {
         const lastRecord = sessionRecords[sessionRecords.length - 1];
         const outDateStr = new Date(lastRecord.timestamp).toISOString().split('T')[0];
         if (inDateStr === todayStr || outDateStr === todayStr) {
-          return { records: sessionRecords, isClosed: true, sessionDate: inDateStr };
+          return { records: sessionRecords, isClosed: true, sessionDate: inDateStr, lastInTime };
         }
         return null;
       }
@@ -92,10 +108,12 @@ export async function GET(req: Request) {
     const lemburSession = evaluateSession(lembur);
 
     let activeSession = null;
-    if (lemburSession && !lemburSession.isClosed) {
+    if (lemburSession && !lemburSession.isClosed && (!regularSession || regularSession.isClosed)) {
       activeSession = lemburSession;
-    } else if (regularSession && !regularSession.isClosed) {
+    } else if (regularSession && !regularSession.isClosed && (!lemburSession || lemburSession.isClosed)) {
       activeSession = regularSession;
+    } else if (lemburSession && !lemburSession.isClosed && regularSession && !regularSession.isClosed) {
+      activeSession = (lemburSession.lastInTime || 0) >= (regularSession.lastInTime || 0) ? lemburSession : regularSession;
     } else if (hasApprovedRequest && lemburSession) {
       activeSession = lemburSession;
     } else if (regularSession) {

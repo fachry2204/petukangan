@@ -37,17 +37,36 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
 
     const conn = await getDbConnection();
     try {
-      // Check if there is an approved request today (in Asia/Jakarta timezone!)
+      // Check if there is an approved request that is currently active and unclosed
       const now = new Date();
       const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // add 7 hours
       wibTime.setUTCHours(0, 0, 0, 0);
       const todayStr = wibTime.toISOString().split('T')[0];
+      const yesterdayStr = new Date(wibTime.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const [requests]: any = await conn.execute(
-        `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) = ? AND status = 'APPROVED' ORDER BY id DESC LIMIT 1`,
-        [userId, todayStr]
+        `SELECT * FROM attendance_requests WHERE userId = ? AND DATE(timestamp) >= ? AND status = 'APPROVED' ORDER BY id DESC LIMIT 1`,
+        [userId, yesterdayStr]
       );
-      const hasApprovedRequest = requests?.[0];
+      const approvedReq = requests?.[0];
+
+      let hasApprovedRequest = false;
+      if (approvedReq) {
+        const reqDateStr = new Date(approvedReq.timestamp).toISOString().split('T')[0];
+
+        const [regOuts]: any = await conn.execute(
+          `SELECT id FROM attendance WHERE userId = ? AND type IN ('OUT', 'EARLY_OUT') AND timestamp >= ? LIMIT 1`,
+          [userId, approvedReq.timestamp]
+        );
+        const [lemOuts]: any = await conn.execute(
+          `SELECT id FROM lembur WHERE userId = ? AND type IN ('OUT', 'EARLY_OUT') AND timestamp >= ? LIMIT 1`,
+          [userId, approvedReq.timestamp]
+        );
+
+        if (regOuts.length === 0 && lemOuts.length === 0 && (reqDateStr === todayStr || reqDateStr === yesterdayStr)) {
+          hasApprovedRequest = true;
+        }
+      }
 
       // Determine table to insert
       if (type === 'REQUEST') {
@@ -67,34 +86,49 @@ export async function POST(req: Request, context: { params: Promise<{ action: st
       }
 
       let table = 'attendance';
-      if (type !== 'IN' && type !== 'PERMIT') {
-        const [openLembur]: any = await conn.execute(
-          `SELECT type FROM lembur WHERE userId = ? ORDER BY id DESC LIMIT 10`,
+      if (type === 'IN' || type === 'PERMIT') {
+        table = hasApprovedRequest ? 'lembur' : 'attendance';
+      } else {
+        // For check-out, break, end-break, early-out: locate the exact table with the LATEST unclosed IN session!
+        const [lastRegIn]: any = await conn.execute(
+          `SELECT id, timestamp FROM attendance WHERE userId = ? AND type = 'IN' AND status != 'PENDING' ORDER BY id DESC LIMIT 1`,
           [userId]
         );
-        const [openAttendance]: any = await conn.execute(
-          `SELECT type FROM attendance WHERE userId = ? ORDER BY id DESC LIMIT 10`,
+        const [lastLemIn]: any = await conn.execute(
+          `SELECT id, timestamp FROM lembur WHERE userId = ? AND type = 'IN' AND status != 'PENDING' ORDER BY id DESC LIMIT 1`,
           [userId]
         );
 
-        const isOpenSession = (rows: any[]) => {
-          if (!rows || rows.length === 0) return false;
-          const lastInIdx = rows.findIndex((r: any) => r.type === 'IN');
-          if (lastInIdx === -1) return false;
-          const eventsAfterIn = rows.slice(0, lastInIdx);
-          const hasOut = eventsAfterIn.some((r: any) => r.type === 'OUT' || r.type === 'EARLY_OUT');
-          return !hasOut;
-        };
+        const regInTime = lastRegIn?.[0] ? new Date(lastRegIn[0].timestamp).getTime() : 0;
+        const lemInTime = lastLemIn?.[0] ? new Date(lastLemIn[0].timestamp).getTime() : 0;
 
-        if (isOpenSession(openLembur)) {
+        let regIsOpen = false;
+        if (regInTime > 0) {
+          const [regOut]: any = await conn.execute(
+            `SELECT id FROM attendance WHERE userId = ? AND type IN ('OUT', 'EARLY_OUT') AND timestamp >= ? LIMIT 1`,
+            [userId, lastRegIn[0].timestamp]
+          );
+          regIsOpen = regOut.length === 0;
+        }
+
+        let lemIsOpen = false;
+        if (lemInTime > 0) {
+          const [lemOut]: any = await conn.execute(
+            `SELECT id FROM lembur WHERE userId = ? AND type IN ('OUT', 'EARLY_OUT') AND timestamp >= ? LIMIT 1`,
+            [userId, lastLemIn[0].timestamp]
+          );
+          lemIsOpen = lemOut.length === 0;
+        }
+
+        if (lemIsOpen && !regIsOpen) {
           table = 'lembur';
-        } else if (isOpenSession(openAttendance)) {
+        } else if (regIsOpen && !lemIsOpen) {
           table = 'attendance';
+        } else if (lemIsOpen && regIsOpen) {
+          table = lemInTime >= regInTime ? 'lembur' : 'attendance';
         } else {
           table = hasApprovedRequest ? 'lembur' : 'attendance';
         }
-      } else {
-        table = hasApprovedRequest ? 'lembur' : 'attendance';
       }
 
       const isPermitType = ['PERMIT', 'EARLY_OUT'].includes(type);
