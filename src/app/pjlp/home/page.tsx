@@ -16,9 +16,7 @@ import {
   ClipboardList,
   Upload,
   ShieldAlert,
-  FileText,
-  Sparkles,
-  X
+  FileText
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
@@ -34,7 +32,6 @@ export default function PjlpHomePage() {
   const [loading, setLoading] = useState(true);
   
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
-  const [hasApprovedRequest, setHasApprovedRequest] = useState<boolean>(false);
   const [todaySchedule, setTodaySchedule] = useState<any>(null);
   const [allSchedules, setAllSchedules] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -55,14 +52,6 @@ export default function PjlpHomePage() {
   const [izinReason, setIzinReason] = useState('');
   const [suratDokter, setSuratDokter] = useState<string | null>(null);
   const [isSubmittingIzin, setIsSubmittingIzin] = useState(false);
-
-  // Unscheduled Check-in Request States
-  const [isRequestAbsenModalOpen, setIsRequestAbsenModalOpen] = useState(false);
-  const [requestReason, setRequestReason] = useState('');
-  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
-  const [showSuccessRequestModal, setShowSuccessRequestModal] = useState(false);
-  const [rejectedRequest, setRejectedRequest] = useState<any>(null);
-  const [isRejectionDismissed, setIsRejectionDismissed] = useState<boolean>(false);
 
   const [serverTime, setServerTime] = useState<string>('');
   const [serverDate, setServerDate] = useState<string>('');
@@ -151,18 +140,8 @@ export default function PjlpHomePage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAttendanceStatus(resAtt.data.status || 'Belum Absen');
-      setHasApprovedRequest(!!resAtt.data.hasApprovedRequest);
       setTodayIzinStatus(resAtt.data.izinStatus || null);
       setTodayIzinType(resAtt.data.izinType || null);
-      
-      // Get rejected request details
-      if (resAtt.data.rejectedRequest) {
-        setRejectedRequest(resAtt.data.rejectedRequest);
-        const dismissed = localStorage.getItem(`dismissed-rejection-${resAtt.data.rejectedRequest.id}`) === 'true';
-        setIsRejectionDismissed(dismissed);
-      } else {
-        setRejectedRequest(null);
-      }
 
       // 2. Fetch Active Schedules
       const resSchedules = await axios.get(`${apiUrl}/schedules`, {
@@ -357,75 +336,6 @@ export default function PjlpHomePage() {
       alert(err.response?.data?.message || 'Gagal mengirimkan pengajuan izin.');
     } finally {
       setIsSubmittingIzin(false);
-    }
-  };
-
-  const handleSubmitRequestAbsen = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!requestReason.trim()) {
-      alert('Silakan masukkan alasan permintaan absen masuk.');
-      return;
-    }
-
-    setIsSubmittingRequest(true);
-
-    let lat = -6.229728;
-    let lng = 106.747136;
-    try {
-      const pos: any = await new Promise((res, rej) => {
-        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 5000 });
-      });
-      lat = pos.coords.latitude;
-      lng = pos.coords.longitude;
-    } catch (err) {
-      console.log('Location not shared for unscheduled request', err);
-    }
-
-    let resolvedAddress = 'Jl. Ciledug Raya, Petukangan Utara, Kebayoran Lama, Jakarta Selatan';
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' }
-      });
-      const data = await response.json();
-      if (data.display_name) {
-        resolvedAddress = data.display_name;
-      } else {
-        resolvedAddress = `Lokasi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      }
-    } catch (error) {
-      console.warn('Reverse geocoding failed for request, using fallback:', error);
-    }
-
-    try {
-      await axios.post(
-        `${apiUrl}/attendance/request`,
-        {
-          lat,
-          lng,
-          address: resolvedAddress,
-          photoUrl: null,
-          reason: requestReason,
-          clientTimestamp: Date.now()
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setIsRequestAbsenModalOpen(false);
-      setRequestReason('');
-      setShowSuccessRequestModal(true);
-      fetchData(); // Refresh today's attendance status
-    } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Gagal mengirimkan permintaan absen masuk.');
-    } finally {
-      setIsSubmittingRequest(false);
-    }
-  };
-
-  const handleDismissRejection = () => {
-    if (rejectedRequest) {
-      localStorage.setItem(`dismissed-rejection-${rejectedRequest.id}`, 'true');
-      setIsRejectionDismissed(true);
     }
   };
 
@@ -643,41 +553,6 @@ export default function PjlpHomePage() {
         </CardContent>
       </Card>
 
-      {/* Rejected Request Warning Card */}
-      {rejectedRequest && !isRejectionDismissed && (
-        <Card className="border-none bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-3xl overflow-hidden relative p-4 space-y-3 animate-in fade-in slide-in-from-top-3 duration-300">
-          <div className="absolute top-4 right-4 flex items-center justify-center">
-            <button 
-              onClick={handleDismissRejection}
-              className="w-6 h-6 rounded-full bg-red-500/15 text-red-600 hover:bg-red-500/30 flex items-center justify-center transition-all"
-              title="Tutup Pemberitahuan"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-950/40 text-red-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div className="space-y-1 pr-6 text-left">
-              <span className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest">
-                Pengajuan Absen Ditolak ⚠️
-              </span>
-              <p className="text-xs font-black text-zinc-800 dark:text-white leading-tight">
-                Permintaan Absen Masuk Luar Jadwal Anda telah ditolak oleh Admin.
-              </p>
-              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100/30 dark:border-red-900/20 rounded-2xl text-xs space-y-1">
-                <span className="block text-[9px] font-bold text-red-500 uppercase tracking-wider">Alasan Penolakan:</span>
-                <p className="font-semibold text-zinc-700 dark:text-zinc-300 leading-normal">
-                  "{rejectedRequest.rejectionReason || 'Alasan tidak dicantumkan oleh admin.'}"
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Attendance Summary Card */}
       <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
         <Card className={`border-none shadow-lg text-white rounded-2xl overflow-hidden relative ${cardTheme.cardBg}`}>
@@ -718,21 +593,12 @@ export default function PjlpHomePage() {
             {attendanceStatus === 'Menunggu Diterima' ? (
               <Button disabled className="w-full mt-4 bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed flex items-center justify-center gap-1.5 animate-pulse">
                 <Clock className="w-4.5 h-4.5 text-white" />
-                Absen Lembur Ditinjau ⏳
+                Permintaan Absensi Ditinjau
               </Button>
-            ) : ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus) && !hasApprovedRequest ? (
-              <div className="space-y-3 mt-4">
-                <Button disabled className="w-full bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
-                  Tugas Hari Ini Selesai
-                </Button>
-                <Button 
-                  onClick={() => setIsRequestAbsenModalOpen(true)}
-                  className="w-full bg-white text-purple-600 hover:bg-zinc-100 rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="w-4.5 h-4.5 text-purple-500 animate-pulse" />
-                  Absen Lembur
-                </Button>
-              </div>
+            ) : ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus) ? (
+              <Button disabled className="w-full mt-4 bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
+                Tugas Hari Ini Selesai
+              </Button>
             ) : ['Izin Tidak Masuk', 'Pulang Awal'].includes(attendanceStatus) || todayIzinStatus ? (
               <Button disabled className={`w-full mt-4 border rounded-2xl font-black py-5 text-sm cursor-not-allowed flex items-center justify-center gap-1.5 ${
                 todayIzinStatus === 'PENDING' 
@@ -759,43 +625,20 @@ export default function PjlpHomePage() {
               </Button>
             ) : (
               <div className="flex gap-2.5 mt-4">
-                {(!todaySchedule || shiftText === 'Libur') && !hasApprovedRequest ? (
-                  <Button 
-                    onClick={() => setIsRequestAbsenModalOpen(true)}
-                    className="w-full bg-white text-orange-600 hover:bg-zinc-100 rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-1.5"
-                  >
-                    <Sparkles className="w-4.5 h-4.5 text-orange-500 animate-pulse" />
-                    Absen Lembur
+                {!todaySchedule || shiftText === 'Libur' ? (
+                  <Button disabled className="w-full bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
+                    Tidak Ada Jadwal Hari Ini
                   </Button>
                 ) : (
                   <>
                     <Button 
-                      onClick={() => { window.location.href = hasApprovedRequest ? '/pjlp/attendance-lembur' : '/pjlp/attendance'; }}
-                      className={`flex-[2.2] rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 ${
-                        hasApprovedRequest 
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
-                          : `bg-white hover:bg-zinc-100 ${cardTheme.btnText}`
-                      }`}
+                      onClick={() => { window.location.href = '/pjlp/attendance'; }}
+                      className={`flex-[2.2] rounded-2xl font-black py-5 text-sm shadow-md transition-all duration-300 transform active:scale-95 bg-white hover:bg-zinc-100 ${cardTheme.btnText}`}
                     >
-                      {hasApprovedRequest ? (
-                        attendanceStatus === 'Belum Absen' || ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus)
-                          ? 'Absen Masuk Lembur'
-                          : attendanceStatus === 'Sudah Absen'
-                          ? 'Mulai Istirahat'
-                          : attendanceStatus === 'Absen Istirahat'
-                          ? 'Selesai Istirahat'
-                          : attendanceStatus === 'Selesai Istirahat'
-                          ? 'Absen Pulang Lembur'
-                          : 'Absen Masuk Lembur'
-                      ) : (
-                        <>
-                          {attendanceStatus === 'Belum Absen' && 'Absen Masuk'}
-                          {attendanceStatus === 'Sudah Absen' && 'Mulai Istirahat'}
-                          {attendanceStatus === 'Absen Istirahat' && 'Selesai Istirahat'}
-                          {attendanceStatus === 'Selesai Istirahat' && 'Absen Pulang'}
-                          {(['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus)) && 'Absen Masuk'}
-                        </>
-                      )}
+                      {attendanceStatus === 'Belum Absen' && 'Absen Masuk'}
+                      {attendanceStatus === 'Sudah Absen' && 'Mulai Istirahat'}
+                      {attendanceStatus === 'Absen Istirahat' && 'Selesai Istirahat'}
+                      {attendanceStatus === 'Selesai Istirahat' && 'Absen Pulang'}
                     </Button>
                     {attendanceStatus === 'Belum Absen' ? (
                       <Button 
@@ -1065,97 +908,6 @@ export default function PjlpHomePage() {
         </div>
       )}
 
-      {/* Premium Request Absen Modal */}
-      {isRequestAbsenModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-sm overflow-hidden bg-white/95 dark:bg-zinc-950/95 border border-white/20 dark:border-zinc-800/80 rounded-3xl shadow-2xl p-6 space-y-4 transform scale-100 transition-all duration-300 text-left animate-in zoom-in-95 duration-155">
-            
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
-              <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wide flex items-center gap-1.5">
-                <Sparkles className="w-4.5 h-4.5 text-orange-500 animate-pulse" />
-                Permintaan Absen Masuk
-              </h3>
-              <button 
-                onClick={() => setIsRequestAbsenModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-xs font-bold"
-              >
-                Tutup
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitRequestAbsen} className="space-y-4">
-              
-              {/* Textarea Reason */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-850 dark:text-zinc-300 uppercase tracking-wider">
-                  Alasan Permintaan Absen Masuk
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={requestReason}
-                  onChange={(e) => setRequestReason(e.target.value)}
-                  placeholder="Masukkan alasan Anda (contoh: Penugasan lembur dari kelurahan, piket malam darurat, dll)..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 text-zinc-900 dark:text-white"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex gap-3">
-                <Button 
-                  type="submit"
-                  disabled={isSubmittingRequest}
-                  className="flex-1 py-5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5"
-                >
-                  {isSubmittingRequest ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    'Kirim Permintaan'
-                  )}
-                </Button>
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsRequestAbsenModalOpen(false)}
-                  className="flex-1 py-5 rounded-xl font-bold text-xs border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100"
-                >
-                  Batal
-                </Button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {showSuccessRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-sm overflow-hidden bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 text-center space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner animate-pulse">
-              <Clock className="w-10 h-10" />
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-zinc-900 dark:text-white">Permintaan Terkirim! 🚀</h3>
-              <p className="text-zinc-655 dark:text-zinc-400 text-xs leading-relaxed">
-                Halo **{user?.fullName}**, pengajuan absensi di luar jadwal kerja Anda telah berhasil direkam oleh sistem!
-              </p>
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400 text-xs p-3.5 rounded-2xl text-left leading-relaxed">
-                <strong>Status: Menunggu Diterima</strong><br/>
-                Pengajuan Anda sedang dikirimkan untuk ditinjau oleh pihak **Staff, Pimpinan, dan Admin**. Kami akan segera memberi tahu Anda setelah disetujui!
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setShowSuccessRequestModal(false)}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-6 rounded-2xl shadow-lg transition-all active:scale-95"
-            >
-              Mengerti, Terima Kasih! 👍
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
