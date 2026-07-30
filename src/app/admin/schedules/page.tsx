@@ -1043,15 +1043,20 @@ export default function AdminSchedulesPage() {
                 <div className="bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-100/50 dark:border-zinc-800/50">
                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mb-1">Status Shift</span>
                   <div className="mt-1">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-black ${
-                      viewingSchedule.status === 'Berjalan' 
-                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' 
-                        : viewingSchedule.status === 'Selesai'
-                        ? 'bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-400'
-                        : 'bg-amber-50 text-amber-650 dark:bg-amber-950/20 dark:text-amber-400'
-                    }`}>
-                      {viewingSchedule.status}
-                    </span>
+                    {(() => {
+                      const currentStatus = getDynamicStatus(viewingSchedule.date, viewingSchedule.timeRange);
+                      return (
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-black ${
+                          currentStatus === 'Berjalan'
+                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400'
+                            : currentStatus === 'Selesai'
+                            ? 'bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-400'
+                            : 'bg-amber-50 text-amber-650 dark:bg-amber-950/20 dark:text-amber-400'
+                        }`}>
+                          {currentStatus}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
