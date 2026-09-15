@@ -137,7 +137,7 @@ export default function LoginPage() {
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-white"
       style={(settings.bgType === 'image' || hasVideoError || (settings.bgType === 'video' && (!settings.bgVideo || !getYoutubeId(settings.bgVideo)))) ? {
         backgroundImage: settings.bgImage ? `url(${settings.bgImage})` : 'none',
-        backgroundSize: 'contain',
+        backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#ffffff',

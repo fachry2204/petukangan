@@ -47,13 +47,13 @@ export function AdminSidebar() {
       onMouseEnter={() => setCollapsed(false)}
       onMouseLeave={() => setCollapsed(true)}
       className={cn(
-        "bg-white border-r border-zinc-100 flex flex-col h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out shadow-[4px_0_24px_rgba(0,0,0,0.12)]",
+        "admin-sidebar bg-white/95 border-r border-orange-100/70 flex flex-col h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out shadow-[6px_0_30px_rgba(24,24,27,0.07)] backdrop-blur-xl",
         isCollapsed ? "w-20" : "w-64"
       )}
     >
       {/* Sidebar Header Section */}
       <div className={cn(
-        "flex flex-col transition-all duration-300 ease-in-out border-b border-zinc-100",
+        "flex flex-col transition-all duration-300 ease-in-out border-b border-orange-100/70 bg-gradient-to-br from-orange-50/80 via-white to-white",
         isCollapsed ? "p-4 items-center" : "p-8"
       )}>
         <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ export function AdminSidebar() {
             "flex flex-col transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
             isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[200px]"
           )}>
-            <span className="text-xl font-black tracking-tight leading-tight text-zinc-90">{systemName || "PPSU System"}</span>
+            <span className="text-xl font-black tracking-tight leading-tight text-zinc-900">{systemName || "PPSU System"}</span>
             <span className="text-[10px] text-zinc-400 font-medium mt-0.5 uppercase tracking-widest">{(systemDescription || "Monitoring & Management System").slice(0,25)}</span>
           </div>
         </div>
@@ -89,8 +89,8 @@ export function AdminSidebar() {
                 'flex items-center rounded-xl transition-all duration-300 group relative',
                 isCollapsed ? 'justify-center p-3' : 'px-4 py-3.5 gap-3',
                 isActive 
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' 
-                  : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400' 
+                  : 'text-zinc-600 hover:bg-orange-50/70 hover:text-zinc-950'
               )}
               title={isCollapsed ? item.label : undefined}
             >
@@ -136,8 +136,8 @@ export function AdminSidebar() {
                 'flex items-center rounded-xl transition-all duration-300 group relative',
                 isCollapsed ? 'justify-center p-3' : 'px-4 py-3.5 gap-3',
                 isActive 
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' 
-                  : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400' 
+                  : 'text-zinc-600 hover:bg-orange-50/70 hover:text-zinc-950'
               )}
               title={isCollapsed ? item.label : undefined}
             >
@@ -174,7 +174,7 @@ export function AdminSidebar() {
           <Link
             href="/admin/settings"
             className={cn(
-              "flex items-center rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-all duration-300",
+              "group flex items-center rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-orange-50/70 transition-all duration-300",
               isCollapsed ? "p-3" : "px-4 py-3 gap-3 w-full"
             )}
             title={isCollapsed ? "Settings" : undefined}
