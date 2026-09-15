@@ -17,7 +17,7 @@ const generalMenuItems = [
 ];
 
 const pjlpMenuItems = [
-  { label: 'Petugas', iconSrc: '/icons/dashboard/total-petugas.png', href: '/admin/users' },
+  { label: 'Petugas', iconSrc: '/icons/dashboard/total-petugas-orange.png', href: '/admin/users' },
   { label: 'Absensi Petugas', iconSrc: '/icon/absen.png', href: '/admin/attendance' },
   { label: 'Jadwal Petugas', iconSrc: '/icon/calender.png', href: '/admin/schedules' },
   { label: 'Tugas Lapangan', iconSrc: '/icon/camera.png', href: '/admin/tasks' },

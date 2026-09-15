@@ -22,8 +22,16 @@ export default function AdminLayout({
   const roleAccess = useSettingsStore(state => state.roleAccess);
   const footerText = useSettingsStore(state => state.footerText);
   const footerShowOnAdmin = useSettingsStore(state => state.footerShowOnAdmin);
+  const systemName = useSettingsStore(state => state.systemName);
+  const systemDescription = useSettingsStore(state => state.systemDescription);
 
   const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const userInitials = String(user?.fullName || user?.username || 'User')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
   const isAllowed =
     !roleName ||
     roleName === 'ADMIN' ||
@@ -40,17 +48,17 @@ export default function AdminLayout({
       <div className={cn("flex-1 flex flex-col transition-all duration-300", isCollapsed ? "ml-20" : "ml-64")}>
         <header className="h-20 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 px-8 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-white/70">
           <div>
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">System Monitoring PJLP Kelurahan</h2>
-            <p className="text-lg font-bold text-zinc-900 dark:text-white">Main Dashboard</p>
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{systemName || 'PPSU System'}</h2>
+            <p className="text-lg font-bold text-zinc-900 dark:text-white">{systemDescription || 'Monitoring & Management System'}</p>
           </div>
           <div className="flex items-center gap-6">
             <div className="text-right">
-              <p className="text-sm font-bold text-zinc-900 dark:text-white">Administrator</p>
-              <p className="text-xs text-zinc-500">Super Admin</p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-white">{user?.fullName || user?.username || 'Pengguna'}</p>
+              <p className="text-xs text-zinc-500">{roleName || 'ADMIN'}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center border border-zinc-200">
-                <span className="text-lg font-bold text-orange-600">AD</span>
+                <span className="text-lg font-bold text-orange-600">{userInitials}</span>
               </div>
               <button 
                 onClick={handleLogout}

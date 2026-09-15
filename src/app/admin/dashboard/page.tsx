@@ -2,16 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  MapPin,
-  ClipboardCheck,
-  AlertTriangle,
-  TrendingUp,
-  ArrowUpRight,
   Loader2,
-  FileText,
-  MessageSquare,
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
@@ -29,18 +22,18 @@ export default function AdminDashboardPage() {
     perempuan: 0,
     tidakAktif: 0,
     dikeluarkan: 0,
-    tugasDikerjakan: 0,
-    totalLaporan: 0,
+    petugasPiket: 0,
+    sudahAbsen: 0,
+    belumAbsen: 0,
+    izinTidakMasuk: 0,
   });
-  const [activities, setActivities] = useState<any[]>([]);
 
   const fetchStats = async (signal?: AbortSignal) => {
     if (!token) return;
     try {
       // Use Promise.all with individual try-catch for each request
       let usersData: any[] = [];
-      let tasksData: any[] = [];
-      let reportsData: any[] = [];
+      let attendanceStats = { petugasPiket: 0, sudahAbsen: 0, belumAbsen: 0, izinTidakMasuk: 0 };
 
       try {
         const usersRes = await axios.get(`${apiUrl}/users`, {
@@ -55,26 +48,14 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const tasksRes = await axios.get(`${apiUrl}/tasks`, {
+        const attendanceStatsRes = await axios.get(`${apiUrl}/dashboard/attendance-stats`, {
           headers: { Authorization: `Bearer ${token}` },
           signal
         });
-        tasksData = tasksRes.data || [];
+        attendanceStats = attendanceStatsRes.data || attendanceStats;
       } catch (e: any) {
         if (!axios.isCancel(e)) {
-          console.error('Failed to fetch tasks:', e);
-        }
-      }
-
-      try {
-        const reportsRes = await axios.get(`${apiUrl}/reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal
-        });
-        reportsData = reportsRes.data || [];
-      } catch (e: any) {
-        if (!axios.isCancel(e)) {
-          console.error('Failed to fetch reports:', e);
+          console.error('Failed to fetch attendance statistics:', e);
         }
       }
 
@@ -88,9 +69,6 @@ export default function AdminDashboardPage() {
       const perempuan = pjlpUsers.filter((u: any) => ['PEREMPUAN', 'FEMALE', 'WANITA'].includes(normalizeGender(u.gender)));
       const tidakAktif = pjlpUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
       const dikeluarkan = pjlpUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
-      const tugasDikerjakan = tasksData.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
-      const totalLaporan = reportsData.length;
-
       setStats({
         totalPetugas: pjlpUsers.length,
         petugasAktif: activePjlp.length,
@@ -98,45 +76,12 @@ export default function AdminDashboardPage() {
         perempuan: perempuan.length,
         tidakAktif: tidakAktif.length,
         dikeluarkan: dikeluarkan.length,
-        tugasDikerjakan: tugasDikerjakan.length,
-        totalLaporan: totalLaporan,
+        petugasPiket: attendanceStats.petugasPiket,
+        sudahAbsen: attendanceStats.sudahAbsen,
+        belumAbsen: attendanceStats.belumAbsen,
+        izinTidakMasuk: attendanceStats.izinTidakMasuk,
       });
 
-      const recentActivities: any[] = [];
-      
-      tasksData.slice(0, 3).forEach((task: any) => {
-        let title = '';
-        if (task.status === 'WORKING') {
-          title = `Tugas Dikerjakan: ${task.assignedTo?.fullName || 'Petugas'}`;
-        } else if (task.status === 'DONE') {
-          title = `Tugas Selesai: ${task.assignedTo?.fullName || 'Petugas'}`;
-        } else {
-          title = `Tugas Baru: ${task.title}`;
-        }
-        recentActivities.push({
-          title,
-          description: `${task.title} • Sektor Petukangan Utara`,
-          time: task.updatedAt ? new Date(task.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : 'Baru saja'
-        });
-      });
-
-      pjlpUsers.filter((u: any) => u.lastSeen).slice(0, 2).forEach((u: any) => {
-        recentActivities.push({
-          title: `Petugas Online: ${u.fullName}`,
-          description: `${u.username} • GPS Aktif`,
-          time: new Date(u.lastSeen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB'
-        });
-      });
-
-      if (recentActivities.length === 0) {
-        recentActivities.push({
-          title: 'Sistem Siap',
-          description: 'Seluruh sistem monitoring berjalan normal',
-          time: 'Baru saja'
-        });
-      }
-
-      setActivities(recentActivities.slice(0, 5));
     } catch (error) {
       console.error('Failed to load dashboard statistics:', error);
     } finally {
@@ -174,12 +119,12 @@ export default function AdminDashboardPage() {
       {/* Stats Overview - Petugas */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Petugas', value: stats.totalPetugas, iconSrc: '/icons/dashboard/total-petugas.png', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
-          { label: 'Petugas Aktif', value: stats.petugasAktif, iconSrc: '/icons/dashboard/petugas-aktif.png', bgClass: 'bg-green-50 dark:bg-green-950/20' },
-          { label: 'Laki-Laki', value: stats.lakiLaki, iconSrc: '/icons/dashboard/laki-laki.png', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
-          { label: 'Perempuan', value: stats.perempuan, iconSrc: '/icons/dashboard/perempuan.png', bgClass: 'bg-pink-50 dark:bg-pink-950/20' },
-          { label: 'Tidak Aktif', value: stats.tidakAktif, iconSrc: '/icons/dashboard/tidak-aktif.png', bgClass: 'bg-zinc-50 dark:bg-zinc-800' },
-          { label: 'Dikeluarkan', value: stats.dikeluarkan, iconSrc: '/icons/dashboard/dikeluarkan.png', bgClass: 'bg-red-50 dark:bg-red-950/20' },
+          { label: 'Total Petugas', value: stats.totalPetugas, iconSrc: '/icons/dashboard/total-petugas-orange.png', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
+          { label: 'Petugas Aktif', value: stats.petugasAktif, iconSrc: '/icons/dashboard/petugas-aktif-orange.png', bgClass: 'bg-green-50 dark:bg-green-950/20' },
+          { label: 'Laki-Laki', value: stats.lakiLaki, iconSrc: '/icons/dashboard/laki-laki-orange.png', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
+          { label: 'Perempuan', value: stats.perempuan, iconSrc: '/icons/dashboard/perempuan-orange.png', bgClass: 'bg-pink-50 dark:bg-pink-950/20' },
+          { label: 'Tidak Aktif', value: stats.tidakAktif, iconSrc: '/icons/dashboard/tidak-aktif-orange.png', bgClass: 'bg-zinc-50 dark:bg-zinc-800' },
+          { label: 'Dikeluarkan', value: stats.dikeluarkan, iconSrc: '/icons/dashboard/dikeluarkan-orange.png', bgClass: 'bg-red-50 dark:bg-red-950/20' },
         ].map((stat, idx) => (
           <div
             key={idx}
@@ -209,26 +154,24 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* Stats Overview - Tugas & Laporan */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Stats Overview - Kehadiran Hari Ini */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {[
-          { label: 'Total Tugas Dikerjakan', value: stats.tugasDikerjakan, icon: FileText, color: 'blue', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
-          { label: 'Total Laporan Dari Petugas', value: stats.totalLaporan, icon: MessageSquare, color: 'purple', bgClass: 'bg-purple-50 dark:bg-purple-950/20' },
+          { label: 'Petugas Piket Hari Ini', value: stats.petugasPiket, iconSrc: '/icons/dashboard/petugas-piket.png', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
+          { label: 'Petugas yang Sudah Absen', value: stats.sudahAbsen, iconSrc: '/icons/dashboard/sudah-absen.png', bgClass: 'bg-green-50 dark:bg-green-950/20' },
+          { label: 'Petugas yang Belum Absen', value: stats.belumAbsen, iconSrc: '/icons/dashboard/belum-absen.png', bgClass: 'bg-amber-50 dark:bg-amber-950/20' },
+          { label: 'Petugas Izin Tidak Masuk', value: stats.izinTidakMasuk, iconSrc: '/icons/dashboard/izin-tidak-masuk.png', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
         ].map((stat, idx) => (
           <div
             key={idx}
             className="animate-in fade-in slide-in-from-bottom-5 duration-500"
             style={{ animationDelay: `${(idx + 6) * 100}ms`, animationFillMode: 'both' }}
           >
-            <Card className={`border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden group ${stat.bgClass}`}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className={`p-4 rounded-2xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500/20 transition-colors duration-300`}>
-                    <stat.icon className={`w-6 h-6 text-${stat.color}-500 transition-colors duration-300`} />
-                  </div>
-                  <div className={`flex items-center gap-1 text-xs font-bold text-green-500`}>
-                    <ArrowUpRight className="w-3 h-3" />
-                    Live
+              <Card className={`h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden group ${stat.bgClass}`}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                  <div className="relative h-16 w-16 transition-transform duration-300 group-hover:scale-110">
+                    <Image src={stat.iconSrc} alt={`Ikon ${stat.label}`} fill sizes="64px" className="object-contain drop-shadow-sm" />
                   </div>
                 </div>
                 <div className="mt-6">
@@ -241,29 +184,6 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        {/* Activity Feed */}
-        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 flex flex-col">
-          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800 p-6">
-            <CardTitle className="text-lg font-bold">Aktivitas Terkini</CardTitle>
-            <p className="text-xs text-zinc-400 mt-0.5">Log aktivitas terintegrasi database</p>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6 flex-1 overflow-y-auto">
-            {activities.map((item, idx) => (
-              <div key={idx} className="flex gap-4">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/10 rounded-xl flex-shrink-0 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-orange-600 dark:text-orange-500" />
-                </div>
-                <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{item.title}</p>
-                  <p className="text-xs text-zinc-500 truncate">{item.description}</p>
-                  <p className="text-[10px] text-zinc-400 font-semibold">{item.time}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
