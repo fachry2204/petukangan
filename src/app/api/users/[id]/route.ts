@@ -170,7 +170,10 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
       updates.push('documents = ?'); 
       values.push(body.documents ? JSON.stringify(body.documents) : null); 
     }
-    if (body.gender !== undefined) { updates.push('gender = ?'); values.push(body.gender); }
+    if (body.gender !== undefined) {
+      updates.push('gender = ?');
+      values.push(body.gender ? String(body.gender).trim().toUpperCase() : null);
+    }
     if (body.birthDate !== undefined) { updates.push('birthDate = ?'); values.push(body.birthDate); }
     if (body.joinDate !== undefined) { updates.push('joinDate = ?'); values.push(body.joinDate); }
     if (body.address !== undefined) { updates.push('address = ?'); values.push(body.address); }

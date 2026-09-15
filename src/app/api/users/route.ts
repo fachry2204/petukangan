@@ -292,7 +292,7 @@ export async function POST(req: Request) {
         phone || null, 
         roleId, 
         zoneId || null, 
-        gender || null, 
+        gender ? String(gender).trim().toUpperCase() : null,
         birthDate || null, 
         joinDate || null, 
         address || null, 

@@ -189,9 +189,11 @@ export default function LoginPage() {
               className="object-contain w-14 h-14 drop-shadow-sm"
             />
           </div>
-          <CardTitle className="text-xl font-bold text-zinc-900 dark:text-white">Si Petut</CardTitle>
+          <CardTitle className="text-xl font-bold text-zinc-900 dark:text-white">
+            {settings.systemName}
+          </CardTitle>
           <CardDescription className="text-[10px] text-zinc-500 font-semibold uppercase tracking-[0.15em] mt-1">
-            PJLP SMART MONITORING
+            {settings.systemDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-8 px-6">

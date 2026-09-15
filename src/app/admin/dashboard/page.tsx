@@ -1,18 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Users,
   MapPin,
   ClipboardCheck,
   AlertTriangle,
   TrendingUp,
   ArrowUpRight,
   Loader2,
-  UserCheck,
-  UserX,
-  UserMinus,
   FileText,
   MessageSquare,
 } from 'lucide-react';
@@ -83,8 +80,12 @@ export default function AdminDashboardPage() {
 
       const pjlpUsers = usersData.filter((u: any) => (u.role?.name || u.roleName) === 'PJLP');
       const activePjlp = pjlpUsers.filter((u: any) => u.status === 'ACTIVE');
-      const lakiLaki = pjlpUsers.filter((u: any) => u.gender === 'LAKI-LAKI' || u.gender === 'Laki-Laki' || u.gender === 'Male');
-      const perempuan = pjlpUsers.filter((u: any) => u.gender === 'PEREMPUAN' || u.gender === 'Perempuan' || u.gender === 'Female');
+      const normalizeGender = (value: unknown) => String(value || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z]/g, '');
+      const lakiLaki = pjlpUsers.filter((u: any) => ['LAKILAKI', 'MALE', 'PRIA'].includes(normalizeGender(u.gender)));
+      const perempuan = pjlpUsers.filter((u: any) => ['PEREMPUAN', 'FEMALE', 'WANITA'].includes(normalizeGender(u.gender)));
       const tidakAktif = pjlpUsers.filter((u: any) => u.status === 'INACTIVE' || u.status === 'TIDAK_AKTIF');
       const dikeluarkan = pjlpUsers.filter((u: any) => u.status === 'TERMINATED' || u.status === 'DIKELUARKAN');
       const tugasDikerjakan = tasksData.filter((t: any) => t.status === 'WORKING' || t.status === 'TODO');
@@ -173,12 +174,12 @@ export default function AdminDashboardPage() {
       {/* Stats Overview - Petugas */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Petugas', value: stats.totalPetugas, icon: Users, color: 'orange', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
-          { label: 'Petugas Aktif', value: stats.petugasAktif, icon: UserCheck, color: 'green', bgClass: 'bg-green-50 dark:bg-green-950/20' },
-          { label: 'Laki-Laki', value: stats.lakiLaki, icon: Users, color: 'blue', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
-          { label: 'Perempuan', value: stats.perempuan, icon: Users, color: 'pink', bgClass: 'bg-pink-50 dark:bg-pink-950/20' },
-          { label: 'Tidak Aktif', value: stats.tidakAktif, icon: UserMinus, color: 'zinc', bgClass: 'bg-zinc-50 dark:bg-zinc-800' },
-          { label: 'Dikeluarkan', value: stats.dikeluarkan, icon: UserX, color: 'red', bgClass: 'bg-red-50 dark:bg-red-950/20' },
+          { label: 'Total Petugas', value: stats.totalPetugas, iconSrc: '/icons/dashboard/total-petugas.png', bgClass: 'bg-orange-50 dark:bg-orange-950/20' },
+          { label: 'Petugas Aktif', value: stats.petugasAktif, iconSrc: '/icons/dashboard/petugas-aktif.png', bgClass: 'bg-green-50 dark:bg-green-950/20' },
+          { label: 'Laki-Laki', value: stats.lakiLaki, iconSrc: '/icons/dashboard/laki-laki.png', bgClass: 'bg-blue-50 dark:bg-blue-950/20' },
+          { label: 'Perempuan', value: stats.perempuan, iconSrc: '/icons/dashboard/perempuan.png', bgClass: 'bg-pink-50 dark:bg-pink-950/20' },
+          { label: 'Tidak Aktif', value: stats.tidakAktif, iconSrc: '/icons/dashboard/tidak-aktif.png', bgClass: 'bg-zinc-50 dark:bg-zinc-800' },
+          { label: 'Dikeluarkan', value: stats.dikeluarkan, iconSrc: '/icons/dashboard/dikeluarkan.png', bgClass: 'bg-red-50 dark:bg-red-950/20' },
         ].map((stat, idx) => (
           <div
             key={idx}
@@ -188,8 +189,14 @@ export default function AdminDashboardPage() {
             <Card className={`border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group ${stat.bgClass}`}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
-                  <div className={`p-3 rounded-xl bg-${stat.color}-500/10 group-hover:bg-${stat.color}-500/20 transition-colors duration-300`}>
-                    <stat.icon className={`w-5 h-5 text-${stat.color}-500 transition-colors duration-300`} />
+                  <div className="relative h-14 w-14 transition-transform duration-300 group-hover:scale-110">
+                    <Image
+                      src={stat.iconSrc}
+                      alt={`Ikon ${stat.label}`}
+                      fill
+                      sizes="56px"
+                      className="object-contain drop-shadow-sm"
+                    />
                   </div>
                 </div>
                 <div className="mt-4">
