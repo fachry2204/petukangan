@@ -304,7 +304,7 @@ export default function PjlpLayout({
         nativeWatcherId = await BackgroundGeolocation.addWatcher(
           {
             backgroundMessage: 'GPS PJLP sedang aktif - jangan tutup aplikasi.',
-            backgroundTitle: 'SI PETUT - Live Tracking',
+            backgroundTitle: 'PPSU System - Live Tracking',
             requestPermissions: true,
             stale: false,
             distanceFilter: 5,
@@ -567,7 +567,7 @@ export default function PjlpLayout({
             <img src={settings.logoUrl || '/logodki.png'} alt="Logo DKI" className="w-8 h-8 object-contain drop-shadow-sm" />
             <div className="flex items-baseline gap-2">
               <h1 className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none">
-                {settings.systemName || 'PJLP SMART'}
+                {settings.systemName || 'PPSU System'}
               </h1>
               {settings.systemDescription && (
                 <span className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none hidden sm:inline-block">

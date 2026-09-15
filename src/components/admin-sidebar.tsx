@@ -3,41 +3,25 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Map as MapIcon, 
-  Users, 
-  Calendar, 
-  Settings, 
-  ClipboardCheck,
-  AlertTriangle,
-  History,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  MonitorSmartphone
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 
-import { Siren } from 'lucide-react'; // Ensure Siren is imported if missing
-
 const generalMenuItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard' },
-  { label: 'Live Monitoring', icon: MapIcon, href: '/admin/monitoring' },
-  { label: 'Data Petugas Online', icon: MonitorSmartphone, href: '/admin/online-officers' },
-  { label: 'Riwayat GPS', icon: History, href: '/admin/gps-history' },
-  { label: 'SOS Petugas', icon: Siren, href: '/admin/sos' },
+  { label: 'Dashboard', iconSrc: '/icon/home.png', href: '/admin/dashboard' },
+  { label: 'Live Monitoring', iconSrc: '/gambar/icon/maphome.png', href: '/admin/monitoring' },
+  { label: 'Data Petugas Online', iconSrc: '/gambar/icon/office.png', href: '/admin/online-officers' },
+  { label: 'Riwayat GPS', iconSrc: '/gambar/icon/checkin.png', href: '/admin/gps-history' },
+  { label: 'SOS Petugas', iconSrc: '/icon/sos.png', href: '/admin/sos' },
 ];
 
 const pjlpMenuItems = [
-  { label: 'Petugas', icon: Users, href: '/admin/users' },
-  { label: 'Absensi Petugas', icon: ClipboardCheck, href: '/admin/attendance' },
-  { label: 'Jadwal Petugas', icon: Calendar, href: '/admin/schedules' },
-  { label: 'Tugas Lapangan', icon: ClipboardList, href: '/admin/tasks' },
-  { label: 'Laporan Kejadian', icon: AlertTriangle, href: '/admin/reports' },
+  { label: 'Petugas', iconSrc: '/icons/dashboard/total-petugas.png', href: '/admin/users' },
+  { label: 'Absensi Petugas', iconSrc: '/icon/absen.png', href: '/admin/attendance' },
+  { label: 'Jadwal Petugas', iconSrc: '/icon/calender.png', href: '/admin/schedules' },
+  { label: 'Tugas Lapangan', iconSrc: '/icon/camera.png', href: '/admin/tasks' },
+  { label: 'Laporan Kejadian', iconSrc: '/icon/lapor.png', href: '/admin/reports' },
 ];
 
 export function AdminSidebar() {
@@ -84,7 +68,7 @@ export function AdminSidebar() {
             "flex flex-col transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
             isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[200px]"
           )}>
-            <span className="text-xl font-black tracking-tight leading-tight text-zinc-90">{systemName || "SIPETUT"}</span>
+            <span className="text-xl font-black tracking-tight leading-tight text-zinc-90">{systemName || "PPSU System"}</span>
             <span className="text-[10px] text-zinc-400 font-medium mt-0.5 uppercase tracking-widest">{(systemDescription || "Monitoring & Management System").slice(0,25)}</span>
           </div>
         </div>
@@ -110,10 +94,13 @@ export function AdminSidebar() {
               )}
               title={isCollapsed ? item.label : undefined}
             >
-              <item.icon className={cn(
-                'w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110', 
-                isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-700'
-              )} />
+              <Image
+                src={item.iconSrc}
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
+              />
               
               <span className={cn(
                 "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
@@ -154,10 +141,13 @@ export function AdminSidebar() {
               )}
               title={isCollapsed ? item.label : undefined}
             >
-              <item.icon className={cn(
-                'w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110', 
-                isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-700'
-              )} />
+              <Image
+                src={item.iconSrc}
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
+              />
               
               <span className={cn(
                 "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
@@ -189,7 +179,13 @@ export function AdminSidebar() {
             )}
             title={isCollapsed ? "Settings" : undefined}
           >
-            <Settings className="w-5 h-5 shrink-0" />
+            <Image
+              src="/gambar/icon/key.png"
+              alt=""
+              width={24}
+              height={24}
+              className="h-6 w-6 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
+            />
             <span className={cn(
               "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
               isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[180px]"

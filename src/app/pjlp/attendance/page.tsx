@@ -360,7 +360,7 @@ export default function PjlpAttendancePage() {
 
     // 1. Application Name Header
     ctx.font = `bold ${fontSize * 1.15}px 'Outfit', 'Inter', sans-serif`;
-    ctx.fillText('SI PETUT ABSENSI PJLP', padding, height - bannerHeight + padding + fontSize);
+    ctx.fillText('PPSU SYSTEM ABSENSI PJLP', padding, height - bannerHeight + padding + fontSize);
 
     // 2. Timestamp & GPS Coordinates Info Row
     ctx.font = `bold ${fontSize * 0.8}px 'Inter', sans-serif`;
@@ -912,7 +912,7 @@ export default function PjlpAttendancePage() {
             <div className="space-y-2">
               <h3 className="text-xl font-black text-zinc-900 dark:text-white">Izin Kamera & GPS Wajib</h3>
               <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
-                Aplikasi **SIPETUT** mewajibkan akses Kamera dan lokasi GPS aktif untuk menjamin validitas kehadiran Anda.
+                Aplikasi **PPSU System** mewajibkan akses Kamera dan lokasi GPS aktif untuk menjamin validitas kehadiran Anda.
               </p>
               <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900 text-red-600 text-xs p-3.5 rounded-2xl text-left leading-relaxed">
                 {permissionError || 'Harap berikan izin akses Kamera & GPS di browser Anda.'}

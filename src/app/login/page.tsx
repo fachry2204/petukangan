@@ -63,6 +63,8 @@ export default function LoginPage() {
 
   const [loginVolume, setLoginVolume] = useState(0);
   const ornamentColorMatrix = getOrnamentColorMatrix(settings.mainColor);
+  const hasVideoBackground = settings.bgType === 'video' && Boolean(settings.bgVideo && getYoutubeId(settings.bgVideo)) && !hasVideoError;
+  const hasImageBackground = Boolean(settings.bgImage) && !hasVideoBackground;
 
   // Dynamic mobile viewport detection
   useEffect(() => {
@@ -132,11 +134,13 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-zinc-950"
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-white"
       style={(settings.bgType === 'image' || hasVideoError || (settings.bgType === 'video' && (!settings.bgVideo || !getYoutubeId(settings.bgVideo)))) ? {
-        backgroundImage: `url(${settings.bgImage || '/bg.jpg'})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center bottom',
+        backgroundImage: settings.bgImage ? `url(${settings.bgImage})` : 'none',
+        backgroundSize: 'contain',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#ffffff',
       } : {}}
     >
       {settings.bgType === 'video' && settings.bgVideo && getYoutubeId(settings.bgVideo) && !hasVideoError && (
@@ -187,7 +191,9 @@ export default function LoginPage() {
       )}
 
       {/* Dark Overlay for better contrast */}
-      <div className="absolute inset-0 bg-black/10 md:bg-black/50 z-0" />
+      {(hasImageBackground || hasVideoBackground) && (
+        <div className="absolute inset-0 bg-black/10 md:bg-black/50 z-0" />
+      )}
 
       <Card className="w-full max-w-sm border-none shadow-2xl bg-white dark:bg-zinc-900 rounded-[32px] overflow-hidden relative z-10 flex flex-col justify-center mb-10 md:mb-0">
         <svg aria-hidden="true" className="absolute h-0 w-0 overflow-hidden">

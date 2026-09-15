@@ -10,7 +10,7 @@ interface ManifestSettings {
 }
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  let systemName = 'SI PETUT';
+  let systemName = 'PPSU System';
   let description = 'Monitoring PJLP';
   let mainColor = '#f97316';
 

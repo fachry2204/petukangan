@@ -13,10 +13,10 @@ const defaultSettings = {
   id: 1,
   logoUrl: '/logodki.png',
   bgType: 'image',
-  bgImage: '/bg.jpg',
+  bgImage: '',
   bgVideo: '',
   bgVideoVolume: 0,
-  systemName: 'SIPETUT',
+  systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
   mainColor: '#f97316',
   maintenanceActive: false,
@@ -179,13 +179,13 @@ export async function POST(req: Request) {
     if (existing && existing.length > 0) {
       await queryDb(
         `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '/bg.jpg', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'SIPETUT', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
       );
     } else {
       await queryDb(
         `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '/bg.jpg', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'SIPETUT', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
       );
     }
 

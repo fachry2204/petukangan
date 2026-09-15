@@ -25,7 +25,7 @@ const plusJakarta = localFont({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  let systemName = "SIPETUT";
+  let systemName = "PPSU System";
   let systemDescription = "Monitoring & Management System";
   let logoUrl = "/logodki.png";
 

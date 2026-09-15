@@ -115,7 +115,7 @@ export default function InstallAppPrompt() {
 
         <div className="space-y-2 pr-8">
           <h2 id="install-app-title" className="text-xl font-black text-zinc-950 dark:text-white">
-            Instal SI PETUT
+            Instal PPSU System
           </h2>
           <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             Pasang aplikasi di layar utama agar dapat dibuka langsung tanpa masuk melalui browser.

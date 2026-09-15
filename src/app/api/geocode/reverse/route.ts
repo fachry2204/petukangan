@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         headers: {
           'Accept': 'application/json',
           'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
-          'User-Agent': 'sipetut-petukangan/1.0',
+          'User-Agent': 'ppsu-system/1.0',
         },
         signal: controller.signal,
       },

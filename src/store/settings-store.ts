@@ -33,10 +33,10 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   logoUrl: '/logodki.png',
   bgType: 'image',
-  bgImage: '/bg.jpg',
+  bgImage: '',
   bgVideo: '',
   bgVideoVolume: 0, // Default muted/0 for seamless autoplay
-  systemName: 'SIPETUT',
+  systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
   mainColor: '#f97316', // orange-500
 
