@@ -21,6 +21,22 @@ const getYoutubeId = (url: string) => {
   return match ? match[1] : null;
 };
 
+const getOrnamentColorMatrix = (hexColor: string) => {
+  const normalized = hexColor.trim().replace(/^#/, '');
+  const expanded = normalized.length === 3
+    ? normalized.split('').map((character) => character + character).join('')
+    : normalized;
+  const validHex = /^[0-9a-fA-F]{6}$/.test(expanded) ? expanded : 'ff6b00';
+  const target = [0, 2, 4].map((offset) => parseInt(validHex.slice(offset, offset + 2), 16) / 255);
+  const sourceGreen = 97 / 255;
+
+  return target.flatMap((channel) => {
+    const slope = (1 - channel) / (1 - sourceGreen);
+    const intercept = channel - (slope * sourceGreen);
+    return [0, slope, 0, 0, intercept];
+  }).concat([0, 0, 0, 1, 0]).join(' ');
+};
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -46,6 +62,7 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const [loginVolume, setLoginVolume] = useState(0);
+  const ornamentColorMatrix = getOrnamentColorMatrix(settings.mainColor);
 
   // Dynamic mobile viewport detection
   useEffect(() => {
@@ -173,12 +190,18 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-black/10 md:bg-black/50 z-0" />
 
       <Card className="w-full max-w-sm border-none shadow-2xl bg-white dark:bg-zinc-900 rounded-[32px] overflow-hidden relative z-10 flex flex-col justify-center mb-10 md:mb-0">
+        <svg aria-hidden="true" className="absolute h-0 w-0 overflow-hidden">
+          <filter id="login-ornament-color" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="matrix" values={ornamentColorMatrix} />
+          </filter>
+        </svg>
         {/* Ornament Top */}
         <div className="absolute top-0 left-0 w-full z-0 h-10 md:h-12 overflow-hidden">
           <img
             src="/gambar/ornamen.png"
             alt="Ornamen"
             className="w-full h-full object-cover object-top opacity-90"
+            style={{ filter: 'url(#login-ornament-color)' }}
           />
         </div>
         <CardHeader className="text-center pt-14 pb-4 relative z-10">
@@ -225,7 +248,8 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-[#ff6b00] hover:bg-[#e66000] text-white rounded-2xl font-bold transition-all duration-300 shadow-lg shadow-orange-500/25 text-sm"
+                className="w-full h-12 text-white rounded-2xl font-bold transition-all duration-300 shadow-lg text-sm hover:brightness-90"
+                style={{ backgroundColor: settings.mainColor, boxShadow: `0 10px 20px ${settings.mainColor}40` }}
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
