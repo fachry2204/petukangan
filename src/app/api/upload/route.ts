@@ -88,7 +88,9 @@ export async function POST(request: Request) {
 
     const ext = path.extname(file.name) || '.png';
     const uniqueName = `${type}-${Date.now()}${ext}`;
-    const filePath = path.join(baseDir, uniqueName);
+    // Hindari path.join dengan nama file dinamis. Turbopack menafsirkannya sebagai
+    // pola filesystem saat build dan dapat memindai ribuan file di dalam proyek.
+    const filePath = `${baseDir}${path.sep}${uniqueName}`;
 
     fs.writeFileSync(filePath, buffer);
 
