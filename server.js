@@ -165,12 +165,15 @@ app.prepare().then(async () => {
       if (data && data.userId) {
         const prev = activeLocations.get(String(data.userId)) || {};
         const hasNewCoords = data.lat != null && data.lng != null;
+        // Browser geolocation cannot report mock status. Keep the last known
+        // native result until a native fix explicitly confirms a new state.
+        const isMock = data.isMock === true ? true : data.isMock === false ? false : prev.isMock ?? null;
 
         let shouldSaveToDb = false;
         if (hasNewCoords) {
           const dist = calculateDistance(prev.lastSavedLat, prev.lastSavedLng, data.lat, data.lng);
           // Hanya simpan ke DB jika ini titik pertama ATAU jarak bergerak lebih dari 10 meter
-          if (dist > 10) {
+          if (dist > 10 || (data.isMock != null && data.isMock !== prev.isMock)) {
             shouldSaveToDb = true;
           }
         }
@@ -185,6 +188,7 @@ app.prepare().then(async () => {
           lastSavedLat: shouldSaveToDb ? data.lat : prev.lastSavedLat ?? null,
           lastSavedLng: shouldSaveToDb ? data.lng : prev.lastSavedLng ?? null,
           gpsStatus: hasNewCoords ? !!data.gpsStatus : prev.gpsStatus ?? false,
+          isMock,
           timestamp: data.timestamp || Date.now(),
           device: data.device || prev.device || 'Unknown',
           os: data.os || prev.os || 'Unknown',
@@ -202,7 +206,7 @@ app.prepare().then(async () => {
             await dbPool.execute(
               `INSERT INTO gps_tracking (userId, lat, lng, speed, batteryLevel, isMock, timestamp)
                VALUES (?, ?, ?, ?, ?, ?, NOW(6))`,
-              [data.userId, data.lat, data.lng, data.speed || null, data.batteryLevel || null, data.isMock ? 1 : 0]
+              [data.userId, data.lat, data.lng, data.speed || null, data.batteryLevel || null, isMock ? 1 : 0]
             );
           } catch (dbErr) {
             console.error('[Socket] Failed to insert GPS tracking data:', dbErr.message);
@@ -221,6 +225,7 @@ app.prepare().then(async () => {
         lat: l.lat,
         lng: l.lng,
         gpsStatus: l.gpsStatus,
+        isMock: l.isMock,
         timestamp: l.timestamp,
         device: l.device,
         os: l.os,

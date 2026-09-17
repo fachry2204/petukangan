@@ -139,6 +139,11 @@ export default function AdminSettingsPage() {
   };
 
   const handleSaveSettings = async () => {
+    const officerIdPrefix = settings.officerIdPrefix.trim().toUpperCase();
+    if (!/^[A-Z]{2,10}$/.test(officerIdPrefix)) {
+      alert('Prefix ID Petugas harus 2–10 huruf tanpa angka atau spasi.');
+      return;
+    }
     setIsSaving(true);
     try {
       await axios.post(`${apiUrl}/settings`, {
@@ -149,6 +154,7 @@ export default function AdminSettingsPage() {
         bgVideoVolume: settings.bgVideoVolume,
         systemName: settings.systemName,
         systemDescription: settings.systemDescription,
+        officerIdPrefix,
         mainColor: settings.mainColor,
         maintenanceActive: settings.maintenanceActive,
         maintenanceEnd: settings.maintenanceEnd,
@@ -463,6 +469,22 @@ export default function AdminSettingsPage() {
                     onChange={(e) => settings.setSettings({ systemDescription: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                <label htmlFor="officer-id-prefix" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Prefix ID Petugas</label>
+                <Input
+                  id="officer-id-prefix"
+                  value={settings.officerIdPrefix}
+                  maxLength={10}
+                  onChange={(e) => settings.setSettings({ officerIdPrefix: e.target.value.toUpperCase().replace(/[^A-Z]/g, '') })}
+                  className="mt-2 max-w-xs uppercase"
+                  placeholder="PJLP"
+                  aria-describedby="officer-id-prefix-help"
+                />
+                <p id="officer-id-prefix-help" className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  Berlaku untuk petugas baru. Contoh: {settings.officerIdPrefix || 'PJLP'}001. ID petugas lama tetap sama.
+                </p>
               </div>
 
               <div className="pt-4 border-t border-zinc-100 space-y-4">

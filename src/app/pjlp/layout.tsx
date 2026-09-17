@@ -50,7 +50,7 @@ export default function PjlpLayout({
   const socketRef = useRef<any>(null);
   const attendanceStatusRef = useRef<string>('Online');
   // Last known GPS — used to re-emit heartbeats so admin map keeps the marker alive
-  const lastGpsRef = useRef<{ lat: number; lng: number; timestamp: number } | null>(null);
+  const lastGpsRef = useRef<{ lat: number; lng: number; timestamp: number; isMock?: boolean } | null>(null);
   const wakeLockRef = useRef<any>(null);
 
   const [gpsModalVisible, setGpsModalVisible] = useState(false);
@@ -145,6 +145,7 @@ export default function PjlpLayout({
                 lat: g?.lat ?? null,
                 lng: g?.lng ?? null,
                 gpsStatus: !!g,
+                isMock: g?.isMock,
                 timestamp: Date.now(),
               });
             }
@@ -228,11 +229,12 @@ export default function PjlpLayout({
       return { device, os, provider };
     };
 
-    const emitWithGps = (pos: GeolocationPosition) => {
+    const emitWithGps = (pos: GeolocationPosition, isMock?: boolean) => {
       lastGpsRef.current = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         timestamp: Date.now(),
+        isMock,
       };
       
       const deviceInfo = getDeviceInfo();
@@ -245,6 +247,7 @@ export default function PjlpLayout({
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         gpsStatus: true,
+        isMock,
         timestamp: Date.now(),
         device: deviceInfo.device,
         os: deviceInfo.os,
@@ -269,6 +272,7 @@ export default function PjlpLayout({
         lat: null,
         lng: null,
         gpsStatus: false,
+        isMock: lastGpsRef.current?.isMock,
         timestamp: Date.now(),
         device: deviceInfo.device,
         os: deviceInfo.os,
@@ -279,16 +283,21 @@ export default function PjlpLayout({
     };
 
     let lastGpsEmitAt = 0;
-    const emitWithGpsThrottled = (pos: GeolocationPosition) => {
+    let lastEmittedMock: boolean | undefined;
+    const emitWithGpsThrottled = (pos: GeolocationPosition, isMock?: boolean) => {
       lastGpsRef.current = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         timestamp: Date.now(),
+        isMock,
       };
       const now = Date.now();
-      if (now - lastGpsEmitAt < gpsIntervalMs) return;
+      // A change in mock-location state must reach the map immediately,
+      // even if the officer has not moved or the normal GPS interval has not elapsed.
+      if (now - lastGpsEmitAt < gpsIntervalMs && lastEmittedMock === isMock) return;
       lastGpsEmitAt = now;
-      emitWithGps(pos);
+      lastEmittedMock = isMock;
+      emitWithGps(pos, isMock);
     };
 
     // Try to detect Capacitor native runtime and start native background
@@ -331,7 +340,7 @@ export default function PjlpLayout({
                 speed: location.speed ?? null,
               },
               timestamp: location.time || Date.now(),
-            } as unknown as GeolocationPosition);
+            } as unknown as GeolocationPosition, location.simulated === true);
             setGpsModalVisible(false);
             setIsRequestingGps(false);
           },
@@ -542,6 +551,7 @@ export default function PjlpLayout({
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             gpsStatus: true,
+            isMock: lastGpsRef.current.isMock,
             timestamp: Date.now()
           });
         }
@@ -560,25 +570,25 @@ export default function PjlpLayout({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 pb-20">
+    <div className="pjlp-app min-h-dvh min-w-0 bg-[#F8F9FA] dark:bg-zinc-950 pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-[999] w-full bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            <img src={settings.logoUrl || '/logodki.png'} alt="Logo DKI" className="w-8 h-8 object-contain drop-shadow-sm" />
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none">
+        <div className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <img src={settings.logoUrl || '/logodki.png'} alt="Logo DKI" className="h-8 w-8 shrink-0 object-contain drop-shadow-sm" />
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h1 className="min-w-0 truncate text-sm font-black text-zinc-900 dark:text-white uppercase sm:text-lg">
                 {settings.systemName || 'PPSU System'}
               </h1>
               {settings.systemDescription && (
-                <span className="text-lg font-black text-zinc-900 dark:text-white uppercase leading-none hidden sm:inline-block">
+                <span className="hidden max-w-[35vw] truncate text-lg font-black text-zinc-900 dark:text-white uppercase lg:inline-block">
                   — {settings.systemDescription}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-zinc-500">Live Tracking</span>
+            <span className="hidden text-xs font-medium text-zinc-500 min-[360px]:inline">Live Tracking</span>
           </div>
         </div>
 
@@ -589,7 +599,7 @@ export default function PjlpLayout({
         />
       </header>
 
-      <main className="w-full max-w-lg md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
+      <main className="mx-auto w-full min-w-0 max-w-lg px-3 min-[380px]:px-4 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl xl:max-w-6xl">
         {children}
       </main>
 
@@ -599,7 +609,7 @@ export default function PjlpLayout({
       {/* Call Incoming Modal */}
       {callIncoming && (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-orange-950/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-zinc-900 border-[3px] border-orange-500 rounded-[2rem] p-8 max-w-sm w-full shadow-[0_0_80px_rgba(249,115,22,0.6)] text-center animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-900 border-[3px] border-orange-500 rounded-[2rem] p-5 sm:p-8 max-w-sm w-full max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-[0_0_80px_rgba(249,115,22,0.6)] text-center animate-in zoom-in-95 duration-200">
             <div className="w-24 h-24 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
               <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-30"></div>
               <ShieldAlert className="w-12 h-12 animate-pulse" />
@@ -630,7 +640,7 @@ export default function PjlpLayout({
       {/* Mandatory GPS Error Modal */}
       {gpsModalVisible && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-orange-500 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(249,115,22,0.3)] text-center animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-orange-500 rounded-3xl p-5 sm:p-8 max-w-sm w-full max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-[0_0_50px_rgba(249,115,22,0.3)] text-center animate-in zoom-in-95 duration-200">
             <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
               {isRequestingGps && <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-20"></div>}
               <MapPin className={`w-10 h-10 ${isRequestingGps ? 'animate-bounce' : ''}`} />

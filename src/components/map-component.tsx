@@ -65,12 +65,23 @@ export default function MapComponent({
           <div style="position:relative;width:48px;height:48px;border-radius:50%;border:3px solid #dc2626;background:white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(239,68,68,0.8);overflow:hidden;z-index:10;">
             ${photoHtml}
           </div>
+          ${p.isMock ? '<span style="position:absolute;top:51px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#6d28d9;color:white;border:2px solid white;border-radius:6px;padding:2px 5px;font:900 10px system-ui;z-index:20;">GPS PALSU</span>' : ''}
         </div>`;
       return L.divIcon({ className: 'custom-sos-icon', html, iconSize: [60, 60], iconAnchor: [30, 30], popupAnchor: [0, -30] });
     }
 
     const markerStyle = String(p.markerStyle || '');
     const useStatusDot = markerStyle === 'statusDot' || markerStyle === 'status-dot' || p.useStatusDot === true;
+    if (p.isMock) {
+      const innerHtml = p.photoUrl
+        ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;" />`
+        : `<span style="color:white;font-weight:800;font-size:16px;">${(p.fullName || p.name || 'P')[0].toUpperCase()}</span>`;
+      const html = `<div style="position:relative;width:66px;height:76px;display:flex;justify-content:center;">
+        <div style="width:46px;height:46px;border:4px solid #7c3aed;border-radius:50%;background:#4c1d95;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px white,0 3px 12px #4c1d9580;">${innerHtml}</div>
+        <span style="position:absolute;top:49px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#6d28d9;color:white;border:2px solid white;border-radius:6px;padding:2px 5px;font:900 10px system-ui;">GPS PALSU</span>
+      </div>`;
+      return L.divIcon({ className: 'mock-gps-icon', html, iconSize: [66, 76], iconAnchor: [33, 33], popupAnchor: [0, -38] });
+    }
     if (useStatusDot) {
       const html = `
         <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
@@ -114,6 +125,7 @@ export default function MapComponent({
         <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">
           ${p.fullName || p.name || 'Petugas'}
         </div>
+        ${p.isMock ? '<div style="margin-bottom:7px;padding:6px 8px;border-radius:6px;background:#ede9fe;color:#5b21b6;font-weight:800;font-size:12px;">⚠ GPS PALSU — lokasi disimulasikan perangkat</div>' : ''}
         <div style="display:grid;gap:3px;font-size:12px;color:#374151;">
           <div style="display:flex;align-items:center;gap:4px;">
             <span style="color:#6b7280;font-size:10px;width:70px;">Status</span>

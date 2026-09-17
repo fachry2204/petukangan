@@ -172,8 +172,8 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-100 dark:border-zinc-800 pb-safe z-40 shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
-        <div className="flex justify-around items-center h-[72px] w-full max-w-lg md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto px-2 sm:px-6 md:px-8">
+      <nav aria-label="Navigasi petugas" className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-100 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/90">
+        <div className="mx-auto flex h-[72px] w-full max-w-lg items-center justify-around px-1 min-[380px]:px-2 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl xl:max-w-6xl">
           {navItems.map((item) => {
             const isActive = pathname === item.href && item.label !== 'SOS';
             
@@ -183,7 +183,8 @@ export function BottomNav() {
                 <button
                   key="sos-btn"
                   onClick={() => setShowSOSModal(true)}
-                  className="flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1 -mt-6"
+                  className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 py-1 -mt-6 transition-all duration-300"
+                  aria-label="Kirim SOS"
                 >
                   <div className="flex items-center justify-center transition-all duration-300 bg-red-500 rounded-full w-14 h-14 p-2.5 shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-4 border-white dark:border-zinc-900 animate-pulse active:scale-95">
                     <img 
@@ -202,7 +203,7 @@ export function BottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 py-1 active:scale-90',
+                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 py-1 transition-all duration-300 active:scale-90',
                   isActive ? 'text-orange-600 font-black' : 'text-zinc-400 font-semibold'
                 )}
               >
@@ -214,7 +215,7 @@ export function BottomNav() {
                     isActive ? 'scale-110 opacity-100' : 'opacity-40 grayscale hover:opacity-70'
                   )} 
                 />
-                <span className="text-[11px] tracking-tight">{item.label}</span>
+                <span className="max-w-full truncate text-[10px] tracking-tight min-[380px]:text-[11px]">{item.label}</span>
                 {isActive && (
                   <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-0.5" />
                 )}
@@ -227,7 +228,7 @@ export function BottomNav() {
       {/* SOS Confirmation Modal */}
       {showSOSModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-red-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-red-500 rounded-3xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-in zoom-in-95 duration-150 text-center">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-red-500 rounded-3xl p-6 max-w-sm w-full max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-in zoom-in-95 duration-150 text-center">
             
             <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 relative">
               <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>

@@ -224,7 +224,7 @@ export async function POST(req: Request) {
     const { username, password, fullName, email, phone, roleName, zoneId, gender, birthDate, joinDate, address, country, province, city, district, village, postalCode, photoUrl, documents, status } = body;
     const isAdminAccount = ['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(roleName));
 
-    if (!username || (!isAdminAccount && !password) || !fullName) {
+    if ((!username && roleName !== 'PJLP') || (!isAdminAccount && !password) || !fullName) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
     }
 
@@ -256,36 +256,25 @@ export async function POST(req: Request) {
       if (roles?.[0]) roleId = roles[0].id;
     }
 
-    // Auto-generate sequential ID for PJLP
-    let finalUsername = username;
+    const hashed = await hashPassword(password);
+    const docsString = documents ? JSON.stringify(documents) : null;
+    let prefix = 'PJLP';
     if (roleName === 'PJLP') {
+      // Older installations gain the setting without changing existing IDs.
       try {
-        const lastUsers: any = await queryDb(
-          `SELECT username FROM users WHERE username REGEXP '^PJLP[0-9]+$' ORDER BY CAST(SUBSTRING(username, 5) AS UNSIGNED) DESC LIMIT 1`
-        );
-        let nextId = 1;
-        if (lastUsers && lastUsers.length > 0) {
-          const match = lastUsers[0].username.match(/^PJLP(\d+)$/i);
-          if (match) {
-            nextId = parseInt(match[1], 10) + 1;
-          }
-        }
-        finalUsername = `PJLP${nextId.toString().padStart(3, '0')}`;
-      } catch (err) {
-        console.error('Failed to generate sequential ID:', err);
-        // Fallback if regex fails on older MySQL versions
-        finalUsername = `PJLP${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+        await queryDb("ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'");
+      } catch { /* column already exists */ }
+      const settingsRows: any = await queryDb('SELECT officerIdPrefix FROM system_settings LIMIT 1');
+      prefix = String(settingsRows?.[0]?.officerIdPrefix || 'PJLP').trim().toUpperCase();
+      if (!/^[A-Z]{2,10}$/.test(prefix)) {
+        return NextResponse.json({ error: 'Prefix ID Petugas pada pengaturan sistem tidak valid.' }, { status: 400 });
       }
     }
 
-    const hashed = await hashPassword(password);
-    const docsString = documents ? JSON.stringify(documents) : null;
-
-    await queryDb(
-      `INSERT INTO users (username, password, fullName, email, phone, roleId, zoneId, gender, birthDate, joinDate, address, country, province, city, district, village, postalCode, photoUrl, documents, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), NOW(6))`,
-      [
-        finalUsername, 
+    const insertSql = `INSERT INTO users (username, password, fullName, email, phone, roleId, zoneId, gender, birthDate, joinDate, address, country, province, city, district, village, postalCode, photoUrl, documents, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), NOW(6))`;
+    const insertUser = (generatedUsername: string) => queryDb(insertSql, [
+        generatedUsername,
         hashed, 
         fullName, 
         email || null, 
@@ -305,8 +294,28 @@ export async function POST(req: Request) {
         photoUrl || null,
         docsString,
         status || 'ACTIVE'
-      ]
-    );
+      ]);
+
+    let finalUsername = String(username || '').trim();
+    if (roleName === 'PJLP') {
+      // Retry when concurrent requests selected the same next number.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const rows: any = await queryDb(
+          'SELECT MAX(CAST(SUBSTRING(username, ?) AS UNSIGNED)) AS maxNumber FROM users WHERE username REGEXP ?',
+          [prefix.length + 1, `^${prefix}[0-9]+$`]
+        );
+        const nextNumber = Number(rows?.[0]?.maxNumber || 0) + 1;
+        finalUsername = `${prefix}${String(nextNumber).padStart(3, '0')}`;
+        try {
+          await insertUser(finalUsername);
+          break;
+        } catch (err: any) {
+          if (err?.code !== 'ER_DUP_ENTRY' || attempt === 4) throw err;
+        }
+      }
+    } else {
+      await insertUser(finalUsername);
+    }
 
     emitUserChange('create', { username: finalUsername, fullName });
     return NextResponse.json({ message: 'User berhasil dibuat', username: finalUsername }, { status: 201 });

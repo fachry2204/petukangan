@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Loader2, Save, Trash2, PlusCircle } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { apiUrl } from "@/lib/api-config";
@@ -19,6 +20,7 @@ import { format } from "date-fns";
 export default function AddPetugasPage() {
   const router = useRouter();
   const { token } = useAuthStore();
+  const officerIdPrefix = useSettingsStore((state) => state.officerIdPrefix);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -287,18 +289,15 @@ export default function AddPetugasPage() {
       const formattedBirthDate = formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : null;
       const formattedJoinDate = formData.joinDate ? format(formData.joinDate, 'yyyy-MM-dd') : null;
 
-      // Generate username; password is supplied by the administrator.
-      const generatedUsername = `pjlp-${formData.fullName.toLowerCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 10000)}`;
-
       if (formData.password.length < 8) {
         toast({ title: 'Password Tidak Valid', description: 'Password minimal 8 karakter.', variant: 'destructive' });
         setIsSubmitting(false);
         return;
       }
 
-      await axios.post(`${apiUrl}/users`, {
+      const response = await axios.post(`${apiUrl}/users`, {
         ...formData,
-        username: generatedUsername,
+        username: '', // ID dibuat server memakai prefix terbaru dari MySQL.
         password: formData.password,
         birthDate: formattedBirthDate,
         joinDate: formattedJoinDate,
@@ -308,11 +307,11 @@ export default function AddPetugasPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      toast({ title: 'Berhasil', description: 'Data Petugas berhasil ditambahkan' });
+      toast({ title: 'Berhasil', description: `Petugas dibuat dengan ID ${response.data.username}` });
       router.push('/admin/users');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: 'Gagal', description: 'Gagal menambahkan data', variant: 'destructive' });
+      toast({ title: 'Gagal', description: error.response?.data?.error || 'Gagal menambahkan data', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -342,7 +341,7 @@ export default function AddPetugasPage() {
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
                 <Label className="text-base">User ID / Username</Label>
-                <Input disabled value="Dihasilkan Otomatis (PJLP...)" className="bg-zinc-100 rounded-xl h-14 text-base" />
+                <Input disabled value={`Dihasilkan otomatis (${officerIdPrefix || 'PJLP'}...)`} className="bg-zinc-100 rounded-xl h-14 text-base" />
                 <p className="text-sm text-zinc-500">Username dibuat otomatis dan disimpan di database.</p>
               </div>
               <div className="space-y-3">

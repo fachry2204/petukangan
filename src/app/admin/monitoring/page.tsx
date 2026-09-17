@@ -284,6 +284,7 @@ function AdminMonitoringContent() {
       status: o.status || 'Online',
       photoUrl: o.photoUrl,
       isSOS: o.isSOS,
+      isMock: o.isMock === true,
       address: o.address,
       ipAddress: o.ipAddress,
       device: o.device,
@@ -463,8 +464,13 @@ function AdminMonitoringContent() {
                           {(o.fullName || 'P').charAt(0)}
                         </div>
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-bold text-[11px] text-zinc-800 dark:text-zinc-200">{o.fullName || `Petugas ${o.userId}`}</p>
+                        {o.isMock === true && (
+                          <span className="mt-1 inline-flex rounded-md border border-violet-300 bg-violet-100 px-1.5 py-0.5 text-[9px] font-black text-violet-800 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-200">
+                            GPS PALSU
+                          </span>
+                        )}
                         <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
                           {(o.lat && o.lng && Number(o.lat) !== 0) ? (
                             <><MapPin className="w-2.5 h-2.5 text-orange-500" />{Number(o.lat).toFixed(4)}, {Number(o.lng).toFixed(4)}</>

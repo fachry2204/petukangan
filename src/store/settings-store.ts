@@ -9,6 +9,7 @@ interface SettingsState {
   bgVideoVolume: number; // Volume 0 - 100
   systemName: string;
   systemDescription: string;
+  officerIdPrefix: string;
   mainColor: string;
   
   maintenanceActive: boolean;
@@ -40,6 +41,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   bgVideoVolume: 0, // Default muted/0 for seamless autoplay
   systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
+  officerIdPrefix: 'PJLP',
   mainColor: '#f97316', // orange-500
 
   maintenanceActive: false,

@@ -19,6 +19,7 @@ const defaultSettings = {
   bgVideoVolume: 0,
   systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
+  officerIdPrefix: 'PJLP',
   mainColor: '#f97316',
   maintenanceActive: false,
   maintenanceEnd: '',
@@ -90,6 +91,9 @@ export async function GET() {
       await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
     } catch { /* column may already exist */ }
     try {
+      await queryDb("ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'");
+    } catch { /* column may already exist */ }
+    try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
     } catch { /* column may already exist */ }
     try {
@@ -131,6 +135,7 @@ export async function GET() {
       shifts: shifts || [],
       zones: zones || [],
       gpsUpdateInterval: s.gpsUpdateInterval ?? 30,
+      officerIdPrefix: s.officerIdPrefix || defaultSettings.officerIdPrefix,
       mapVisibility: normalizeMapVisibility(s.mapVisibility),
       roleAccess: roleAccess || defaultSettings.roleAccess,
       rolePermissions: rolePermissions || defaultSettings.rolePermissions,
@@ -153,6 +158,10 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
+    const officerIdPrefix = String(data.officerIdPrefix ?? defaultSettings.officerIdPrefix).trim().toUpperCase();
+    if (!/^[A-Z]{2,10}$/.test(officerIdPrefix)) {
+      return NextResponse.json({ error: 'Prefix ID Petugas harus 2–10 huruf tanpa angka atau spasi.' }, { status: 400 });
+    }
 
     const existing: any = await queryDb('SELECT id FROM system_settings LIMIT 1');
     const shifts = JSON.stringify(data.shifts || []);
@@ -174,6 +183,9 @@ export async function POST(req: Request) {
       await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
     } catch { /* column may already exist */ }
     try {
+      await queryDb("ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'");
+    } catch { /* column may already exist */ }
+    try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
     } catch { /* column may already exist */ }
     try {
@@ -193,14 +205,14 @@ export async function POST(req: Request) {
 
     if (existing && existing.length > 0) {
       await queryDb(
-        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, mapVisibility=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
+        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, officerIdPrefix=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, mapVisibility=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', officerIdPrefix, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
       );
     } else {
       await queryDb(
-        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
+        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, officerIdPrefix, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', officerIdPrefix, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
       );
     }
 
