@@ -42,6 +42,7 @@ const defaultSettings = {
       '/admin/schedules': true,
       '/admin/tasks': true,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': true,
     },
     STAFF: {
@@ -55,6 +56,7 @@ const defaultSettings = {
       '/admin/schedules': true,
       '/admin/tasks': true,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': false,
     },
     PIMPINAN: {
@@ -68,6 +70,7 @@ const defaultSettings = {
       '/admin/schedules': false,
       '/admin/tasks': false,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': false,
     },
   },
@@ -84,39 +87,51 @@ const defaultSettings = {
   updatedAt: new Date().toISOString(),
 };
 
+function mergeRoleAccess(value: unknown) {
+  const source = value && typeof value === 'object' ? value as Record<string, Record<string, boolean>> : {};
+  return Object.fromEntries(
+    Object.entries(defaultSettings.roleAccess).map(([role, defaults]) => [
+      role,
+      { ...defaults, ...(source[role] || {}) },
+    ]),
+  );
+}
+
+let settingsSchemaPromise: Promise<void> | null = null;
+
+function ensureSettingsSchema() {
+  if (settingsSchemaPromise) return settingsSchemaPromise;
+
+  settingsSchemaPromise = (async () => {
+    const columns = await queryDb('SHOW COLUMNS FROM system_settings') as Array<{ Field: string }>;
+    const existing = new Set((columns || []).map((column) => column.Field));
+    const migrations = [
+      ['gpsUpdateInterval', 'ALTER TABLE system_settings ADD COLUMN gpsUpdateInterval INT DEFAULT 30'],
+      ['mapVisibility', 'ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT'],
+      ['officerIdPrefix', "ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'"],
+      ['attendanceMode', "ALTER TABLE system_settings ADD COLUMN attendanceMode VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED'"],
+      ['villageName', "ALTER TABLE system_settings ADD COLUMN villageName VARCHAR(150) NOT NULL DEFAULT ''"],
+      ['roleAccess', 'ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT'],
+      ['rolePermissions', 'ALTER TABLE system_settings ADD COLUMN rolePermissions LONGTEXT'],
+      ['footerText', 'ALTER TABLE system_settings ADD COLUMN footerText LONGTEXT'],
+      ['footerShowOnAdmin', 'ALTER TABLE system_settings ADD COLUMN footerShowOnAdmin TINYINT(1) DEFAULT 1'],
+      ['footerShowOnLogin', 'ALTER TABLE system_settings ADD COLUMN footerShowOnLogin TINYINT(1) DEFAULT 1'],
+    ] as const;
+
+    for (const [column, sql] of migrations) {
+      if (!existing.has(column)) await queryDb(sql);
+    }
+  })().catch((error) => {
+    settingsSchemaPromise = null;
+    throw error;
+  });
+
+  return settingsSchemaPromise;
+}
+
 export async function GET() {
   try {
-    // Ensure gpsUpdateInterval column exists
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN gpsUpdateInterval INT DEFAULT 30');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN attendanceMode VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED'");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN villageName VARCHAR(150) NOT NULL DEFAULT ''");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN rolePermissions LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerText LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerShowOnAdmin TINYINT(1) DEFAULT 1');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerShowOnLogin TINYINT(1) DEFAULT 1');
-    } catch { /* column may already exist */ }
+    await ensureSettingsSchema();
 
     const rows: any = await queryDb('SELECT * FROM system_settings LIMIT 1');
     if (!rows || rows.length === 0) {
@@ -148,7 +163,7 @@ export async function GET() {
       villageName: String(s.villageName || defaultSettings.villageName),
       attendanceMode: s.attendanceMode === 'FREE' ? 'FREE' : 'SCHEDULED',
       mapVisibility: normalizeMapVisibility(s.mapVisibility),
-      roleAccess: roleAccess || defaultSettings.roleAccess,
+      roleAccess: mergeRoleAccess(roleAccess),
       rolePermissions: rolePermissions || defaultSettings.rolePermissions,
       footerText: s.footerText === 'Kelurahan Petukangan Utara © 2026' ? '' : (s.footerText ?? defaultSettings.footerText),
       footerShowOnAdmin: s.footerShowOnAdmin == null ? defaultSettings.footerShowOnAdmin : !!s.footerShowOnAdmin,
@@ -194,7 +209,7 @@ export async function POST(req: Request) {
     const existing: any = await queryDb('SELECT id FROM system_settings LIMIT 1');
     const shifts = JSON.stringify(data.shifts || []);
     const zones = JSON.stringify(data.zones || []);
-    const roleAccess = JSON.stringify(data.roleAccess || defaultSettings.roleAccess);
+    const roleAccess = JSON.stringify(mergeRoleAccess(data.roleAccess));
     const rolePermissions = JSON.stringify(data.rolePermissions || defaultSettings.rolePermissions);
     const mapVisibility = JSON.stringify(normalizeMapVisibility(data.mapVisibility));
     const footerText = data.footerText === 'Kelurahan Petukangan Utara © 2026'
@@ -203,37 +218,7 @@ export async function POST(req: Request) {
     const footerShowOnAdmin = data.footerShowOnAdmin === false ? 0 : 1;
     const footerShowOnLogin = data.footerShowOnLogin === false ? 0 : 1;
 
-    // Ensure gpsUpdateInterval column exists before saving
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN gpsUpdateInterval INT DEFAULT 30');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN officerIdPrefix VARCHAR(10) NOT NULL DEFAULT 'PJLP'");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN attendanceMode VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED'");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb("ALTER TABLE system_settings ADD COLUMN villageName VARCHAR(150) NOT NULL DEFAULT ''");
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN rolePermissions LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerText LONGTEXT');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerShowOnAdmin TINYINT(1) DEFAULT 1');
-    } catch { /* column may already exist */ }
-    try {
-      await queryDb('ALTER TABLE system_settings ADD COLUMN footerShowOnLogin TINYINT(1) DEFAULT 1');
-    } catch { /* column may already exist */ }
+    await ensureSettingsSchema();
 
     const gpsUpdateInterval = Number(data.gpsUpdateInterval) || 30;
 

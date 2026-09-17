@@ -15,12 +15,16 @@ export async function GET(req: Request) {
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const dashboardView = new URL(req.url).searchParams.get('view') === 'dashboard';
+    const dashboardWhere = dashboardView
+      ? ' WHERE date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND date <= CURDATE()'
+      : '';
     const rows: any = await queryDb(
-      `SELECT id, shiftName, timeRange, zone, DATE_FORMAT(date, '%Y-%m-%d') AS date, assignedUsers, status, createdAt, updatedAt FROM schedules ORDER BY date DESC, id DESC`
+      `SELECT id, shiftName, timeRange, zone, DATE_FORMAT(date, '%Y-%m-%d') AS date, assignedUsers, status, createdAt, updatedAt FROM schedules${dashboardWhere} ORDER BY date DESC, id DESC`
     );
 
     // Fetch all users once so we can enrich assignedUsers with photoUrl
-    const allUsers: any = await queryDb(`SELECT id, username, fullName, photoUrl FROM users`);
+    const allUsers: any = dashboardView ? [] : await queryDb(`SELECT id, username, fullName, photoUrl FROM users`);
     const userMap: Record<number, any> = {};
     for (const u of (allUsers || [])) {
       userMap[u.id] = u;
@@ -42,7 +46,7 @@ export async function GET(req: Request) {
       }
 
       // Enrich each user entry with current photoUrl from users table
-      const enrichedUsers = assignedUsers.map((u: any) => {
+      const enrichedUsers = dashboardView ? assignedUsers : assignedUsers.map((u: any) => {
         const fresh = userMap[u.id];
         return {
           id: u.id,

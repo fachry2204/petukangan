@@ -9,6 +9,7 @@ export const ADMIN_PAGE_PATHS = [
   '/admin/schedules',
   '/admin/tasks',
   '/admin/reports',
+  '/admin/statistics',
   '/admin/settings',
 ] as const;
 

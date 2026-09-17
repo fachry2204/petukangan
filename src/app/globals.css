@@ -211,6 +211,26 @@
   .admin-sidebar .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background-color: rgb(113 113 122 / 0.35);
   }
+
+  .filter-input {
+    height: 2.75rem;
+    width: 100%;
+    min-width: 9rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(228 228 231);
+    background: white;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgb(63 63 70);
+    outline: none;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .filter-input:focus {
+    border-color: rgb(249 115 22 / 0.7);
+    box-shadow: 0 0 0 3px rgb(255 237 213 / 0.9);
+  }
 }
 
 @keyframes admin-content-in {

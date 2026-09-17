@@ -26,6 +26,7 @@ const ROLE_PAGES = [
   { href: '/admin/schedules', label: 'Jadwal Petugas' },
   { href: '/admin/tasks', label: 'Tugas Lapangan' },
   { href: '/admin/reports', label: 'Laporan Kejadian' },
+  { href: '/admin/statistics', label: 'Statistik' },
   { href: '/admin/settings', label: 'Pengaturan Sistem' },
 ];
 

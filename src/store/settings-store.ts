@@ -70,6 +70,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       '/admin/schedules': true,
       '/admin/tasks': true,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': true,
     },
     STAFF: {
@@ -83,6 +84,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       '/admin/schedules': true,
       '/admin/tasks': true,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': false,
     },
     PIMPINAN: {
@@ -96,6 +98,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       '/admin/schedules': false,
       '/admin/tasks': false,
       '/admin/reports': true,
+      '/admin/statistics': true,
       '/admin/settings': false,
     },
   },

@@ -86,7 +86,7 @@ export function GlobalSOSAlert() {
       abortController = new AbortController();
 
       try {
-        const res = await fetch('/api/sos', {
+        const res = await fetch('/api/sos?active=1', {
           headers: { Authorization: `Bearer ${token}` },
           signal: abortController.signal
         });
@@ -120,7 +120,8 @@ export function GlobalSOSAlert() {
     };
 
     checkSOSStatus();
-    const interval = setInterval(checkSOSStatus, 3000);
+    // Socket memberikan notifikasi real-time. Polling 30 detik hanya menjadi fallback.
+    const interval = setInterval(checkSOSStatus, 30000);
 
     const socket = io(socketUrl, { auth: { token }, transports: ['websocket', 'polling'], path: '/socket.io' });
 

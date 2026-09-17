@@ -23,6 +23,7 @@ const pjlpMenuItems = [
   { label: 'Jadwal Petugas', iconSrc: '/icon/calender.png', href: '/admin/schedules' },
   { label: 'Tugas Lapangan', iconSrc: '/icon/camera.png', href: '/admin/tasks' },
   { label: 'Laporan Kejadian', iconSrc: '/icon/lapor.png', href: '/admin/reports' },
+  { label: 'Statistik', iconSrc: '/icons/pjlp/performa.png', href: '/admin/statistics' },
   { label: 'Settings', iconSrc: '/gambar/icon/key.png', href: '/admin/settings' },
 ];
 
@@ -35,7 +36,7 @@ export function AdminSidebar() {
   const roleAccess = useSettingsStore(state => state.roleAccess);
   const user = useAuthStore(state => state.user);
 
-  const roleName = normalizeRoleName(user?.role);
+  const roleName = normalizeRoleName(user?.role ?? user?.roleName);
   const canAccess = (href: string) => {
     return canRoleAccessAdminPath(roleName, href, roleAccess);
   };

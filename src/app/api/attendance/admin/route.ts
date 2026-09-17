@@ -14,16 +14,20 @@ export async function GET(req: Request) {
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const dashboardView = new URL(req.url).searchParams.get('view') === 'dashboard';
+    const recentWhere = dashboardView ? ' WHERE a.timestamp >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)' : '';
+    const requestRecentWhere = dashboardView ? ' WHERE r.timestamp >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)' : '';
+
     const regular: any = await queryDb(
-      `SELECT a.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance a JOIN users u ON u.id = a.userId ORDER BY a.timestamp DESC`
+      `SELECT a.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance a JOIN users u ON u.id = a.userId${recentWhere} ORDER BY a.timestamp DESC`
     );
 
-    const lembur: any = await queryDb(
+    const lembur: any = dashboardView ? [] : await queryDb(
       `SELECT l.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM lembur l JOIN users u ON u.id = l.userId ORDER BY l.timestamp DESC`
     );
 
     const requests: any = await queryDb(
-      `SELECT r.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance_requests r JOIN users u ON u.id = r.userId ORDER BY r.timestamp DESC`
+      `SELECT r.*, u.id as userId, u.fullName, u.username, u.photoUrl as userPhotoUrl FROM attendance_requests r JOIN users u ON u.id = r.userId${requestRecentWhere} ORDER BY r.timestamp DESC`
     );
 
     const mappedRequests = (requests || []).map((req: any) => ({

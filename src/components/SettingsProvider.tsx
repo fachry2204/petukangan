@@ -39,10 +39,22 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   // Load settings from backend database on mount
   useEffect(() => {
+    const cacheKey = 'ppsu-system-settings-cache';
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.data) setSettings({ ...parsed.data, settingsLoaded: true });
+      }
+    } catch {
+      // Cache rusak tidak boleh menghambat pengambilan data terbaru.
+    }
+
     const fetchSettings = async () => {
       try {
         const res = await axios.get(`${apiUrl}/settings`);
         setSettings({ ...res.data, settingsLoaded: true });
+        window.localStorage.setItem(cacheKey, JSON.stringify({ data: res.data, savedAt: Date.now() }));
       } catch (err) {
         console.error('Failed to load database settings:', err);
         setSettings({ settingsLoaded: true });
@@ -85,7 +97,7 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   }, [logoUrl, systemName]);
 
   // Role bisa berupa object { name: 'ADMIN' } atau string 'ADMIN'
-  const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name || user?.roleName;
   const isAdmin = userRole === 'ADMIN';
   const isMaintenanceMode = maintenanceActive && !isAdmin;
 

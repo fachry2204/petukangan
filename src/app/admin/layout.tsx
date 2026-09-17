@@ -23,6 +23,7 @@ const pageInformation = [
   { path: '/admin/schedules', title: 'Jadwal Petugas', description: 'Atur shift, zona kerja, dan penugasan petugas.' },
   { path: '/admin/tasks', title: 'Tugas Lapangan', description: 'Kelola tugas serta bukti pekerjaan dari lapangan.' },
   { path: '/admin/reports', title: 'Laporan Kejadian', description: 'Periksa dan tindak lanjuti laporan dari petugas.' },
+  { path: '/admin/statistics', title: 'Statistik Operasional', description: 'Analisis kehadiran dan produktivitas petugas.' },
   { path: '/admin/settings', title: 'Pengaturan Sistem', description: 'Sesuaikan identitas, tampilan, peran, dan akses aplikasi.' },
 ];
 
@@ -55,7 +56,7 @@ export default function AdminLayout({
     year: 'numeric',
   }).format(new Date());
 
-  const roleName = normalizeRoleName(user?.role);
+  const roleName = normalizeRoleName(user?.role ?? user?.roleName);
   const userInitials = String(user?.fullName || user?.username || 'User')
     .split(/\s+/)
     .filter(Boolean)

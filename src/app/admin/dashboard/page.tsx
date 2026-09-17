@@ -41,8 +41,8 @@ export default function AdminDashboardPage() {
       const results = await Promise.allSettled([
         axios.get(`${apiUrl}/users`, { headers, signal }),
         axios.get(`${apiUrl}/dashboard/attendance-stats`, { headers, signal }),
-        axios.get(`${apiUrl}/attendance/admin`, { headers, signal }),
-        axios.get(`${apiUrl}/schedules`, { headers, signal }),
+        axios.get(`${apiUrl}/attendance/admin?view=dashboard`, { headers, signal }),
+        axios.get(`${apiUrl}/schedules?view=dashboard`, { headers, signal }),
         axios.get(`${apiUrl}/sos`, { signal }),
       ]);
       const data = results.map((result) => result.status === 'fulfilled' ? result.value.data : []);
@@ -114,20 +114,19 @@ export default function AdminDashboardPage() {
   const absentPct = Math.max(0, 100 - hadirPct - izinPct);
   const maxChart = Math.max(1, ...trend.flatMap((row) => [row.hadir, row.izin, row.tidakHadir]));
   const cards = useMemo(() => [
-    ['Total Petugas', stats.totalPetugas, '/icons/dashboard/total-petugas-orange.png', `${stats.totalPetugas} terdata`, 'from-orange-50 to-white', 'bg-emerald-100 text-emerald-700'],
-    ['Piket Hari Ini', stats.petugasPiket, '/icons/dashboard/petugas-piket.png', stats.totalPetugas ? `${Math.round(stats.petugasPiket / stats.totalPetugas * 100)}%` : '0%', 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
-    ['Sudah Absen', stats.sudahAbsen, '/icons/dashboard/sudah-absen.png', `${hadirPct}% hadir`, 'from-emerald-50 to-white', 'bg-emerald-100 text-emerald-700'],
-    ['Belum Absen', stats.belumAbsen, '/icons/dashboard/belum-absen.png', `${absentPct}%`, 'from-rose-50 to-white', 'bg-rose-100 text-rose-600'],
-    ['Petugas Laki-Laki', stats.lakiLaki, '/icons/dashboard/laki-laki-orange.png', `${stats.lakiLaki} orang`, 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
-    ['Petugas Perempuan', stats.perempuan, '/icons/dashboard/perempuan-orange.png', `${stats.perempuan} orang`, 'from-pink-50 to-white', 'bg-pink-100 text-pink-700'],
-    ['Petugas Tidak Aktif', stats.tidakAktif, '/icons/dashboard/tidak-aktif-orange.png', `${stats.tidakAktif} orang`, 'from-zinc-100 to-white', 'bg-zinc-200 text-zinc-700'],
-    ['Petugas Dikeluarkan', stats.dikeluarkan, '/icons/dashboard/dikeluarkan-orange.png', `${stats.dikeluarkan} orang`, 'from-red-50 to-white', 'bg-red-100 text-red-700'],
-  ], [absentPct, hadirPct, stats]);
-
-  if (loading) return <div className="flex min-h-[65vh] flex-col items-center justify-center gap-3"><Loader2 className="h-9 w-9 animate-spin text-orange-500" /><p className="text-sm font-semibold text-zinc-500">Memuat dashboard operasional...</p></div>;
+    ['Total Petugas', loading ? '—' : stats.totalPetugas, '/icons/dashboard/total-petugas-orange.png', loading ? 'Memuat data' : `${stats.totalPetugas} terdata`, 'from-orange-50 to-white', 'bg-emerald-100 text-emerald-700'],
+    ['Piket Hari Ini', loading ? '—' : stats.petugasPiket, '/icons/dashboard/petugas-piket.png', loading ? 'Memuat data' : stats.totalPetugas ? `${Math.round(stats.petugasPiket / stats.totalPetugas * 100)}%` : '0%', 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
+    ['Sudah Absen', loading ? '—' : stats.sudahAbsen, '/icons/dashboard/sudah-absen.png', loading ? 'Memuat data' : `${hadirPct}% hadir`, 'from-emerald-50 to-white', 'bg-emerald-100 text-emerald-700'],
+    ['Belum Absen', loading ? '—' : stats.belumAbsen, '/icons/dashboard/belum-absen.png', loading ? 'Memuat data' : `${absentPct}%`, 'from-rose-50 to-white', 'bg-rose-100 text-rose-600'],
+    ['Petugas Laki-Laki', loading ? '—' : stats.lakiLaki, '/icons/dashboard/laki-laki-orange.png', loading ? 'Memuat data' : `${stats.lakiLaki} orang`, 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
+    ['Petugas Perempuan', loading ? '—' : stats.perempuan, '/icons/dashboard/perempuan-orange.png', loading ? 'Memuat data' : `${stats.perempuan} orang`, 'from-pink-50 to-white', 'bg-pink-100 text-pink-700'],
+    ['Petugas Tidak Aktif', loading ? '—' : stats.tidakAktif, '/icons/dashboard/tidak-aktif-orange.png', loading ? 'Memuat data' : `${stats.tidakAktif} orang`, 'from-zinc-100 to-white', 'bg-zinc-200 text-zinc-700'],
+    ['Petugas Dikeluarkan', loading ? '—' : stats.dikeluarkan, '/icons/dashboard/dikeluarkan-orange.png', loading ? 'Memuat data' : `${stats.dikeluarkan} orang`, 'from-red-50 to-white', 'bg-red-100 text-red-700'],
+  ], [absentPct, hadirPct, loading, stats]);
 
   return <div className="space-y-4 pb-3">
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {loading && <span className="mr-auto inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-2 text-[11px] font-bold text-orange-600"><Loader2 className="size-3.5 animate-spin" /> Memperbarui data dashboard</span>}
       <Action onClick={() => router.push('/admin/users/add')} primary icon={UserPlus}>Tambah Petugas</Action>
       <Action onClick={() => router.push('/admin/schedules')} icon={CalendarDays}>Buat Jadwal</Action>
       <Action onClick={() => router.push('/admin/monitoring')} icon={Map}>Lihat Monitoring</Action>
