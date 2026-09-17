@@ -42,9 +42,10 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     const fetchSettings = async () => {
       try {
         const res = await axios.get(`${apiUrl}/settings`);
-        setSettings(res.data);
+        setSettings({ ...res.data, settingsLoaded: true });
       } catch (err) {
         console.error('Failed to load database settings:', err);
+        setSettings({ settingsLoaded: true });
       }
     };
     fetchSettings();

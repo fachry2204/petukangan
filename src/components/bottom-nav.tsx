@@ -11,10 +11,10 @@ import { socketUrl } from '@/lib/socket-config';
 
 const navItems = [
   { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/pjlp/home' },
-  { label: 'Tugas', iconUrl: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png', href: '/pjlp/tasks' },
+  { label: 'Tugas', iconUrl: '/gambar/icon/camera.png', href: '/pjlp/tasks' },
   { label: 'SOS', iconUrl: '/icon/sos.png', href: '#' }, // Prevents accidental navigation
   { label: 'Lapor', iconUrl: '/gambar/icon/lapor.png', href: '/pjlp/reports' },
-  { label: 'Profile', iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', href: '/pjlp/profile' },
+  { label: 'Profil', iconUrl: '/icons/dashboard/petugas-aktif-orange.png', href: '/pjlp/profile' },
 ];
 
 export function BottomNav() {
@@ -172,8 +172,8 @@ export function BottomNav() {
 
   return (
     <>
-      <nav aria-label="Navigasi petugas" className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-100 bg-white/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/90">
-        <div className="mx-auto flex h-[72px] w-full max-w-lg items-center justify-around px-1 min-[380px]:px-2 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl xl:max-w-6xl">
+      <nav aria-label="Navigasi petugas" className="fixed bottom-0 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 border-t border-zinc-100 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_35px_rgba(24,24,27,0.1)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/95">
+        <div className="mx-auto flex h-[76px] w-full items-center justify-around px-1 min-[380px]:px-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href && item.label !== 'SOS';
             
@@ -183,10 +183,10 @@ export function BottomNav() {
                 <button
                   key="sos-btn"
                   onClick={() => setShowSOSModal(true)}
-                  className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 py-1 -mt-6 transition-all duration-300"
+                  className="-mt-7 flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1 transition-all duration-300"
                   aria-label="Kirim SOS"
                 >
-                  <div className="flex items-center justify-center transition-all duration-300 bg-red-500 rounded-full w-14 h-14 p-2.5 shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-4 border-white dark:border-zinc-900 animate-pulse active:scale-95">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-red-400 to-red-600 p-3 shadow-[0_10px_26px_rgba(239,68,68,0.42)] transition-all duration-300 active:scale-95 dark:border-zinc-900">
                     <img 
                       src={item.iconUrl} 
                       alt={item.label}
@@ -211,8 +211,8 @@ export function BottomNav() {
                   src={item.iconUrl} 
                   alt={item.label}
                   className={cn(
-                    'w-8 h-8 object-contain transition-all duration-300', 
-                    isActive ? 'scale-110 opacity-100' : 'opacity-40 grayscale hover:opacity-70'
+                    'h-7 w-7 object-contain transition-all duration-300',
+                    isActive ? 'scale-110 opacity-100 drop-shadow-sm' : 'opacity-65 hover:scale-105 hover:opacity-90'
                   )} 
                 />
                 <span className="max-w-full truncate text-[10px] tracking-tight min-[380px]:text-[11px]">{item.label}</span>

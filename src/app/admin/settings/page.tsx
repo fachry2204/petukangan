@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, Plus, Edit2, Trash2, Upload, Database, FileArchive, Download, Loader2, Save, KeyRound, MapPin } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, Upload, Database, FileArchive, Download, Loader2, Save, KeyRound, MapPin, Settings2, Building2, Palette, Users, CheckCircle2, Info, Clock3, HardDrive, MonitorSmartphone } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
@@ -155,6 +155,7 @@ export default function AdminSettingsPage() {
         bgVideoVolume: settings.bgVideoVolume,
         systemName: settings.systemName,
         systemDescription: settings.systemDescription,
+        villageName: settings.villageName,
         officerIdPrefix,
         attendanceMode: settings.attendanceMode,
         mainColor: settings.mainColor,
@@ -329,37 +330,79 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const activeMapRules = Object.values(settings.mapVisibility || {}).filter(Boolean).length;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Pengaturan Sistem</h1>
-        <p className="text-zinc-500">Konfigurasi sistem dan manajemen akses Administrator.</p>
-      </div>
+    <div className="mx-auto w-full max-w-[1500px] space-y-6 pb-12">
+      <section className="relative overflow-hidden rounded-[28px] border border-orange-100 bg-gradient-to-br from-white via-orange-50/70 to-amber-50 px-5 py-6 shadow-sm dark:border-orange-950 dark:from-zinc-950 dark:via-zinc-900 dark:to-orange-950/30 sm:px-7">
+        <div className="pointer-events-none absolute -right-12 -top-16 size-52 rounded-full bg-orange-200/30 blur-3xl" />
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
+              <Settings2 className="size-6" />
+            </div>
+            <div>
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight text-zinc-950 dark:text-white sm:text-3xl">Pengaturan Sistem</h1>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">Sistem aktif</span>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">Kelola identitas aplikasi, aturan operasional, akses pengguna, dan keamanan data dari satu tempat.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[540px]">
+            {[
+              { icon: Building2, label: 'Kelurahan', value: settings.villageName || 'Belum diatur', tone: 'bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-300' },
+              { icon: Users, label: 'Administrator', value: `${adminUsers.length} akun`, tone: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300' },
+              { icon: MapPin, label: 'Marker Map', value: `${activeMapRules}/4 aktif`, tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300' },
+              { icon: Clock3, label: 'Update GPS', value: `${settings.gpsUpdateInterval} detik`, tone: 'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300' },
+            ].map(({ icon: Icon, label, value, tone }) => (
+              <div key={label} className="rounded-2xl border border-white/80 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
+                <div className="flex items-center gap-2">
+                  <span className={`flex size-8 items-center justify-center rounded-xl ${tone}`}>
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-bold uppercase tracking-wide text-zinc-400">{label}</p>
+                    <p className="truncate text-sm font-extrabold text-zinc-800 dark:text-zinc-100">{value}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <Tabs defaultValue="umum" className="w-full">
-        <TabsList className="bg-zinc-100 dark:bg-zinc-900 mb-6 p-1 rounded-xl h-12">
-          <TabsTrigger value="umum" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Umum
+        <div className="sticky top-0 z-20 -mx-1 mb-6 overflow-x-auto px-1 py-2 backdrop-blur-xl">
+        <TabsList className="grid w-full min-w-[900px] grid-cols-5 items-stretch gap-1 rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-sm group-data-horizontal/tabs:!h-14 dark:border-zinc-800 dark:bg-zinc-950/95">
+          <TabsTrigger value="umum" className="!h-full rounded-xl px-4 font-bold text-zinc-500 data-active:bg-orange-500 data-active:text-white data-active:shadow-md">
+            <Palette className="mr-2 size-4" /> Umum & Operasional
           </TabsTrigger>
-          <TabsTrigger value="gps-map" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <MapPin data-icon="inline-start" /> GPS / Map
+          <TabsTrigger value="gps-map" className="!h-full rounded-xl px-4 font-bold text-zinc-500 data-active:bg-orange-500 data-active:text-white data-active:shadow-md">
+            <MapPin className="mr-2 size-4" /> GPS & Live Map
           </TabsTrigger>
-          <TabsTrigger value="role" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Role
+          <TabsTrigger value="role" className="!h-full rounded-xl px-4 font-bold text-zinc-500 data-active:bg-orange-500 data-active:text-white data-active:shadow-md">
+            <Shield className="mr-2 size-4" /> Hak Akses Role
           </TabsTrigger>
-          <TabsTrigger value="administrator" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Shield className="w-4 h-4 mr-2" /> Administrator
+          <TabsTrigger value="administrator" className="!h-full rounded-xl px-4 font-bold text-zinc-500 data-active:bg-orange-500 data-active:text-white data-active:shadow-md">
+            <Users className="mr-2 size-4" /> Administrator
+          </TabsTrigger>
+          <TabsTrigger value="backup" className="!h-full rounded-xl px-4 font-bold text-zinc-500 data-active:bg-orange-500 data-active:text-white data-active:shadow-md">
+            <HardDrive className="mr-2 size-4" /> Backup
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="umum" className="space-y-6">
           {/* Identitas Sistem */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
-            <CardHeader>
-              <CardTitle>Identitas Sistem</CardTitle>
-              <CardDescription>Atur logo, nama sistem, dan warna utama aplikasi.</CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-300"><Building2 className="size-5" /></span>
+                <div><CardTitle>Identitas & Tampilan Sistem</CardTitle><CardDescription>Informasi utama yang tampil pada login, dashboard, laporan, dan PDF.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-7 p-5 sm:p-7">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Column 1: Logo & Warna Utama */}
                 <div className="space-y-6">
@@ -473,20 +516,38 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
-              <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+              <div className="grid gap-5 border-t border-zinc-100 pt-6 dark:border-zinc-800 md:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+                <label htmlFor="village-name" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Nama Kelurahan</label>
+                <Input
+                  id="village-name"
+                  value={settings.villageName || ''}
+                  maxLength={150}
+                  onChange={(e) => settings.setSettings({ villageName: e.target.value })}
+                  className="mt-2 bg-white dark:bg-zinc-900"
+                  placeholder="Contoh: Petukangan Utara"
+                  aria-describedby="village-name-help"
+                />
+                <p id="village-name-help" className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  Nama ini digunakan pada halaman laporan, hasil ekspor, dan dokumen PDF.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
                 <label htmlFor="officer-id-prefix" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Prefix ID Petugas</label>
                 <Input
                   id="officer-id-prefix"
                   value={settings.officerIdPrefix}
                   maxLength={10}
                   onChange={(e) => settings.setSettings({ officerIdPrefix: e.target.value.toUpperCase().replace(/[^A-Z]/g, '') })}
-                  className="mt-2 max-w-xs uppercase"
+                  className="mt-2 uppercase bg-white dark:bg-zinc-900"
                   placeholder="PJLP"
                   aria-describedby="officer-id-prefix-help"
                 />
                 <p id="officer-id-prefix-help" className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
                   Berlaku untuk petugas baru. Contoh: {settings.officerIdPrefix || 'PJLP'}001. ID petugas lama tetap sama.
                 </p>
+              </div>
               </div>
 
               <div className="pt-4 border-t border-zinc-100 space-y-4">
@@ -523,12 +584,15 @@ export default function AdminSettingsPage() {
           </Card>
 
           {/* Setting Jadwal dan Zona */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 rounded-3xl">
-            <CardHeader>
-              <CardTitle>Mode Absen Petugas</CardTitle>
-              <CardDescription>Tentukan apakah absen masuk wajib mengikuti jadwal atau petugas bebas memilih shift.</CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50"><CheckCircle2 className="size-5" /></span>
+                <div><CardTitle>Mode Absen Petugas</CardTitle><CardDescription>Tentukan apakah absen wajib mengikuti jadwal atau petugas bebas memilih shift.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]">
+              <div className="flex flex-col gap-3">
               <label htmlFor="attendance-mode" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Aturan Absensi</label>
               <Select value={settings.attendanceMode} onValueChange={(value) => settings.setSettings({ attendanceMode: value as 'SCHEDULED' | 'FREE' })}>
                 <SelectTrigger id="attendance-mode" className="w-full max-w-md">
@@ -546,16 +610,23 @@ export default function AdminSettingsPage() {
                   ? 'Petugas dapat absen tanpa jadwal penugasan, tetapi wajib memilih shift dari daftar shift sebelum absen masuk.'
                   : 'Absen masuk hanya tersedia untuk petugas yang dijadwalkan pada hari tersebut. Sesi yang sudah dimulai tetap bisa dilanjutkan.'}
               </p>
+              </div>
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+                <Info className="mt-0.5 size-5 shrink-0" />
+                <p><strong>Dampak pengaturan:</strong> perubahan berlaku untuk proses absen berikutnya dan tidak mengubah riwayat absensi yang sudah tersimpan.</p>
+              </div>
             </CardContent>
           </Card>
 
           {/* Setting Jadwal dan Zona */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
-            <CardHeader>
-              <CardTitle>Setting Jadwal dan Zona atau Kategori</CardTitle>
-              <CardDescription>Kelola daftar nama shift dan nama zona atau kategori penugasan petugas lapangan.</CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-950/50"><Clock3 className="size-5" /></span>
+                <div><CardTitle>Shift & Zona Penugasan</CardTitle><CardDescription>Kelola pilihan shift kerja serta zona atau kategori penugasan lapangan.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-5 sm:p-7">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* Shift Management Block */}
@@ -760,23 +831,28 @@ export default function AdminSettingsPage() {
           </Card>
 
           {/* Maintenance System */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border-l-4 border-l-orange-500">
-            <CardHeader>
-              <CardTitle>Maintenance System</CardTitle>
-              <CardDescription>Aktifkan mode pemeliharaan agar pengguna selain Admin tidak dapat mengakses sistem.</CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/50"><MonitorSmartphone className="size-5" /></span>
+                <div><CardTitle>Mode Pemeliharaan</CardTitle><CardDescription>Batasi akses sementara ketika sistem sedang diperbarui atau diperbaiki.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
+            <CardContent className="space-y-6 p-5 sm:p-7">
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+                <div><p className="font-bold text-zinc-800 dark:text-zinc-100">Status pemeliharaan</p><p className="text-xs text-zinc-500">Admin tetap dapat mengakses sistem saat mode ini aktif.</p></div>
+                <div className="flex items-center gap-3">
                 <button
                   onClick={() => settings.setSettings({ maintenanceActive: !settings.maintenanceActive })}
                   className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors ${settings.maintenanceActive ? 'bg-orange-500' : 'bg-zinc-200'}`}
                 >
                   <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${settings.maintenanceActive ? 'translate-x-7' : 'translate-x-0'}`} />
                 </button>
-                <span className="font-bold text-zinc-700">{settings.maintenanceActive ? 'Maintenance Aktif' : 'Maintenance Non-Aktif'}</span>
+                <span className="whitespace-nowrap font-bold text-zinc-700 dark:text-zinc-200">{settings.maintenanceActive ? 'Aktif' : 'Nonaktif'}</span>
+                </div>
               </div>
 
-              {settings.maintenanceActive && (
+              {Boolean(settings.maintenanceActive) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-zinc-700">Batas Waktu Berakhir</label>
@@ -807,12 +883,14 @@ export default function AdminSettingsPage() {
           </Card>
 
           {/* GPS Tracking Update Interval */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl border-l-4 border-l-blue-500">
-            <CardHeader>
-              <CardTitle>Update Riwayat GPS</CardTitle>
-              <CardDescription>Atur interval waktu (dalam detik) untuk update lokasi GPS petugas PJLP ke sistem tracking dan riwayat GPS.</CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-950/50"><MapPin className="size-5" /></span>
+                <div><CardTitle>Interval Pelacakan GPS</CardTitle><CardDescription>Atur frekuensi pengiriman lokasi petugas ke riwayat GPS dan Live Monitoring.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-5 sm:p-7">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-zinc-700">Interval Update GPS (Detik)</label>
@@ -854,7 +932,7 @@ export default function AdminSettingsPage() {
           </Card>
 
           {/* Action Bar for Saving */}
-          <div className="flex justify-end mt-4 mb-6">
+          <div className="sticky bottom-4 z-10 flex justify-end rounded-2xl border border-zinc-200 bg-white/90 p-3 shadow-xl backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/90">
             <Button 
               onClick={handleSaveSettings} 
               disabled={isSaving}
@@ -865,96 +943,19 @@ export default function AdminSettingsPage() {
             </Button>
           </div>
 
-          {/* Backup Data */}
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
-            <CardHeader>
-              <CardTitle>Backup Data & File</CardTitle>
-              <CardDescription>Amankan data database dan seluruh file sistem secara rutin.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex gap-4 mb-6">
-                <button
-                  onClick={() => setBackupType('db')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${backupType === 'db' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-zinc-50 text-zinc-600 border border-transparent'}`}
-                >
-                  <Database className="w-5 h-5" /> Backup Database
-                </button>
-                <button
-                  onClick={() => setBackupType('file')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${backupType === 'file' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-zinc-50 text-zinc-600 border border-transparent'}`}
-                >
-                  <FileArchive className="w-5 h-5" /> Backup File & Media
-                </button>
-              </div>
-
-              <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-lg text-zinc-800">
-                      {backupType === 'db' ? 'Export SQL Database' : 'Zip Semua File System'}
-                    </h3>
-                    <p className="text-sm text-zinc-500">
-                      {backupType === 'db' ? 'Proses ini akan mengekspor tabel dan data ke /public/backup' : 'Proses ini akan meng-compress seluruh source code ke /public/backup'}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleBackup} 
-                    disabled={backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp}
-                    className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl"
-                  >
-                    {(backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Mulai Backup
-                  </Button>
-                </div>
-
-                {(backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp) && (
-                  <div className="space-y-2 pt-4 border-t border-zinc-200">
-                    <div className="flex justify-between text-sm font-bold text-zinc-700">
-                      <span>Proses {backupType === 'db' ? 'Export Database' : 'Zipping Files'}...</span>
-                      <span>{backupType === 'db' ? dbBackup.progress : fileBackup.progress}%</span>
-                    </div>
-                    <div className="w-full bg-zinc-200 rounded-full h-3 overflow-hidden">
-                      <div 
-                        className="bg-orange-500 h-3 rounded-full transition-all duration-300"
-                        style={{ width: `${backupType === 'db' ? dbBackup.progress : fileBackup.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {(backupType === 'db' ? dbBackup.complete : fileBackup.complete) && (
-                  <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row justify-between items-center gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                    <div className="flex items-center gap-3 text-emerald-700 font-medium">
-                      <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                        <Download className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-bold">Backup Selesai!</p>
-                        <p className="text-xs opacity-80">{backupType === 'db' ? dbBackup.fileName : fileBackup.fileName}</p>
-                      </div>
-                    </div>
-                    <Button 
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
-                      onClick={handleDownload}
-                    >
-                      Download File
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="gps-map" className="flex flex-col gap-6">
-          <Card className="rounded-3xl bg-white shadow-xl dark:bg-zinc-900">
-            <CardHeader>
-              <CardTitle>Tampilan Petugas di Live Monitoring</CardTitle>
-              <CardDescription>
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50"><MapPin className="size-5" /></span>
+                <div><CardTitle>Tampilan Petugas di Live Monitoring</CardTitle><CardDescription>
                 Tentukan pada status mana marker petugas ditampilkan di peta. Pengaturan ini tidak menghentikan pencatatan GPS atau absensi.
-              </CardDescription>
+                </CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="grid gap-3 p-5 sm:p-7 lg:grid-cols-2">
               {([
                 { key: 'loggedIn', title: 'Petugas Login', description: 'Tampil setelah login, sebelum absen masuk.' },
                 { key: 'checkedIn', title: 'Petugas Absen Masuk', description: 'Tampil saat bekerja, termasuk setelah selesai istirahat.' },
@@ -981,7 +982,7 @@ export default function AdminSettingsPage() {
                   </span>
                 </label>
               ))}
-              <p className="text-xs text-zinc-500">Marker SOS darurat selalu ditampilkan. Petugas tanpa koordinat GPS tidak dapat ditampilkan di peta.</p>
+              <p className="col-span-full flex items-start gap-2 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"><Info className="size-4 shrink-0" /> Marker SOS darurat selalu ditampilkan. Petugas tanpa koordinat GPS tidak dapat ditampilkan di peta.</p>
             </CardContent>
           </Card>
           <div className="flex justify-end">
@@ -992,13 +993,77 @@ export default function AdminSettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="role" className="space-y-6">
-          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl">
-            <CardHeader>
-              <CardTitle>Akses Halaman Berdasarkan Role</CardTitle>
-              <CardDescription>Aktifkan / nonaktifkan halaman admin untuk role STAFF dan PIMPINAN.</CardDescription>
+        <TabsContent value="backup" className="space-y-6">
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"><HardDrive className="size-5" /></span>
+                <div><CardTitle>Backup Data & File</CardTitle><CardDescription>Amankan database dan media sistem secara berkala.</CardDescription></div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-5 sm:p-7">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={() => setBackupType('db')}
+                  className={`flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all ${backupType === 'db' ? 'border border-orange-200 bg-orange-50 text-orange-600' : 'border border-transparent bg-zinc-50 text-zinc-600'}`}
+                >
+                  <Database className="size-5" /> Backup Database
+                </button>
+                <button
+                  onClick={() => setBackupType('file')}
+                  className={`flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all ${backupType === 'file' ? 'border border-orange-200 bg-orange-50 text-orange-600' : 'border border-transparent bg-zinc-50 text-zinc-600'}`}
+                >
+                  <FileArchive className="size-5" /> Backup File & Media
+                </button>
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-950/40 sm:p-6">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{backupType === 'db' ? 'Export SQL Database' : 'Zip Semua File System'}</h3>
+                    <p className="text-sm text-zinc-500">{backupType === 'db' ? 'Proses ini akan mengekspor tabel dan data ke /public/backup' : 'Proses ini akan mengompres seluruh source code ke /public/backup'}</p>
+                  </div>
+                  <Button onClick={handleBackup} disabled={backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp} className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">
+                    {(backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp) ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+                    Mulai Backup
+                  </Button>
+                </div>
+
+                {(backupType === 'db' ? dbBackup.isBackingUp : fileBackup.isBackingUp) && (
+                  <div className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                    <div className="flex justify-between text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                      <span>Proses {backupType === 'db' ? 'Export Database' : 'Zipping Files'}...</span>
+                      <span>{backupType === 'db' ? dbBackup.progress : fileBackup.progress}%</span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                      <div className="h-3 rounded-full bg-orange-500 transition-all duration-300" style={{ width: `${backupType === 'db' ? dbBackup.progress : fileBackup.progress}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {(backupType === 'db' ? dbBackup.complete : fileBackup.complete) && (
+                  <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4 pt-4 sm:flex-row">
+                    <div className="flex items-center gap-3 font-medium text-emerald-700">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-emerald-100"><Download className="size-4" /></div>
+                      <div><p className="font-bold">Backup Selesai!</p><p className="text-xs opacity-80">{backupType === 'db' ? dbBackup.fileName : fileBackup.fileName}</p></div>
+                    </div>
+                    <Button className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleDownload}>Download File</Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="role" className="space-y-6">
+          <Card className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader className="border-b border-zinc-100 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-950/50"><Shield className="size-5" /></span>
+                <div><CardTitle>Akses Halaman Berdasarkan Role</CardTitle><CardDescription>Atur menu dan halaman yang dapat dibuka oleh STAFF dan PIMPINAN.</CardDescription></div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 p-5 sm:p-7">
               {(['STAFF', 'PIMPINAN'] as const).map((r) => (
                 <div key={r} className="rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4">
                   <div className="flex items-center justify-between gap-3">

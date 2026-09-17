@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AdminSidebar } from '@/components/admin-sidebar';
 import { CalendarDays, CheckCircle2, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
@@ -7,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/store/settings-store';
+import { canRoleAccessAdminPath, firstAllowedAdminPath, normalizeRoleName } from '@/lib/role-access';
 
 import { GlobalSOSAlert } from '@/components/global-sos-alert';
 
@@ -34,6 +36,7 @@ export default function AdminLayout({
   const { logout, user } = useAuthStore();
   const isCollapsed = useSidebarStore(state => state.isCollapsed);
   const roleAccess = useSettingsStore(state => state.roleAccess);
+  const settingsLoaded = useSettingsStore(state => state.settingsLoaded);
   const footerText = useSettingsStore(state => state.footerText);
   const footerShowOnAdmin = useSettingsStore(state => state.footerShowOnAdmin);
   const systemName = useSettingsStore(state => state.systemName);
@@ -52,17 +55,23 @@ export default function AdminLayout({
     year: 'numeric',
   }).format(new Date());
 
-  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const roleName = normalizeRoleName(user?.role);
   const userInitials = String(user?.fullName || user?.username || 'User')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join('');
-  const isAllowed =
-    !roleName ||
-    roleName === 'ADMIN' ||
-    roleAccess?.[roleName]?.[pathname] !== false;
+  const isAllowed = canRoleAccessAdminPath(roleName, pathname, roleAccess);
+
+  useEffect(() => {
+    if (!settingsLoaded || !user || isAllowed) return;
+
+    const fallbackPath = firstAllowedAdminPath(roleName, roleAccess);
+    if (fallbackPath && fallbackPath !== pathname) {
+      router.replace(fallbackPath);
+    }
+  }, [isAllowed, pathname, roleAccess, roleName, router, settingsLoaded, user]);
 
   const handleLogout = () => {
     logout();
@@ -111,7 +120,11 @@ export default function AdminLayout({
         </header>
         <main className="admin-workspace flex-1 p-4 sm:p-6 lg:p-8">
           <GlobalSOSAlert />
-          {isAllowed ? (
+          {!settingsLoaded ? (
+            <div className="flex min-h-[40vh] items-center justify-center text-sm font-semibold text-zinc-500">
+              Memeriksa hak akses...
+            </div>
+          ) : isAllowed ? (
             children
           ) : (
             <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-zinc-100 dark:border-zinc-800 p-8 text-center">

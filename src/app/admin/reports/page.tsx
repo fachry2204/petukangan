@@ -19,6 +19,7 @@ export default function AdminReportsPage() {
   const { token } = useAuthStore();
   const user = useAuthStore(state => state.user);
   const rolePermissions = useSettingsStore(state => state.rolePermissions);
+  const villageName = useSettingsStore(state => state.villageName);
   const { toast } = useToast();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,7 +176,7 @@ export default function AdminReportsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Laporan Kejadian</h1>
-        <p className="text-zinc-500">Tinjau laporan masalah dan kejadian dari lapangan.</p>
+        <p className="text-zinc-500">Tinjau laporan masalah dan kejadian dari lapangan{villageName ? ` di Kelurahan ${villageName}` : ''}.</p>
       </div>
 
       {/* Filters Area */}

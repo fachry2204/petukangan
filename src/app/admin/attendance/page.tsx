@@ -12,6 +12,7 @@ import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
 import { apiUrl } from '@/lib/api-config';
+import { useSettingsStore } from '@/store/settings-store';
 import * as XLSX from 'xlsx';
 import { 
   Users, FileText, Clock, Search, MapPin, 
@@ -49,6 +50,7 @@ interface AttendanceItem {
 }
 
 export default function AdminAttendancePage() {
+  const villageName = useSettingsStore((state) => state.villageName);
   const router = useRouter();
   const { token, user, logout } = useAuthStore();
 
@@ -622,7 +624,8 @@ export default function AdminAttendancePage() {
           "Zona": zoneName,
           "Keterangan": statusKehadiran,
           "Validitas GPS": log ? (log.isMock ? "Fake GPS" : "Valid") : "-",
-          "Lokasi Absen": log ? (log.address || '-') : "-"
+          "Lokasi Absen": log ? (log.address || '-') : "-",
+          "Kelurahan": villageName || "-"
         };
       });
 
@@ -654,7 +657,7 @@ export default function AdminAttendancePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white">Kelola Kehadiran Petugas</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Monitoring kehadiran terjadwal, pengajuan dispensasi/izin sakit, dan permintaan presensi luar jadwal.</p>
+          <p className="text-zinc-500 dark:text-zinc-400">Monitoring kehadiran terjadwal, pengajuan dispensasi/izin sakit, dan permintaan presensi luar jadwal{villageName ? ` Kelurahan ${villageName}` : ''}.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button 

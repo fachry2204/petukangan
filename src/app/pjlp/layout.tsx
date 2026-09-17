@@ -5,7 +5,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { ActiveSOSLock } from '@/components/active-sos-lock';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
-import { ShieldAlert, Loader2, MapPin } from 'lucide-react';
+import { Bell, ShieldAlert, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
@@ -569,37 +569,38 @@ export default function PjlpLayout({
     );
   };
 
+  const configuredSystemName = (settings.systemName || 'PPSU System').trim();
+  const [systemNameAccent, ...systemNameRestParts] = configuredSystemName.split(/\s+/);
+  const systemNameRest = systemNameRestParts.join(' ');
+
   return (
-    <div className="pjlp-app min-h-dvh min-w-0 bg-[#F8F9FA] dark:bg-zinc-950 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 z-[999] w-full bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-        <div className="flex min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <img src={settings.logoUrl || '/logodki.png'} alt="Logo DKI" className="h-8 w-8 shrink-0 object-contain drop-shadow-sm" />
-            <div className="flex min-w-0 items-baseline gap-2">
-              <h1 className="min-w-0 truncate text-sm font-black text-zinc-900 dark:text-white uppercase sm:text-lg">
-                {settings.systemName || 'PPSU System'}
+    <div className="pjlp-app min-h-dvh min-w-0 bg-[#faf9f7] pb-[calc(6rem+env(safe-area-inset-bottom))] dark:bg-zinc-950">
+      <header className="sticky top-0 z-[999] w-full border-b border-orange-100/70 bg-white/95 shadow-[0_8px_30px_rgba(24,24,27,0.04)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/95">
+        <div className="mx-auto flex min-w-0 max-w-lg items-center justify-between gap-3 px-3.5 py-3 min-[390px]:px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <img src={settings.logoUrl || '/logodki.png'} alt="Logo sistem" className="h-11 w-11 shrink-0 object-contain drop-shadow-sm min-[390px]:h-12 min-[390px]:w-12" />
+            <div className="min-w-0">
+              <h1 className="truncate text-[17px] font-black leading-tight tracking-[-0.025em] min-[390px]:text-xl">
+                <span className="text-orange-600">{systemNameAccent}</span>
+                {systemNameRest && <span className="text-zinc-800 dark:text-white"> {systemNameRest}</span>}
               </h1>
-              {settings.systemDescription && (
-                <span className="hidden max-w-[35vw] truncate text-lg font-black text-zinc-900 dark:text-white uppercase lg:inline-block">
-                  — {settings.systemDescription}
-                </span>
-              )}
+              <p className="mt-0.5 max-w-[210px] truncate text-[9px] font-semibold leading-tight text-zinc-400 min-[390px]:text-[10px]">
+                {settings.systemDescription || 'Bersih Jakarta, Nyaman untuk Semua'}
+              </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="hidden text-xs font-medium text-zinc-500 min-[360px]:inline">Live Tracking</span>
+          <div className="flex shrink-0 items-center gap-2 min-[390px]:gap-3">
+            <div className="relative flex h-9 w-8 items-center justify-center text-zinc-500"><Bell className="h-5 w-5 fill-zinc-500" /><span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" /></div>
+            <div className="h-8 w-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="flex items-center gap-1.5">
+              <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-black text-emerald-600 min-[390px]:text-xs dark:text-emerald-400">Online</span>
+            </div>
           </div>
         </div>
-
-        {/* Horizontal Traditional Ornament gigi balang */}
-        <div
-          className="absolute left-0 right-0 top-full w-full h-6 bg-repeat-x bg-contain pointer-events-none"
-          style={{ backgroundImage: "url('/gambar/ornamen.png')" }}
-        />
       </header>
 
-      <main className="mx-auto w-full min-w-0 max-w-lg px-3 min-[380px]:px-4 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl xl:max-w-6xl">
+      <main className="mx-auto w-full min-w-0 max-w-lg px-3 min-[380px]:px-4 sm:px-5">
         {children}
       </main>
 

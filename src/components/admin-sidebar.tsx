@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/store/sidebar-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
+import { canRoleAccessAdminPath, normalizeRoleName } from '@/lib/role-access';
 
 const generalMenuItems = [
   { label: 'Dashboard', iconSrc: '/icon/home.png', href: '/admin/dashboard' },
@@ -22,6 +23,7 @@ const pjlpMenuItems = [
   { label: 'Jadwal Petugas', iconSrc: '/icon/calender.png', href: '/admin/schedules' },
   { label: 'Tugas Lapangan', iconSrc: '/icon/camera.png', href: '/admin/tasks' },
   { label: 'Laporan Kejadian', iconSrc: '/icon/lapor.png', href: '/admin/reports' },
+  { label: 'Settings', iconSrc: '/gambar/icon/key.png', href: '/admin/settings' },
 ];
 
 export function AdminSidebar() {
@@ -33,10 +35,9 @@ export function AdminSidebar() {
   const roleAccess = useSettingsStore(state => state.roleAccess);
   const user = useAuthStore(state => state.user);
 
-  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  const roleName = normalizeRoleName(user?.role);
   const canAccess = (href: string) => {
-    if (!roleName || roleName === 'ADMIN') return true;
-    return roleAccess?.[roleName]?.[href] !== false;
+    return canRoleAccessAdminPath(roleName, href, roleAccess);
   };
 
   const filteredGeneral = generalMenuItems.filter((i) => canAccess(i.href));
@@ -53,7 +54,7 @@ export function AdminSidebar() {
     >
       {/* Sidebar Header Section */}
       <div className={cn(
-        "flex flex-col transition-all duration-300 ease-in-out border-b border-orange-100/70 bg-gradient-to-br from-orange-50/80 via-white to-white",
+        "flex shrink-0 flex-col transition-all duration-300 ease-in-out border-b border-orange-100/70 bg-gradient-to-br from-orange-50/80 via-white to-white",
         isCollapsed ? "p-4 items-center" : "p-8"
       )}>
         <div className="flex items-center gap-3">
@@ -76,7 +77,7 @@ export function AdminSidebar() {
 
       {/* Main Navigation Section */}
       <nav className={cn(
-        "flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pt-6",
+        "min-h-0 flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pt-6",
         isCollapsed ? "px-2" : "px-4"
       )}>
         {filteredGeneral.map((item) => {
@@ -165,36 +166,6 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* Sidebar Footer Section */}
-      <div className={cn(
-        "border-t border-zinc-100 mt-auto transition-all duration-300",
-        isCollapsed ? "p-2 flex justify-center" : "p-4"
-      )}>
-        {canAccess('/admin/settings') && (
-          <Link
-            href="/admin/settings"
-            className={cn(
-              "group flex items-center rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-orange-50/70 transition-all duration-300",
-              isCollapsed ? "p-3" : "px-4 py-3 gap-3 w-full"
-            )}
-            title={isCollapsed ? "Settings" : undefined}
-          >
-            <Image
-              src="/gambar/icon/key.png"
-              alt=""
-              width={24}
-              height={24}
-              className="h-6 w-6 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
-            />
-            <span className={cn(
-              "text-sm font-bold transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
-              isCollapsed ? "opacity-0 w-0 max-w-0" : "opacity-100 w-auto max-w-[180px]"
-            )}>
-              Settings
-            </span>
-          </Link>
-        )}
-      </div>
     </aside>
   );
 }

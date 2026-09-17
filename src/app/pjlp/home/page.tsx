@@ -44,6 +44,7 @@ export default function PjlpHomePage() {
     totalTugas: 0,
     totalLaporan: 0,
     poinPerforma: 98,
+    hariKerja: 0,
   });
 
   const [todayIzinStatus, setTodayIzinStatus] = useState<string | null>(null);
@@ -260,6 +261,7 @@ export default function PjlpHomePage() {
         totalTugas: totalTugasCount,
         totalLaporan: reportsCount,
         poinPerforma: 98,
+        hariKerja: currentMonthSchedules.length,
       });
 
     } catch (error) {
@@ -497,24 +499,182 @@ export default function PjlpHomePage() {
   };
 
   const cardTheme = getCardTheme(attendanceStatus, todayIzinStatus);
+  const todayKey = getJakartaTodayString();
+  const nextSchedule = [...allSchedules]
+    .filter((schedule: any) => getLocalDateString(schedule.date) > todayKey)
+    .sort((a: any, b: any) => getLocalDateString(a.date).localeCompare(getLocalDateString(b.date)))[0] || null;
+  const nextScheduleDate = nextSchedule?.date ? new Date(nextSchedule.date) : null;
+  const nextScheduleLabel = nextScheduleDate
+    ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Asia/Jakarta' }).format(nextScheduleDate)
+    : 'Belum ada jadwal';
+  const nextScheduleZone = nextSchedule
+    ? (typeof nextSchedule.zone === 'object' ? nextSchedule.zone?.name : nextSchedule.zone)
+    : '-';
+  const attendanceActionLabel = attendanceStatus === 'Belum Absen'
+    ? 'Absen Masuk'
+    : attendanceStatus === 'Sudah Absen'
+      ? 'Mulai Istirahat'
+      : attendanceStatus === 'Absen Istirahat'
+        ? 'Selesai Istirahat'
+        : attendanceStatus === 'Selesai Istirahat'
+          ? 'Absen Pulang'
+          : 'Buka Absensi';
+  const attendanceCompleted = ['Sudah Absen Pulang', 'Sudah Check-Out', 'Sudah Checkout'].includes(attendanceStatus);
+  const noSchedule = attendanceMode !== 'FREE' && attendanceStatus === 'Belum Absen' && (!todaySchedule || shiftText === 'Libur');
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col gap-5 pb-5 pt-4 sm:pt-5">
+      <section aria-label="Profil petugas" className="rounded-[1.75rem] border border-orange-100/80 bg-white p-5 shadow-[0_16px_40px_rgba(24,24,27,0.07)] dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-wrap items-center gap-3 min-[430px]:flex-nowrap min-[430px]:gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-orange-100 bg-orange-50 shadow-md min-[430px]:h-[72px] min-[430px]:w-[72px]">
+            <img
+              src="/gambar/pjlp-attendance-hero.png"
+              alt="Ilustrasi Petugas PPSU"
+              className="h-full w-full scale-110 object-cover object-[88%_24%]"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">{getGreeting()},</p>
+            <h2 className="truncate text-xl font-black leading-tight text-zinc-950 dark:text-white">{user?.fullName || 'Petugas PJLP'}</h2>
+            <p className="mt-1 text-xs font-semibold text-zinc-500">ID Petugas: <span className="font-black text-orange-600">{user?.username || '-'}</span></p>
+          </div>
+          <div className="relative h-[62px] w-full overflow-hidden rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 min-[430px]:h-[72px] min-[430px]:w-[142px] min-[430px]:shrink-0 dark:border-orange-900/40 dark:bg-orange-950/30">
+            <img
+              src="/gambar/pjlp-attendance-hero.png"
+              alt="Ilustrasi Monas"
+              className="pointer-events-none absolute inset-y-0 right-0 h-full w-[92px] object-cover object-[45%_55%] opacity-85"
+            />
+            <div className="relative z-10 max-w-[58%] min-[430px]:max-w-[72px]">
+              <p className="text-[9px] font-black uppercase leading-tight text-orange-600">Tetap semangat</p>
+              <p className="mt-1 text-[9px] font-semibold leading-tight text-zinc-700 dark:text-zinc-200">Melayani Jakarta lebih bersih!</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex items-end justify-between gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          <div className="shrink-0">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">{serverDate || 'Memuat tanggal...'}</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-zinc-950 dark:text-white">{serverTime || '00:00:00 WIB'}</p>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+            <span className="text-[9px] font-black uppercase">Online</span>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Status absensi hari ini" className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 p-5 text-white shadow-[0_18px_40px_rgba(249,115,22,0.28)] sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-amber-300/25 blur-2xl" />
+        <img
+          src="/gambar/pjlp-attendance-hero.png"
+          alt="Ilustrasi Petugas PPSU dengan latar Monas"
+          className="pointer-events-none absolute bottom-[72px] right-0 w-[270px] max-w-[68%] select-none object-contain object-right-bottom opacity-100 min-[430px]:w-[300px]"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-orange-500 via-orange-500/95 to-transparent" />
+        <div className="relative z-10">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/80">Status Hari Ini</p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-orange-600 shadow-sm"><Clock className="h-6 w-6" /></div>
+            <p className="text-2xl font-black leading-none">{attendanceStatus}</p>
+          </div>
+          <div className="mt-5 max-w-[62%] space-y-2.5 text-sm font-bold">
+            <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{shiftText}</span></div>
+            <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>Zona Kerja • {zoneText}</span></div>
+          </div>
+          <div className="relative z-20 mt-5 flex gap-2.5">
+            {attendanceStatus === 'Menunggu Diterima' ? (
+              <Button disabled className="h-14 w-full rounded-2xl border border-white/30 bg-white/20 font-black text-white">Permintaan Absensi Ditinjau</Button>
+            ) : attendanceCompleted ? (
+              <Button disabled className="h-14 w-full rounded-2xl border border-white/30 bg-white/20 font-black text-white">Tugas Hari Ini Selesai</Button>
+            ) : ['Izin Tidak Masuk', 'Pulang Awal'].includes(attendanceStatus) || todayIzinStatus ? (
+              <Button disabled className="h-14 w-full rounded-2xl border border-white/30 bg-white/20 font-black text-white">
+                {todayIzinStatus === 'PENDING' ? 'Pengajuan Izin Ditinjau' : todayIzinStatus === 'APPROVED' ? 'Izin Telah Disetujui' : attendanceStatus}
+              </Button>
+            ) : noSchedule ? (
+              <Button disabled className="h-14 w-full rounded-2xl border border-white/20 bg-white/15 font-black text-white/80">Tidak Ada Jadwal Hari Ini</Button>
+            ) : (
+              <>
+                <Button onClick={() => router.push('/pjlp/attendance')} className="h-14 flex-[1.7] rounded-2xl bg-white font-black text-orange-600 shadow-lg hover:bg-orange-50">{attendanceActionLabel}</Button>
+                <Button onClick={() => handleOpenIzinModal(attendanceStatus === 'Belum Absen' ? 'PERMIT' : 'EARLY_OUT')} className="h-14 flex-1 rounded-2xl border-2 border-white bg-transparent px-2 font-black text-white hover:bg-white/10">
+                  {attendanceStatus === 'Belum Absen' ? 'Ajukan Izin' : 'Pulang Awal'}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3.5 text-emerald-700 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400">
+        <div className="flex items-center gap-2.5"><MapPin className="h-5 w-5 fill-emerald-500 text-emerald-600" /><span className="text-xs font-black">GPS Aktif • Live Tracking</span></div>
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500 ring-4 ring-emerald-200/70" />
+      </div>
+
+      <section aria-labelledby="monthly-summary-title-new">
+        <div className="mb-3 flex items-end justify-between">
+          <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">Aktivitas</p><h3 id="monthly-summary-title-new" className="text-xl font-black text-zinc-950 dark:text-white">Ringkasan Bulan Ini</h3></div>
+          <button onClick={() => router.push('/pjlp/schedule')} className="text-[11px] font-black text-orange-600">Lihat Detail ›</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Hari Masuk', value: stats.absenMasuk, icon: '/icons/pjlp/hari-masuk.png', tone: 'text-emerald-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Izin', value: stats.izinCount, icon: '/icons/pjlp/izin.png', tone: 'text-orange-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Tidak Hadir', value: stats.tidakHadir, icon: '/icons/pjlp/tidak-hadir.png', tone: 'text-red-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Performa', value: `${stats.poinPerforma}%`, icon: '/icons/pjlp/performa.png', tone: 'text-emerald-600', sub: 'Kerja baik, pertahankan!' },
+          ].map((stat) => (
+            <Card key={stat.label} className="rounded-2xl border border-zinc-200/70 bg-white shadow-[0_7px_20px_rgba(24,24,27,0.07)] dark:border-zinc-800 dark:bg-zinc-900">
+              <CardContent className="flex min-h-[112px] items-center gap-2 p-3 min-[390px]:gap-3 min-[390px]:p-4">
+                <img src={stat.icon} alt={`Ikon ${stat.label}`} className="h-14 w-14 shrink-0 object-contain min-[390px]:h-16 min-[390px]:w-16" />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-2xl font-black leading-none min-[390px]:text-3xl ${stat.tone}`}>{stat.value}</div>
+                  <p className="mt-1 text-[11px] font-black leading-tight text-zinc-900 min-[390px]:text-sm dark:text-white">{stat.label}</p>
+                  <p className="mt-0.5 truncate text-[8px] font-medium leading-tight text-zinc-400 min-[390px]:text-[9px]">{stat.sub}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="next-schedule-title">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2"><img src="/gambar/icon/calender.png" alt="" className="h-6 w-6 object-contain" /><h3 id="next-schedule-title" className="text-lg font-black text-zinc-950 dark:text-white">Jadwal Berikutnya</h3></div>
+          <button onClick={() => router.push('/pjlp/schedule')} className="text-[11px] font-black text-orange-600">Lihat Semua ›</button>
+        </div>
+        <Card className="relative overflow-hidden rounded-[1.5rem] border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <img src="/gambar/pjlp-attendance-hero.png" alt="" className="pointer-events-none absolute bottom-0 right-1 w-36 max-w-[38%] object-contain object-right-bottom opacity-90" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/35 dark:from-zinc-900 dark:via-zinc-900/95 dark:to-zinc-900/40" />
+          <CardContent className="relative z-10 flex items-center gap-4 p-4">
+            <div className="flex h-[76px] w-[64px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-orange-100 bg-orange-50 text-center">
+              <span className="w-full bg-orange-500 py-1 text-[8px] font-black uppercase text-white">Berikutnya</span>
+              <span className="mt-1 text-xl font-black text-zinc-950 dark:text-white">{nextScheduleDate ? nextScheduleDate.getDate() : '—'}</span>
+              <span className="text-[9px] font-bold text-zinc-500">{nextScheduleDate ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(nextScheduleDate) : '-'}</span>
+            </div>
+            <div className="min-w-0 flex-1 pr-12">
+              <p className="truncate text-sm font-black text-zinc-950 dark:text-white">{nextScheduleLabel}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300"><Clock className="h-3.5 w-3.5 text-orange-500" />{nextSchedule?.shiftName || 'Belum ditentukan'} {nextSchedule?.timeRange ? `• ${nextSchedule.timeRange}` : ''}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300"><MapPin className="h-3.5 w-3.5 text-orange-500" />{nextScheduleZone}</p>
+            </div>
+            <span className="text-2xl font-bold text-zinc-300">›</span>
+          </CardContent>
+        </Card>
+      </section>
+
+      <div className="hidden">
+      <section aria-label="Ringkasan petugas hari ini" className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
       {/* Welcome Section in Premium Card View */}
       <Card 
-        className="border-none shadow-sm rounded-3xl overflow-hidden relative"
+        className="relative min-h-[168px] overflow-hidden rounded-[1.75rem] border border-white/80 shadow-[0_18px_45px_rgba(24,24,27,0.08)] dark:border-zinc-800"
         style={{ 
           backgroundImage: "url('/gambar/bgheaderpjlp.jpg')", 
           backgroundSize: 'cover', 
           backgroundPosition: 'center' 
         }}
       >
-        <div className="absolute inset-0 bg-white/75 dark:bg-zinc-950/80 backdrop-blur-[1px] pointer-events-none" />
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 relative z-10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/95 via-white/82 to-orange-50/80 backdrop-blur-[2px] dark:from-zinc-950/95 dark:via-zinc-950/85 dark:to-orange-950/30" />
+        <CardContent className="relative z-10 flex h-full flex-col justify-between gap-5 p-5 sm:p-6">
           
           <div className="flex items-center gap-4 min-w-0 flex-1">
             {/* Profile Photo */}
-            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-855 flex items-center justify-center flex-shrink-0 border border-zinc-100 dark:border-zinc-800 shadow-inner">
+            <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-zinc-50 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
               {user?.photoUrl ? (
                 <img 
                   src={user.photoUrl} 
@@ -533,8 +693,8 @@ export default function PjlpHomePage() {
 
             {/* User Text Details */}
             <div className="space-y-0.5">
-              <p className="text-[10px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">{getGreeting()},</p>
-              <h2 className="text-base font-black text-zinc-800 dark:text-white leading-tight">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">{getGreeting()},</p>
+              <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white">
                 {user?.fullName || 'Petugas PJLP'} 👋
               </h2>
               <div className="flex items-center gap-2 pt-0.5">
@@ -547,16 +707,18 @@ export default function PjlpHomePage() {
           </div>
 
           {/* Right Side: Running Server Clock & Date */}
-          <div className="text-left sm:text-right space-y-0.5 sm:flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/40 dark:border-zinc-800/40">
-            <p className="text-[9px] font-bold text-zinc-850 dark:text-zinc-200 uppercase tracking-wider">
+          <div className="flex w-full items-end justify-between border-t border-orange-100/80 pt-3 dark:border-zinc-800">
+            <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-300">
               {serverDate || 'Memuat Tanggal...'}
             </p>
-            <p className="text-sm font-black text-orange-600 dark:text-orange-500 tabular-nums">
+            <p className="mt-0.5 text-xl font-black tabular-nums text-zinc-900 dark:text-white">
               {serverTime || '00:00:00 WIB'}
             </p>
-            <div className="flex items-center gap-1 justify-start sm:justify-end">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[8px] font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">Server Time</span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+              <span className="text-[8px] font-black uppercase tracking-wider">Waktu WIB</span>
             </div>
           </div>
 
@@ -564,13 +726,13 @@ export default function PjlpHomePage() {
       </Card>
 
       {/* Attendance Summary Card */}
-      <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
-        <Card className={`border-none shadow-lg text-white rounded-2xl overflow-hidden relative ${cardTheme.cardBg}`}>
+      <div className="h-full animate-in fade-in slide-in-from-bottom-5 duration-500">
+        <Card className={`relative h-full min-h-[220px] overflow-hidden rounded-[1.75rem] border-none text-white shadow-[0_18px_45px_rgba(24,24,27,0.13)] ${cardTheme.cardBg}`}>
           {/* Subtle Decorative Background Circles */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/10 rounded-full blur-lg pointer-events-none" />
           
-          <CardContent className="p-4 relative z-10">
+          <CardContent className="relative z-10 flex h-full flex-col p-5 sm:p-6">
             <div className="flex justify-between items-start mb-4">
               <div className="space-y-1">
                 <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider">Status Hari Ini</p>
@@ -584,14 +746,14 @@ export default function PjlpHomePage() {
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-0.5">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
                 <div className="flex items-center gap-1 text-white/80">
                   <Clock className="w-3 h-3" />
                   <span className="text-[9px] font-bold uppercase tracking-wider">Shift Masuk</span>
                 </div>
                 <p className="text-sm font-black truncate">{shiftText}</p>
               </div>
-              <div className="space-y-0.5">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
                 <div className="flex items-center gap-1 text-white/80">
                   <MapPin className="w-3 h-3" />
                   <span className="text-[9px] font-bold uppercase tracking-wider">Zona Kerja</span>
@@ -634,7 +796,7 @@ export default function PjlpHomePage() {
                 )}
               </Button>
             ) : (
-              <div className="flex gap-2.5 mt-4">
+              <div className="mt-auto flex gap-2.5 pt-4">
                 {attendanceMode !== 'FREE' && attendanceStatus === 'Belum Absen' && (!todaySchedule || shiftText === 'Libur') ? (
                   <Button disabled className="w-full bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
                     Tidak Ada Jadwal Hari Ini
@@ -672,18 +834,26 @@ export default function PjlpHomePage() {
           </CardContent>
         </Card>
       </div>
+      </section>
 
       {/* Dynamic 3-Column Stats Grid (Calculated Monthly) */}
-      <div className="space-y-3">
+      <section className="flex flex-col gap-3" aria-labelledby="monthly-summary-title">
+        <div className="flex items-end justify-between px-1">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">Aktivitas</p>
+            <h3 id="monthly-summary-title" className="text-lg font-black text-zinc-900 dark:text-white">Ringkasan Bulan Ini</h3>
+          </div>
+          <Badge variant="outline" className="rounded-full bg-white text-[10px] font-bold dark:bg-zinc-900">Diperbarui langsung</Badge>
+        </div>
         {/* Row 1: Attendance Indicators */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             { label: 'Total Masuk', value: stats.absenMasuk, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/20' },
             { label: 'Total Tidak Masuk', value: stats.tidakHadir, icon: AlertTriangle, color: 'text-red-650', bg: 'bg-red-50 dark:bg-red-950/20' },
             { label: 'Total Izin', value: stats.izinCount, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/20' },
           ].map((stat, idx) => (
-            <Card key={idx} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 transition-all hover:shadow-md">
-              <CardContent className="p-3 flex flex-col items-center text-center space-y-1.5">
+            <Card key={idx} className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+              <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
                 <div className={`${stat.bg} p-2.5 rounded-xl`}>
                   {stat.icon === Calendar ? (
                     <img src="/gambar/icon/calender.png" alt="Kalender" className="w-5 h-5 object-contain" />
@@ -692,8 +862,8 @@ export default function PjlpHomePage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-lg font-black text-zinc-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider leading-tight">{stat.label}</p>
+                  <p className="text-xl font-black leading-none text-zinc-900 dark:text-white">{stat.value}</p>
+                  <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-wider text-zinc-500">{stat.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -701,31 +871,31 @@ export default function PjlpHomePage() {
         </div>
 
         {/* Row 2: Operational Indicators */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             { label: 'Total Tugas', value: stats.totalTugas, icon: ClipboardList, color: 'text-orange-650', bg: 'bg-orange-50 dark:bg-orange-950/20' },
             { label: 'Total Laporan', value: stats.totalLaporan, icon: AlertTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-950/20' },
             { label: 'Performa', value: `${stats.poinPerforma}%`, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20' },
           ].map((stat, idx) => (
-            <Card key={idx} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 transition-all hover:shadow-md">
-              <CardContent className="p-3 flex flex-col items-center text-center space-y-1.5">
+            <Card key={idx} className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+              <CardContent className="flex items-center gap-3 p-3.5 sm:p-4">
                 <div className={`${stat.bg} p-2.5 rounded-xl`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-lg font-black text-zinc-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider leading-tight">{stat.label}</p>
+                  <p className="text-xl font-black leading-none text-zinc-900 dark:text-white">{stat.value}</p>
+                  <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-wider text-zinc-500">{stat.label}</p>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Weekly Schedule Section (Table view) */}
-      <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900 overflow-hidden w-full">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex justify-between items-center">
+      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <CardContent className="space-y-4 p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <img src="/gambar/icon/calender.png" alt="Jadwal" className="w-5 h-5 object-contain" />
               <h3 className="text-sm font-black text-zinc-800 dark:text-white">Jadwal Seminggu Ini</h3>
@@ -733,14 +903,14 @@ export default function PjlpHomePage() {
             <Button 
               variant="ghost" 
               onClick={() => router.push('/pjlp/schedule')}
-              className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/20 font-bold px-3 py-1.5 rounded-xl transition-all"
+              className="shrink-0 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-orange-600 transition-all hover:bg-orange-50 hover:text-orange-700 dark:hover:bg-orange-950/20 sm:px-3 sm:text-xs"
             >
               Lihat Jadwal
             </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]">
+            <table className="w-full min-w-[520px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                   <th className="py-2.5 px-2">Hari & Tanggal</th>
@@ -754,10 +924,10 @@ export default function PjlpHomePage() {
                   const isToday = ws.dateStr === getJakartaTodayString();
                   
                   return (
-                    <tr 
+                    <tr
                       key={idx} 
                       className={`text-xs font-bold transition-colors ${
-                        isToday ? 'bg-orange-50/40 dark:bg-orange-950/10' : ''
+                        isToday ? 'bg-orange-50/70 dark:bg-orange-950/20' : ''
                       }`}
                     >
                       <td className="py-3 px-2 text-zinc-650 dark:text-zinc-300">
@@ -797,6 +967,7 @@ export default function PjlpHomePage() {
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Premium Glassmorphic Izin & Pulang Awal Modal */}
       {isIzinModalOpen && (

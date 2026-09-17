@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
 import { DEFAULT_MAP_VISIBILITY, normalizeMapVisibility } from '@/lib/map-visibility';
+import { canRoleAccessAdminPath } from '@/lib/role-access';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +20,7 @@ const defaultSettings = {
   bgVideoVolume: 0,
   systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
+  villageName: '',
   officerIdPrefix: 'PJLP',
   attendanceMode: 'SCHEDULED',
   mainColor: '#f97316',
@@ -98,6 +100,9 @@ export async function GET() {
       await queryDb("ALTER TABLE system_settings ADD COLUMN attendanceMode VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED'");
     } catch { /* column may already exist */ }
     try {
+      await queryDb("ALTER TABLE system_settings ADD COLUMN villageName VARCHAR(150) NOT NULL DEFAULT ''");
+    } catch { /* column may already exist */ }
+    try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
     } catch { /* column may already exist */ }
     try {
@@ -140,6 +145,7 @@ export async function GET() {
       zones: zones || [],
       gpsUpdateInterval: s.gpsUpdateInterval ?? 30,
       officerIdPrefix: s.officerIdPrefix || defaultSettings.officerIdPrefix,
+      villageName: String(s.villageName || defaultSettings.villageName),
       attendanceMode: s.attendanceMode === 'FREE' ? 'FREE' : 'SCHEDULED',
       mapVisibility: normalizeMapVisibility(s.mapVisibility),
       roleAccess: roleAccess || defaultSettings.roleAccess,
@@ -158,8 +164,20 @@ export async function POST(req: Request) {
   try {
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role))) {
+    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role).trim().toUpperCase())) {
       return NextResponse.json({ error: 'Hanya administrator yang dapat mengubah pengaturan.' }, { status: 403 });
+    }
+
+    const accessRows: any = await queryDb('SELECT roleAccess FROM system_settings LIMIT 1');
+    let storedRoleAccess = defaultSettings.roleAccess;
+    const rawRoleAccess = accessRows?.[0]?.roleAccess;
+    if (rawRoleAccess) {
+      try {
+        storedRoleAccess = typeof rawRoleAccess === 'string' ? JSON.parse(rawRoleAccess) : rawRoleAccess;
+      } catch { /* gunakan akses default jika data lama rusak */ }
+    }
+    if (!canRoleAccessAdminPath(decoded.role, '/admin/settings', storedRoleAccess)) {
+      return NextResponse.json({ error: 'Role Anda tidak memiliki akses ke Pengaturan Sistem.' }, { status: 403 });
     }
 
     const data = await req.json();
@@ -171,6 +189,7 @@ export async function POST(req: Request) {
     if (attendanceMode !== 'SCHEDULED' && attendanceMode !== 'FREE') {
       return NextResponse.json({ error: 'Mode absen petugas tidak valid.' }, { status: 400 });
     }
+    const villageName = String(data.villageName ?? defaultSettings.villageName).trim().slice(0, 150);
 
     const existing: any = await queryDb('SELECT id FROM system_settings LIMIT 1');
     const shifts = JSON.stringify(data.shifts || []);
@@ -198,6 +217,9 @@ export async function POST(req: Request) {
       await queryDb("ALTER TABLE system_settings ADD COLUMN attendanceMode VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED'");
     } catch { /* column may already exist */ }
     try {
+      await queryDb("ALTER TABLE system_settings ADD COLUMN villageName VARCHAR(150) NOT NULL DEFAULT ''");
+    } catch { /* column may already exist */ }
+    try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
     } catch { /* column may already exist */ }
     try {
@@ -217,14 +239,14 @@ export async function POST(req: Request) {
 
     if (existing && existing.length > 0) {
       await queryDb(
-        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, officerIdPrefix=?, attendanceMode=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, mapVisibility=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', officerIdPrefix, attendanceMode, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
+        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, villageName=?, officerIdPrefix=?, attendanceMode=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, mapVisibility=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', villageName, officerIdPrefix, attendanceMode, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
       );
     } else {
       await queryDb(
-        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, officerIdPrefix, attendanceMode, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', officerIdPrefix, attendanceMode, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
+        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, villageName, officerIdPrefix, attendanceMode, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', villageName, officerIdPrefix, attendanceMode, data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
       );
     }
 

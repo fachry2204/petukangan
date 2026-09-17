@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { DEFAULT_MAP_VISIBILITY, type MapVisibilitySettings } from '@/lib/map-visibility';
 
 interface SettingsState {
+  settingsLoaded: boolean;
   logoUrl: string;
   bgType: 'image' | 'video';
   bgImage: string;
@@ -9,6 +10,7 @@ interface SettingsState {
   bgVideoVolume: number; // Volume 0 - 100
   systemName: string;
   systemDescription: string;
+  villageName: string;
   officerIdPrefix: string;
   attendanceMode: 'SCHEDULED' | 'FREE';
   mainColor: string;
@@ -35,6 +37,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
+  settingsLoaded: false,
   logoUrl: '/logodki.png',
   bgType: 'image',
   bgImage: '',
@@ -42,6 +45,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   bgVideoVolume: 0, // Default muted/0 for seamless autoplay
   systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
+  villageName: '',
   officerIdPrefix: 'PJLP',
   attendanceMode: 'SCHEDULED',
   mainColor: '#f97316', // orange-500

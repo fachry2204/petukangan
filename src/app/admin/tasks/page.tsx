@@ -98,6 +98,7 @@ const TASK_TYPES = ['ASSIGNED', 'SELF'];
 export default function AdminTasksPage() {
   const router = useRouter();
   const configuredSystemName = useSettingsStore((state) => state.systemName);
+  const configuredVillageName = useSettingsStore((state) => state.villageName);
   const { token } = useAuthStore();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -332,6 +333,7 @@ export default function AdminTasksPage() {
     }
 
     const excelData = data.map(t => ({
+      'Kelurahan': configuredVillageName || '-',
       'Waktu Tugas': t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-',
       'Petugas': t.assignedTo?.fullName || '-',
       'Judul Tugas': t.title,
@@ -346,7 +348,7 @@ export default function AdminTasksPage() {
     const ws = XLSX.utils.json_to_sheet(excelData);
     
     const colWidths = [
-      { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
+      { wch: 24 }, { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 40 },
       { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
     ];
     ws['!cols'] = colWidths;
@@ -443,6 +445,7 @@ export default function AdminTasksPage() {
 
       const doc = new jsPDF({ orientation: 'landscape' });
       const systemName = configuredSystemName || 'PPSU System';
+      const villageName = configuredVillageName || '-';
       const exportDate = new Date().toLocaleDateString('id-ID');
       
       let textStartX = 14;
@@ -460,7 +463,7 @@ export default function AdminTasksPage() {
       } else {
         subtitle += `Rentang Tanggal Upload: Semua Waktu  `;
       }
-      subtitle += `|  Sistem: ${systemName}`;
+      subtitle += `|  Sistem: ${systemName}  |  Kelurahan: ${villageName}`;
       doc.setFontSize(10);
       doc.text(subtitle, textStartX, 24);
 
@@ -618,7 +621,7 @@ export default function AdminTasksPage() {
           doc.setFontSize(8);
           doc.setFont('helvetica', 'normal');
           const website = window.location.host;
-          const footerText = `${systemName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'} | Website: ${website}`;
+          const footerText = `${systemName} | Kelurahan ${villageName} | Tanggal Export: ${exportDate} | ${exportDateFrom || '*'} s/d ${exportDateTo || '*'} | Website: ${website}`;
           const pageSize = doc.internal.pageSize;
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
           const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
@@ -695,7 +698,7 @@ export default function AdminTasksPage() {
             <ClipboardList className="w-6 h-6 text-orange-500" /> Tugas Lapangan
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Manajemen penugasan dan monitoring progres pekerjaan PJLP.
+            Manajemen penugasan dan monitoring progres pekerjaan PJLP{configuredVillageName ? ` Kelurahan ${configuredVillageName}` : ''}.
           </p>
         </div>
         <div className="flex items-center gap-2">
