@@ -578,8 +578,9 @@ export default function AdminAttendancePage() {
         const log = logsByDate.find(l => l.dateStr === dateStr);
         
         const sched = getScheduleForUser(userLogs[0].user?.id, dateStr + 'T08:00:00');
-        const shiftName = sched ? sched.shiftName : (log?.isOutsideSchedule ? 'Luar Jadwal' : '-');
-        const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
+        const shiftName = log?.records?.find((r: any) => r.type === 'IN')?.shiftName || (sched ? sched.shiftName : (log?.isOutsideSchedule ? 'Luar Jadwal' : '-'));
+        const zoneName = sched && (!log?.records?.find((r: any) => r.type === 'IN')?.shiftName || shiftName === sched.shiftName)
+          ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
         
         let inRec, outRec, permitRec;
         let workStr = '-', breakStr = '-';
@@ -795,8 +796,9 @@ export default function AdminAttendancePage() {
                       <TableBody>
                         {paginatedAbsensi.paginated.map((item) => {
                           const sched = getScheduleForUser(item.user?.id, item.timestamp);
-                          const shiftName = sched ? sched.shiftName : (item.isOutsideSchedule ? 'Luar Jadwal' : '-');
-                          const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
+                          const shiftName = item.shiftName || (sched ? sched.shiftName : (item.isOutsideSchedule ? 'Luar Jadwal' : '-'));
+                          const zoneName = sched && (!item.shiftName || item.shiftName === sched.shiftName)
+                            ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
 
                           return (
                             <TableRow key={item.id} className="border-zinc-50 dark:border-zinc-800/50 hover:bg-zinc-50/40 dark:hover:bg-zinc-800/20">
@@ -1484,8 +1486,9 @@ export default function AdminAttendancePage() {
       {/* Detail Modal */}
       {selectedDetailItem && (() => {
         const sched = getScheduleForUser(selectedDetailItem.user?.id, selectedDetailItem.timestamp);
-        const shiftName = sched ? sched.shiftName : (selectedDetailItem.isOutsideSchedule ? 'Luar Jadwal' : '-');
-        const zoneName = sched ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
+        const shiftName = selectedDetailItem.shiftName || (sched ? sched.shiftName : (selectedDetailItem.isOutsideSchedule ? 'Luar Jadwal' : '-'));
+        const zoneName = sched && (!selectedDetailItem.shiftName || selectedDetailItem.shiftName === sched.shiftName)
+          ? (typeof sched.zone === 'object' ? sched.zone?.name : sched.zone) : '-';
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">

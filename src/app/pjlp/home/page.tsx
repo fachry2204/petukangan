@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useRealtime } from '@/hooks/use-realtime';
@@ -28,11 +29,13 @@ import { apiUrl } from '@/lib/api-config';
 
 export default function PjlpHomePage() {
   const { user, token, setAuth } = useAuthStore();
+  const attendanceMode = useSettingsStore((state) => state.attendanceMode);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [todaySchedule, setTodaySchedule] = useState<any>(null);
+  const [sessionShift, setSessionShift] = useState<{ name: string; timeRange: string | null } | null>(null);
   const [allSchedules, setAllSchedules] = useState<any[]>([]);
   const [stats, setStats] = useState({
     absenMasuk: 0,
@@ -140,6 +143,7 @@ export default function PjlpHomePage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAttendanceStatus(resAtt.data.status || 'Belum Absen');
+      setSessionShift(resAtt.data.selectedShift || null);
       setTodayIzinStatus(resAtt.data.izinStatus || null);
       setTodayIzinType(resAtt.data.izinType || null);
 
@@ -425,11 +429,13 @@ export default function PjlpHomePage() {
     );
   }
 
-  const shiftText = todaySchedule 
-    ? `${todaySchedule.shiftName} (${todaySchedule.timeRange?.split(' - ')[0] || ''} WIB)`
-    : 'Libur';
+  const shiftText = attendanceMode === 'FREE'
+    ? (sessionShift ? `${sessionShift.name}${sessionShift.timeRange ? ` (${sessionShift.timeRange.split(' - ')[0]} WIB)` : ''}` : 'Pilih saat absen masuk')
+    : todaySchedule
+      ? `${todaySchedule.shiftName} (${todaySchedule.timeRange?.split(' - ')[0] || ''} WIB)`
+      : 'Libur';
 
-  const zoneText = todaySchedule
+  const zoneText = todaySchedule && attendanceMode !== 'FREE'
     ? (typeof todaySchedule.zone === 'object' ? todaySchedule.zone?.name : todaySchedule.zone)
     : '-';
 
@@ -629,7 +635,7 @@ export default function PjlpHomePage() {
               </Button>
             ) : (
               <div className="flex gap-2.5 mt-4">
-                {!todaySchedule || shiftText === 'Libur' ? (
+                {attendanceMode !== 'FREE' && attendanceStatus === 'Belum Absen' && (!todaySchedule || shiftText === 'Libur') ? (
                   <Button disabled className="w-full bg-white/20 text-white border border-white/25 rounded-2xl font-black py-5 text-sm cursor-not-allowed">
                     Tidak Ada Jadwal Hari Ini
                   </Button>

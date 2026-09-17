@@ -152,6 +152,7 @@ export async function GET(req: Request) {
     let sessionDate = activeSession?.sessionDate || todayStr;
 
     const hasIn = records.some((r: any) => r.type === 'IN' && r.status !== 'PENDING');
+    const activeInRecord = records.find((r: any) => r.type === 'IN' && r.status !== 'PENDING');
     const hasBreak = records.some((r: any) => r.type === 'BREAK');
     const hasEndBreak = records.some((r: any) => r.type === 'END_BREAK');
     const hasOut = records.some((r: any) => r.type === 'OUT');
@@ -177,7 +178,7 @@ export async function GET(req: Request) {
     else if (hasBreak) status = 'Absen Istirahat';
     else if (hasIn) status = 'Sudah Absen';
 
-    return NextResponse.json({ status, records, sessionDate, hasApprovedRequest: !!hasApprovedRequest, rejectedRequest });
+    return NextResponse.json({ status, records, sessionDate, selectedShift: activeInRecord?.shiftName ? { name: activeInRecord.shiftName, timeRange: activeInRecord.shiftTimeRange || null } : null, hasApprovedRequest: !!hasApprovedRequest, rejectedRequest });
   } catch (err: any) {
     console.error('[GET /api/attendance] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

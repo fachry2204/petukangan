@@ -150,6 +150,7 @@ export async function GET(req: Request) {
     let sessionDate = activeSession?.sessionDate || todayStr;
 
     const hasIn = records.some((r: any) => r.type === 'IN' && r.status !== 'PENDING');
+    const activeInRecord = records.find((r: any) => r.type === 'IN' && r.status !== 'PENDING');
     const hasBreak = records.some((r: any) => r.type === 'BREAK');
     const hasEndBreak = records.some((r: any) => r.type === 'END_BREAK');
     const hasOut = records.some((r: any) => r.type === 'OUT');
@@ -190,6 +191,10 @@ export async function GET(req: Request) {
       status, 
       records, 
       sessionDate,
+      selectedShift: activeInRecord?.shiftName ? {
+        name: activeInRecord.shiftName,
+        timeRange: activeInRecord.shiftTimeRange || null,
+      } : null,
       hasApprovedRequest: !!hasApprovedRequest, 
       rejectedRequest,
       izinStatus,

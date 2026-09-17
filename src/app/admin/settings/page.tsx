@@ -12,6 +12,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiUrl } from '@/lib/api-config';
 
 const ROLE_PAGES = [
@@ -155,6 +156,7 @@ export default function AdminSettingsPage() {
         systemName: settings.systemName,
         systemDescription: settings.systemDescription,
         officerIdPrefix,
+        attendanceMode: settings.attendanceMode,
         mainColor: settings.mainColor,
         maintenanceActive: settings.maintenanceActive,
         maintenanceEnd: settings.maintenanceEnd,
@@ -517,6 +519,33 @@ export default function AdminSettingsPage() {
                   </label>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Setting Jadwal dan Zona */}
+          <Card className="border-none shadow-xl bg-white dark:bg-zinc-900/90 rounded-3xl">
+            <CardHeader>
+              <CardTitle>Mode Absen Petugas</CardTitle>
+              <CardDescription>Tentukan apakah absen masuk wajib mengikuti jadwal atau petugas bebas memilih shift.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <label htmlFor="attendance-mode" className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Aturan Absensi</label>
+              <Select value={settings.attendanceMode} onValueChange={(value) => settings.setSettings({ attendanceMode: value as 'SCHEDULED' | 'FREE' })}>
+                <SelectTrigger id="attendance-mode" className="w-full max-w-md">
+                  <SelectValue placeholder="Pilih mode absen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="SCHEDULED">Sesuai Jadwal</SelectItem>
+                    <SelectItem value="FREE">Absen Bebas — pilih shift saat masuk</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {settings.attendanceMode === 'FREE'
+                  ? 'Petugas dapat absen tanpa jadwal penugasan, tetapi wajib memilih shift dari daftar shift sebelum absen masuk.'
+                  : 'Absen masuk hanya tersedia untuk petugas yang dijadwalkan pada hari tersebut. Sesi yang sudah dimulai tetap bisa dilanjutkan.'}
+              </p>
             </CardContent>
           </Card>
 

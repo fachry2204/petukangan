@@ -10,6 +10,7 @@ interface SettingsState {
   systemName: string;
   systemDescription: string;
   officerIdPrefix: string;
+  attendanceMode: 'SCHEDULED' | 'FREE';
   mainColor: string;
   
   maintenanceActive: boolean;
@@ -42,6 +43,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   systemName: 'PPSU System',
   systemDescription: 'Monitoring & Management System',
   officerIdPrefix: 'PJLP',
+  attendanceMode: 'SCHEDULED',
   mainColor: '#f97316', // orange-500
 
   maintenanceActive: false,

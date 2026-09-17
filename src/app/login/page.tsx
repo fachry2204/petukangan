@@ -231,8 +231,7 @@ export default function LoginPage() {
               <Label htmlFor="username" className="text-xs font-bold text-zinc-800 dark:text-zinc-200 ml-1">Username</Label>
               <Input
                 id="username"
-                placeholder="PPSU001"
-                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400"
+                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -243,8 +242,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
-                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400"
+                className="h-12 text-sm rounded-2xl bg-[#F4F7FF] dark:bg-zinc-800/50 border-none focus-visible:ring-1 focus-visible:ring-orange-500 px-4 text-zinc-800 dark:text-zinc-100"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

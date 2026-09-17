@@ -187,6 +187,30 @@
     border-color: rgb(251 146 60 / 0.75);
     box-shadow: 0 0 0 3px rgb(255 237 213 / 0.8);
   }
+
+  /* Sidebar tetap dapat digulir, tetapi indikatornya tidak mendominasi UI. */
+  .admin-sidebar .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(113 113 122 / 0.2) transparent;
+  }
+
+  .admin-sidebar .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .admin-sidebar .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-sidebar .custom-scrollbar::-webkit-scrollbar-thumb {
+    min-height: 40px;
+    border-radius: 999px;
+    background-color: rgb(113 113 122 / 0.18);
+  }
+
+  .admin-sidebar .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(113 113 122 / 0.35);
+  }
 }
 
 @keyframes admin-content-in {

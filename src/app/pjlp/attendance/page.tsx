@@ -20,6 +20,8 @@ import { apiUrl } from '@/lib/api-config';
 const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: false });
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useRealtimeEntity } from '@/hooks/use-realtime';
@@ -33,6 +35,7 @@ export default function PjlpAttendancePage() {
   const [attendanceStatus, setAttendanceStatus] = useState<string>('Belum Absen');
   const [hasApprovedRequest, setHasApprovedRequest] = useState<boolean>(false);
   const [todayRecords, setTodayRecords] = useState<any[]>([]);
+  const [selectedShiftName, setSelectedShiftName] = useState('');
   const [fetchingStatus, setFetchingStatus] = useState<boolean>(true);
   const [showFullMap, setShowFullMap] = useState<boolean>(false);
   
@@ -47,6 +50,12 @@ export default function PjlpAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { user, token } = useAuthStore();
+  const attendanceMode = useSettingsStore((state) => state.attendanceMode);
+  const shifts = useSettingsStore((state) => state.shifts);
+  const availableShifts = (shifts || []).map((shift: any) => ({
+    name: typeof shift === 'string' ? shift : shift?.name,
+    timeRange: typeof shift === 'string' ? '' : `${shift?.startTime || '08:00'} - ${shift?.endTime || '16:00'}`,
+  })).filter((shift) => !!shift.name);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -142,6 +151,10 @@ export default function PjlpAttendancePage() {
 
   // Start the GPS & Camera flow on demand (Mulai Absen click)
   const startAttendanceFlow = async () => {
+    if (attendanceMode === 'FREE' && attendanceStatus === 'Belum Absen' && !selectedShiftName) {
+      toast({ variant: 'destructive', title: 'Pilih Shift', description: 'Pilih shift kerja sebelum absen masuk.' });
+      return;
+    }
     setIsActivating(true);
     setHasPermission(null);
     setPermissionError('');
@@ -272,7 +285,7 @@ export default function PjlpAttendancePage() {
         title: `${actionLabel} Berhasil 🎉`,
         desc: `Data anda sudah tercatat di system`
       });
-      fetchTodayStatus(false);
+      fetchTodayStatus();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -284,7 +297,7 @@ export default function PjlpAttendancePage() {
     }
   };
 
-  const fetchTodayStatus = async (isInitial = false) => {
+  const fetchTodayStatus = async () => {
     try {
       const res = await axios.get(
         `${apiUrl}/attendance/today`,
@@ -294,11 +307,10 @@ export default function PjlpAttendancePage() {
       setAttendanceStatus(status);
       setHasApprovedRequest(!!res.data.hasApprovedRequest);
       setTodayRecords(res.data.records || []);
+      if (res.data.selectedShift?.name) setSelectedShiftName(res.data.selectedShift.name);
 
-      // Automatically launch full camera flow on mount if status requires photo capture or has approved request
-      if (isInitial && (status === 'Belum Absen' || status === 'Selesai Istirahat' || !!res.data.hasApprovedRequest)) {
-        startAttendanceFlow();
-      }
+      // The officer starts camera capture explicitly after reviewing the
+      // current mode and, in free mode, choosing a shift.
     } catch (err) {
       console.error('Failed to fetch today status:', err);
     } finally {
@@ -318,7 +330,7 @@ export default function PjlpAttendancePage() {
       router.push('/login');
       return;
     }
-    fetchTodayStatus(true);
+    fetchTodayStatus();
   }, [token, user, isHydrated]);
 
   // Realtime updates for attendance without page refresh
@@ -485,6 +497,10 @@ export default function PjlpAttendancePage() {
 
   const submitAttendance = async () => {
     if (!photo || !location) return;
+    if (attendanceMode === 'FREE' && attendanceStatus === 'Belum Absen' && !selectedShiftName) {
+      toast({ variant: 'destructive', title: 'Pilih Shift', description: 'Pilih shift kerja sebelum absen masuk.' });
+      return;
+    }
     setIsLoading(true);
 
     const isCheckOut = attendanceStatus !== 'Belum Absen';
@@ -500,6 +516,7 @@ export default function PjlpAttendancePage() {
           photoUrl: photo,
           clientTimestamp: Date.now(),
           address: address,
+          shiftName: attendanceStatus === 'Belum Absen' ? selectedShiftName : undefined,
         },
         { 
           headers: { Authorization: `Bearer ${token}` },
@@ -513,12 +530,12 @@ export default function PjlpAttendancePage() {
         desc: `Data anda sudah tercatat di system`
       });
       setPhoto(null);
-      fetchTodayStatus(false);
+      fetchTodayStatus();
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: isCheckOut ? 'Absen Pulang Gagal' : 'Absen Masuk Gagal',
-        description: error.response?.data?.message || 'Gagal mengirim data absensi ke basis data',
+        description: error.response?.data?.error || error.response?.data?.message || 'Gagal mengirim data absensi ke basis data',
       });
     } finally {
       setIsLoading(false);
@@ -585,6 +602,33 @@ export default function PjlpAttendancePage() {
           {headerInfo.subtitle}
         </p>
       </header>
+
+      {attendanceMode === 'FREE' && attendanceStatus === 'Belum Absen' && (
+        <Card className="rounded-2xl border border-orange-200 bg-white p-4 dark:border-orange-900 dark:bg-zinc-900">
+          <label htmlFor="attendance-shift" className="mb-2 block text-sm font-bold text-zinc-800 dark:text-zinc-100">Pilih Shift Kerja *</label>
+          <Select value={selectedShiftName} onValueChange={setSelectedShiftName}>
+            <SelectTrigger id="attendance-shift" className="h-11 w-full">
+              <SelectValue placeholder="Pilih shift sebelum absen masuk" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {availableShifts.map((shift) => (
+                  <SelectItem key={shift.name} value={shift.name}>
+                    {shift.name}{shift.timeRange ? ` (${shift.timeRange} WIB)` : ''}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-zinc-500">
+            {availableShifts.length ? 'Shift ini akan digunakan untuk sesi masuk, istirahat, dan pulang Anda.' : 'Belum ada shift tersedia. Minta admin menambahkan shift di Pengaturan Sistem.'}
+          </p>
+        </Card>
+      )}
+
+      {attendanceMode === 'FREE' && attendanceStatus !== 'Belum Absen' && selectedShiftName && (
+        <Badge variant="outline">Shift: {selectedShiftName}</Badge>
+      )}
 
       {todayRecords.length > 0 && (
         <Card className="border-none shadow-md bg-zinc-50 dark:bg-zinc-900 rounded-3xl p-4.5 border border-zinc-100 dark:border-zinc-800 animate-in fade-in duration-300">
@@ -709,7 +753,7 @@ export default function PjlpAttendancePage() {
 
               <Button 
                 onClick={startAttendanceFlow}
-                disabled={isActivating}
+                disabled={isActivating || (attendanceMode === 'FREE' && attendanceStatus === 'Belum Absen' && !selectedShiftName)}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl py-6 shadow-md transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2"
               >
                 {isActivating ? (
@@ -720,7 +764,9 @@ export default function PjlpAttendancePage() {
                 ) : (
                   <>
                     <Camera className="w-5 h-5" />
-                    {attendanceStatus === 'Selesai Istirahat' ? 'Mulai Absen Pulang' : 'Mulai Absen Masuk'}
+                    {attendanceMode === 'FREE' && attendanceStatus === 'Belum Absen' && !selectedShiftName
+                      ? 'Pilih Shift Terlebih Dahulu'
+                      : attendanceStatus === 'Selesai Istirahat' ? 'Mulai Absen Pulang' : 'Mulai Absen Masuk'}
                   </>
                 )}
               </Button>
