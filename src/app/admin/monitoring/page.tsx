@@ -328,7 +328,6 @@ function AdminMonitoringContent() {
                 Live Tracking
               </span>
               <h1 className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mt-1">Monitoring</h1>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">Sektor Petukangan Utara</p>
             </div>
 
             <div className="flex items-center gap-1.5">
