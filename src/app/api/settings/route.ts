@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { queryDb } from '@/lib/db';
+import { DEFAULT_MAP_VISIBILITY, normalizeMapVisibility } from '@/lib/map-visibility';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
@@ -24,6 +25,7 @@ const defaultSettings = {
   maintenanceTitle: 'Sistem Dalam Perbaikan',
   maintenanceDesc: 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.',
   gpsUpdateInterval: 30,
+  mapVisibility: DEFAULT_MAP_VISIBILITY,
   roleAccess: {
     ADMIN: {
       '/admin/dashboard': true,
@@ -70,7 +72,7 @@ const defaultSettings = {
     STAFF: { canEdit: true, canDelete: true },
     PIMPINAN: { canEdit: false, canDelete: false },
   },
-  footerText: 'Kelurahan Petukangan Utara © 2026',
+  footerText: '',
   footerShowOnAdmin: true,
   footerShowOnLogin: true,
   shifts: [],
@@ -83,6 +85,9 @@ export async function GET() {
     // Ensure gpsUpdateInterval column exists
     try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN gpsUpdateInterval INT DEFAULT 30');
+    } catch { /* column may already exist */ }
+    try {
+      await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
     } catch { /* column may already exist */ }
     try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
@@ -126,9 +131,10 @@ export async function GET() {
       shifts: shifts || [],
       zones: zones || [],
       gpsUpdateInterval: s.gpsUpdateInterval ?? 30,
+      mapVisibility: normalizeMapVisibility(s.mapVisibility),
       roleAccess: roleAccess || defaultSettings.roleAccess,
       rolePermissions: rolePermissions || defaultSettings.rolePermissions,
-      footerText: s.footerText ?? defaultSettings.footerText,
+      footerText: s.footerText === 'Kelurahan Petukangan Utara © 2026' ? '' : (s.footerText ?? defaultSettings.footerText),
       footerShowOnAdmin: s.footerShowOnAdmin == null ? defaultSettings.footerShowOnAdmin : !!s.footerShowOnAdmin,
       footerShowOnLogin: s.footerShowOnLogin == null ? defaultSettings.footerShowOnLogin : !!s.footerShowOnLogin,
     });
@@ -142,6 +148,9 @@ export async function POST(req: Request) {
   try {
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role))) {
+      return NextResponse.json({ error: 'Hanya administrator yang dapat mengubah pengaturan.' }, { status: 403 });
+    }
 
     const data = await req.json();
 
@@ -150,13 +159,19 @@ export async function POST(req: Request) {
     const zones = JSON.stringify(data.zones || []);
     const roleAccess = JSON.stringify(data.roleAccess || defaultSettings.roleAccess);
     const rolePermissions = JSON.stringify(data.rolePermissions || defaultSettings.rolePermissions);
-    const footerText = String(data.footerText ?? defaultSettings.footerText);
+    const mapVisibility = JSON.stringify(normalizeMapVisibility(data.mapVisibility));
+    const footerText = data.footerText === 'Kelurahan Petukangan Utara © 2026'
+      ? ''
+      : String(data.footerText ?? defaultSettings.footerText);
     const footerShowOnAdmin = data.footerShowOnAdmin === false ? 0 : 1;
     const footerShowOnLogin = data.footerShowOnLogin === false ? 0 : 1;
 
     // Ensure gpsUpdateInterval column exists before saving
     try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN gpsUpdateInterval INT DEFAULT 30');
+    } catch { /* column may already exist */ }
+    try {
+      await queryDb('ALTER TABLE system_settings ADD COLUMN mapVisibility LONGTEXT');
     } catch { /* column may already exist */ }
     try {
       await queryDb('ALTER TABLE system_settings ADD COLUMN roleAccess LONGTEXT');
@@ -178,14 +193,14 @@ export async function POST(req: Request) {
 
     if (existing && existing.length > 0) {
       await queryDb(
-        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
+        `UPDATE system_settings SET logoUrl=?, bgType=?, bgImage=?, bgVideo=?, bgVideoVolume=?, systemName=?, systemDescription=?, mainColor=?, maintenanceActive=?, maintenanceEnd=?, maintenanceTitle=?, maintenanceDesc=?, gpsUpdateInterval=?, mapVisibility=?, roleAccess=?, rolePermissions=?, footerText=?, footerShowOnAdmin=?, footerShowOnLogin=?, shifts=?, zones=?, updatedAt=NOW(6) WHERE id=?`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, existing[0].id]
       );
     } else {
       await queryDb(
-        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
-        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
+        `INSERT INTO system_settings (logoUrl, bgType, bgImage, bgVideo, bgVideoVolume, systemName, systemDescription, mainColor, maintenanceActive, maintenanceEnd, maintenanceTitle, maintenanceDesc, gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6))`,
+        [data.logoUrl || '/logodki.png', data.bgType || 'image', data.bgImage || '', data.bgVideo || '', data.bgVideoVolume ?? 0, data.systemName || 'PPSU System', data.systemDescription || 'Monitoring & Management System', data.mainColor || '#f97316', data.maintenanceActive ? 1 : 0, data.maintenanceEnd || '', data.maintenanceTitle || 'Sistem Dalam Perbaikan', data.maintenanceDesc || 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.', gpsUpdateInterval, mapVisibility, roleAccess, rolePermissions, footerText, footerShowOnAdmin, footerShowOnLogin, shifts, zones]
       );
     }
 

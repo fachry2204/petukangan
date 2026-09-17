@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEFAULT_MAP_VISIBILITY, type MapVisibilitySettings } from '@/lib/map-visibility';
 
 interface SettingsState {
   logoUrl: string;
@@ -16,6 +17,7 @@ interface SettingsState {
   maintenanceDesc: string;
 
   gpsUpdateInterval: number; // detik, interval update lokasi GPS petugas
+  mapVisibility: MapVisibilitySettings;
 
   roleAccess: Record<string, Record<string, boolean>>;
   rolePermissions: Record<string, { canEdit: boolean; canDelete: boolean }>;
@@ -46,6 +48,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   maintenanceDesc: 'Kami sedang melakukan pemeliharaan sistem. Silakan kembali lagi nanti.',
 
   gpsUpdateInterval: 30, // default 30 detik
+  mapVisibility: { ...DEFAULT_MAP_VISIBILITY },
 
   roleAccess: {
     ADMIN: {
@@ -95,7 +98,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     PIMPINAN: { canEdit: false, canDelete: false },
   },
 
-  footerText: 'Kelurahan Petukangan Utara © 2026',
+  footerText: '',
   footerShowOnAdmin: true,
   footerShowOnLogin: true,
 

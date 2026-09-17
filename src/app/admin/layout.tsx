@@ -124,7 +124,7 @@ export default function AdminLayout({
         </main>
         {footerShowOnAdmin !== false && (
           <footer className="px-8 pb-6 text-center">
-            <p className="text-xs font-medium text-zinc-400">{footerText || 'Kelurahan Petukangan Utara © 2026'}</p>
+            <p className="text-xs font-medium text-zinc-400">{footerText || `${systemName || 'PPSU System'} © ${new Date().getFullYear()}`}</p>
           </footer>
         )}
       </div>

@@ -230,7 +230,7 @@ export default function PjlpTasksPage() {
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
                         <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[150px]">
-                          {task.address || 'Petukangan Utara'}
+                          {task.address || 'Alamat tidak tersedia'}
                         </span>
                         <button
                           onClick={(e) => handleMapClick(e, task)}
@@ -376,7 +376,7 @@ export default function PjlpTasksPage() {
                 <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                   <MapPin className="w-12 h-12 mb-2" />
                   <p className="text-sm font-semibold">Lokasi GPS belum tersedia</p>
-                  <p className="text-xs">Alamat: {selectedTask.address || 'Petukangan Utara'}</p>
+                  <p className="text-xs">Alamat: {selectedTask.address || 'tidak tersedia'}</p>
                 </div>
               )}
             </div>

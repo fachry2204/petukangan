@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -22,7 +23,8 @@ import {
   Eye,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Pencil
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -39,6 +41,8 @@ export default function PjlpProfilePage() {
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [attendanceMonth, setAttendanceMonth] = useState(new Date().getMonth());
   const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
@@ -46,6 +50,11 @@ export default function PjlpProfilePage() {
 
   // Form states
   const [newPhone, setNewPhone] = useState('');
+  const [profileDraft, setProfileDraft] = useState({
+    fullName: '', email: '', phone: '', gender: '', birthDate: '', joinDate: '',
+    address: '', country: '', province: '', city: '', district: '',
+    village: '', postalCode: '',
+  });
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -53,12 +62,64 @@ export default function PjlpProfilePage() {
 
   const refreshUserSession = async () => {
     try {
-      const res = await axios.get(`${apiUrl}/users/${user.id}`, {
+      const res = await axios.get(`${apiUrl}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAuth(res.data, token!);
     } catch (err) {
       console.error('Failed to sync user session:', err);
+    }
+  };
+
+  const openEditProfile = () => {
+    const currentUser = useAuthStore.getState().user;
+    const birthDate = currentUser?.birthDate ? String(currentUser.birthDate).slice(0, 10) : '';
+    setProfileDraft({
+      fullName: currentUser?.fullName || '',
+      email: currentUser?.email || '',
+      phone: currentUser?.phone || '',
+      gender: currentUser?.gender || '',
+      birthDate,
+      joinDate: currentUser?.joinDate ? String(currentUser.joinDate).slice(0, 10) : '',
+      address: currentUser?.address || '',
+      country: currentUser?.country || '',
+      province: currentUser?.province || '',
+      city: currentUser?.city || '',
+      district: currentUser?.district || '',
+      village: currentUser?.village || '',
+      postalCode: currentUser?.postalCode || '',
+    });
+    setShowEditProfile(true);
+  };
+
+  const handleUpdateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !token) return;
+    if (!profileDraft.fullName.trim()) {
+      toast({ variant: 'destructive', title: 'Nama lengkap wajib diisi.' });
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      await axios.put(`${apiUrl}/users/${user.id}`, {
+        ...profileDraft,
+        fullName: profileDraft.fullName.trim(),
+        email: profileDraft.email.trim() || null,
+        phone: profileDraft.phone.trim() || null,
+        birthDate: profileDraft.birthDate || null,
+        joinDate: profileDraft.joinDate || null,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      await refreshUserSession();
+      setShowEditProfile(false);
+      toast({ title: 'Profil berhasil diperbarui', description: 'Perubahan data Anda sudah tersimpan.' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Gagal memperbarui profil',
+        description: error.response?.data?.error || error.response?.data?.message || 'Silakan coba lagi.',
+      });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -170,7 +231,7 @@ export default function PjlpProfilePage() {
     setNewPhone(user.phone || '');
     refreshUserSession();
     fetchStats();
-  }, [token, user, isHydrated]);
+  }, [token, isHydrated]);
 
   const handleLogout = async () => {
     try {
@@ -347,8 +408,73 @@ export default function PjlpProfilePage() {
               </Badge>
             </div>
           </div>
+          <Button type="button" onClick={openEditProfile} variant="outline" className="rounded-xl font-bold">
+            <Pencil data-icon="inline-start" /> Edit Profil
+          </Button>
         </CardContent>
       </Card>
+
+      {showEditProfile && (
+        <Card className="rounded-3xl border-orange-200 bg-white shadow-lg dark:bg-zinc-900">
+          <CardHeader>
+            <CardTitle>Edit Profil Saya</CardTitle>
+            <CardDescription>Perbarui biodata Anda. User ID tidak dapat diubah.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateProfile} className="flex flex-col gap-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-user-id">User ID</Label>
+                  <Input id="profile-user-id" value={user.username || ''} readOnly aria-readonly="true" className="bg-zinc-100" />
+                  <p className="text-xs text-zinc-500">Dikelola oleh administrator dan tidak dapat diubah.</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-full-name">Nama lengkap</Label>
+                  <Input id="profile-full-name" required value={profileDraft.fullName} onChange={(event) => setProfileDraft((draft) => ({ ...draft, fullName: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-email">Email</Label>
+                  <Input id="profile-email" type="email" value={profileDraft.email} onChange={(event) => setProfileDraft((draft) => ({ ...draft, email: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-phone">Nomor telepon / WhatsApp</Label>
+                  <Input id="profile-phone" type="tel" value={profileDraft.phone} onChange={(event) => setProfileDraft((draft) => ({ ...draft, phone: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-gender">Jenis kelamin</Label>
+                  <select id="profile-gender" value={profileDraft.gender} onChange={(event) => setProfileDraft((draft) => ({ ...draft, gender: event.target.value }))} className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900">
+                    <option value="">Pilih jenis kelamin</option>
+                    <option value="LAKI-LAKI">Laki-laki</option>
+                    <option value="PEREMPUAN">Perempuan</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-birth-date">Tanggal lahir</Label>
+                  <Input id="profile-birth-date" type="date" value={profileDraft.birthDate} onChange={(event) => setProfileDraft((draft) => ({ ...draft, birthDate: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="profile-join-date">Tanggal bergabung</Label>
+                  <Input id="profile-join-date" type="date" value={profileDraft.joinDate} onChange={(event) => setProfileDraft((draft) => ({ ...draft, joinDate: event.target.value }))} />
+                </div>
+                {(['country', 'province', 'city', 'district', 'village', 'postalCode'] as const).map((field) => (
+                  <div className="flex flex-col gap-2" key={field}>
+                    <Label htmlFor={`profile-${field}`}>{{ country: 'Negara', province: 'Provinsi', city: 'Kota / Kabupaten', district: 'Kecamatan', village: 'Kelurahan / Desa', postalCode: 'Kode pos' }[field]}</Label>
+                    <Input id={`profile-${field}`} value={profileDraft[field]} onChange={(event) => setProfileDraft((draft) => ({ ...draft, [field]: event.target.value }))} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="profile-address">Alamat lengkap</Label>
+                <Textarea id="profile-address" value={profileDraft.address} onChange={(event) => setProfileDraft((draft) => ({ ...draft, address: event.target.value }))} rows={3} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowEditProfile(false)} disabled={isSavingProfile}>Batal</Button>
+                <Button type="submit" disabled={isSavingProfile}>{isSavingProfile ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Simpan Profil</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Laporan Kinerja (Performance Stats) Card */}
       <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-zinc-900 overflow-hidden">

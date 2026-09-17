@@ -200,7 +200,7 @@ export default function AdminUsersPage() {
       "Provinsi": "DKI JAKARTA",
       "Kota / Kabupaten": "KOTA JAKARTA SELATAN",
       "Kecamatan": "PESANGGRAHAN",
-      "Kelurahan / Desa": "PETUKANGAN UTARA",
+      "Kelurahan / Desa": "ISI SESUAI DOMISILI",
       "Kode Pos": "12260",
       "Alamat Lengkap": "Jl. Ciledug Raya No. 1"
     }];

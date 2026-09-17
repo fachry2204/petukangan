@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -25,6 +26,7 @@ const MapComponent = dynamic(() => import('@/components/map-component'), { ssr: 
 
 export default function PjlpCreateTaskPage() {
   const router = useRouter();
+  const systemName = useSettingsStore((state) => state.systemName);
   const { user, token } = useAuthStore();
   const { toast } = useToast();
 
@@ -342,7 +344,7 @@ export default function PjlpCreateTaskPage() {
 
         const tsLine = `Tanggal - Waktu: ${formatTimestamp(new Date())}`;
         const addressLine = address ? `Alamat: ${address}` : 'Alamat: (tidak tersedia)';
-        const headerLine = 'Sistem Monitoring PJLP Kelurahan Petukangan Utara';
+        const headerLine = systemName || 'PPSU System';
 
         context.save();
         context.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;

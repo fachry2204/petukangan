@@ -19,6 +19,7 @@ import {
   RefreshCw, User2, AlertCircle, Eye, Pencil, Trash2, Loader2, Map as MapIcon, Download, FileText
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
@@ -96,6 +97,7 @@ const TASK_TYPES = ['ASSIGNED', 'SELF'];
 
 export default function AdminTasksPage() {
   const router = useRouter();
+  const configuredSystemName = useSettingsStore((state) => state.systemName);
   const { token } = useAuthStore();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -440,7 +442,7 @@ export default function AdminTasksPage() {
       }
 
       const doc = new jsPDF({ orientation: 'landscape' });
-      const systemName = 'Sistem Monitoring PJLP Petukangan Utara';
+      const systemName = configuredSystemName || 'PPSU System';
       const exportDate = new Date().toLocaleDateString('id-ID');
       
       let textStartX = 14;

@@ -18,7 +18,10 @@ export async function GET(req: Request) {
     const minutes = Math.max(1, Math.min(Number(searchParams.get('minutes')) || 60, 240));
 
     const rows: any = await queryDb(
-      `SELECT g.*, u.fullName, u.photoUrl
+      `SELECT g.*, u.fullName, u.photoUrl,
+        (SELECT a.type FROM attendance a
+         WHERE a.userId = g.userId AND a.timestamp >= NOW() - INTERVAL 1 DAY
+         ORDER BY a.timestamp DESC, a.id DESC LIMIT 1) AS latestAttendanceType
        FROM gps_tracking g
        INNER JOIN (
          SELECT userId, MAX(timestamp) AS maxTs
@@ -31,6 +34,13 @@ export async function GET(req: Request) {
       [minutes, minutes]
     );
 
+    const statusFromAttendance: Record<string, string> = {
+      IN: 'Absen Masuk',
+      BREAK: 'Istirahat',
+      END_BREAK: 'Kembali Bekerja',
+      OUT: 'Pulang',
+      EARLY_OUT: 'Pulang',
+    };
     const officers = (rows || []).map((r: any) => ({
       userId: Number(r.userId),
       lat: Number(r.lat),
@@ -42,7 +52,7 @@ export async function GET(req: Request) {
       wifiName: r.wifiName,
       provider: r.provider,
       deviceInfo: r.deviceInfo,
-      statusAbsen: r.statusAbsen,
+      statusAbsen: statusFromAttendance[r.latestAttendanceType] || r.statusAbsen || 'Online',
       timestamp: r.timestamp,
       fullName: r.fullName || `Petugas ${r.userId}`,
       photoUrl: r.photoUrl,

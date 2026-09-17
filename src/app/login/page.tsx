@@ -268,7 +268,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             {settings.footerShowOnLogin !== false && (
               <p className="text-[10px] text-zinc-400">
-                {settings.footerText || '© Sistem Informasi Pjlp©2026'}
+                {settings.footerText || `${settings.systemName || 'PPSU System'} © ${new Date().getFullYear()}`}
               </p>
             )}
           </div>

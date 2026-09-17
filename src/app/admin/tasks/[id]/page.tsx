@@ -195,7 +195,7 @@ export default function AdminTaskDetailPage() {
             <h2 className="text-2xl font-black text-zinc-800 dark:text-white leading-tight">{task.title}</h2>
             <div className="flex items-center gap-1.5 text-zinc-450 dark:text-zinc-550 text-xs">
               <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              <span className="truncate font-semibold">{fullAddress || task.address || 'Petukangan Utara'}</span>
+              <span className="truncate font-semibold">{fullAddress || task.address || 'Alamat tidak tersedia'}</span>
             </div>
           </div>
           <Badge className={`${STATUS_COLOR[task.status] || 'bg-zinc-100 text-zinc-700'} border-none text-[10px] font-black uppercase flex-shrink-0 px-2.5 py-1`}>

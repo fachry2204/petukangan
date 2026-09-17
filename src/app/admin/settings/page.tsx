@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, Plus, Edit2, Trash2, Upload, Database, FileArchive, Download, Loader2, Save, KeyRound } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, Upload, Database, FileArchive, Download, Loader2, Save, KeyRound, MapPin } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
@@ -155,6 +155,7 @@ export default function AdminSettingsPage() {
         maintenanceTitle: settings.maintenanceTitle,
         maintenanceDesc: settings.maintenanceDesc,
         gpsUpdateInterval: settings.gpsUpdateInterval,
+        mapVisibility: settings.mapVisibility,
         roleAccess: settings.roleAccess,
         rolePermissions: settings.rolePermissions,
         footerText: settings.footerText,
@@ -332,6 +333,9 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="umum" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Umum
           </TabsTrigger>
+          <TabsTrigger value="gps-map" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <MapPin data-icon="inline-start" /> GPS / Map
+          </TabsTrigger>
           <TabsTrigger value="role" className="rounded-lg h-10 px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Role
           </TabsTrigger>
@@ -467,7 +471,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.footerText || ''}
                     onChange={(e) => settings.setSettings({ footerText: e.target.value })}
-                    placeholder="Contoh: Kelurahan Petukangan Utara © 2026"
+                    placeholder={`Kosongkan untuk memakai ${settings.systemName || 'PPSU System'} © ${new Date().getFullYear()}`}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -889,6 +893,52 @@ export default function AdminSettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="gps-map" className="flex flex-col gap-6">
+          <Card className="rounded-3xl bg-white shadow-xl dark:bg-zinc-900">
+            <CardHeader>
+              <CardTitle>Tampilan Petugas di Live Monitoring</CardTitle>
+              <CardDescription>
+                Tentukan pada status mana marker petugas ditampilkan di peta. Pengaturan ini tidak menghentikan pencatatan GPS atau absensi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {([
+                { key: 'loggedIn', title: 'Petugas Login', description: 'Tampil setelah login, sebelum absen masuk.' },
+                { key: 'checkedIn', title: 'Petugas Absen Masuk', description: 'Tampil saat bekerja, termasuk setelah selesai istirahat.' },
+                { key: 'onBreak', title: 'Petugas Istirahat', description: 'Tampil selama status istirahat.' },
+                { key: 'checkedOut', title: 'Petugas Absen Pulang', description: 'Tampilkan lokasi terakhir setelah absen pulang jika masih tersedia.' },
+              ] as const).map(({ key, title, description }) => (
+                <label key={key} className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4 transition-colors hover:bg-orange-50/60 dark:border-zinc-800 dark:bg-zinc-900">
+                  <span className="flex flex-col gap-1">
+                    <span className="font-bold text-zinc-900 dark:text-white">{title}</span>
+                    <span className="text-xs text-zinc-500">{description}</span>
+                  </span>
+                  <span className="relative shrink-0">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      aria-label={`Tampilkan ${title.toLowerCase()} di peta`}
+                      checked={settings.mapVisibility[key]}
+                      onChange={(event) => settings.setSettings({
+                        mapVisibility: { ...settings.mapVisibility, [key]: event.target.checked },
+                      })}
+                      className="peer sr-only"
+                    />
+                    <span aria-hidden="true" className="block h-7 w-12 rounded-full bg-zinc-300 transition-colors peer-checked:bg-orange-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-orange-500 after:absolute after:left-1 after:top-1 after:size-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                  </span>
+                </label>
+              ))}
+              <p className="text-xs text-zinc-500">Marker SOS darurat selalu ditampilkan. Petugas tanpa koordinat GPS tidak dapat ditampilkan di peta.</p>
+            </CardContent>
+          </Card>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveSettings} disabled={isSaving} className="rounded-xl bg-orange-500 font-bold text-white hover:bg-orange-600">
+              {isSaving ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Save data-icon="inline-start" />}
+              Simpan Pengaturan GPS / Map
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="role" className="space-y-6">

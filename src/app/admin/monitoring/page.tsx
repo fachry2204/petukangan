@@ -7,6 +7,8 @@ import { Users, MapPin, AlertTriangle, Activity, Search, Eye, EyeOff } from 'luc
 import dynamic from 'next/dynamic';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { isOfficerVisibleOnMap } from '@/lib/map-visibility';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,7 +28,9 @@ function AdminMonitoringContent() {
   const [isPanelVisible, setIsPanelVisible] = useState(true);
   const [activeCenter, setActiveCenter] = useState<[number, number] | null>(null);
   const [activeZoom, setActiveZoom] = useState<number>(12);
+  const [now, setNow] = useState(() => Date.now());
   const { token } = useAuthStore();
+  const mapVisibility = useSettingsStore((state) => state.mapVisibility);
   const socketRef = useRef<any>(null);
   const { toast } = useToast();
 
@@ -37,6 +41,11 @@ function AdminMonitoringContent() {
 
   const searchParams = useSearchParams();
   const focusUserId = searchParams.get('focus');
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -210,6 +219,9 @@ function AdminMonitoringContent() {
       setOfficers(prev => {
         const filtered = prev.filter(o => {
           if (String(o.userId) === String(data.userId) && !o.isSOS) {
+            if (o.status === 'Pulang' && useSettingsStore.getState().mapVisibility.checkedOut) {
+              return true; // Keep the last known check-out position; no further GPS is collected.
+            }
             console.log('[Admin] Removing officer from map:', data.userId);
             return false;
           }
@@ -255,13 +267,15 @@ function AdminMonitoringContent() {
   };
 
   // Separate live officers from SOS-only officers
-  const liveOfficers = officers.filter(o => !o.isSOS);
   const sosOfficers = officers.filter(o => o.isSOS);
 
   // Convert officers to map points — only include those with valid GPS coordinates
   // Exclude officers who have checked out (Pulang)
   const mapPoints = officers
-    .filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0 && o.status !== 'Pulang')
+    .filter(o => o.lat && o.lng && Number(o.lat) !== 0 && Number(o.lng) !== 0
+      && (o.isSOS || o.status !== 'Pulang' || (Number.isFinite(new Date(o.timestamp).getTime())
+        && now - new Date(o.timestamp).getTime() < 60 * 60 * 1000))
+      && isOfficerVisibleOnMap(o.status, mapVisibility, o.isSOS))
     .map(o => ({
       id: `officer-${o.userId}`,
       lat: o.lat,
@@ -415,7 +429,7 @@ function AdminMonitoringContent() {
           {/* Live Active Officers List */}
           <div className="space-y-2">
             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-              Petugas Online ({filteredOfficers.filter(o => !o.isSOS).length})
+              Petugas Terpantau ({filteredOfficers.filter(o => !o.isSOS).length})
             </h3>
 
             <div className="space-y-1.5">

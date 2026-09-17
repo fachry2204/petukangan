@@ -66,6 +66,7 @@ export async function POST(req: Request) {
         role: { name: user.roleName, id: user.roleId },
         photoUrl: user.photoUrl,
         phone: user.phone,
+        email: user.email,
         zone: user.zoneId,
         gender: user.gender,
         birthDate: user.birthDate,

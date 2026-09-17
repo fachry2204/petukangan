@@ -131,7 +131,7 @@ export default function PjlpAttendanceLemburPage() {
       return data.display_name || `Lokasi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
       console.warn('Reverse geocoding failed, using fallback:', error);
-      return `Jl. Ciledug Raya, Petukangan Utara, Kebayoran Lama, Jakarta Selatan`;
+      return `Lokasi: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
   };
 

@@ -60,6 +60,10 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role)) && String(decoded.sub) !== String(id)) {
+      return NextResponse.json({ error: 'Anda hanya dapat melihat profil sendiri.' }, { status: 403 });
+    }
+
     const url = new URL(req.url);
     const type = url.searchParams.get('type');
     if (type === 'admin') {
@@ -73,7 +77,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     }
 
     const rows: any = await queryDb(
-      `SELECT u.id, u.username, u.fullName, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
+      `SELECT u.id, u.username, u.fullName, u.email, u.gender, u.birthDate, u.phone, u.address, u.country, u.province, u.city, u.district, u.village, u.postalCode, u.joinDate, u.photoUrl, u.status, u.statusReason, u.statusChangedAt, u.lastSeen, u.deviceId, u.documents, u.createdAt, u.updatedAt, u.roleId, u.zoneId, r.name as roleName
        FROM users u LEFT JOIN roles r ON r.id = u.roleId WHERE u.id = ?`,
       [id]
     );
@@ -144,6 +148,28 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
       emitUserChange('update', { id: Number(id) });
       return NextResponse.json({ message: 'Data administrator berhasil diperbarui.' });
+    }
+
+    const isAdministrator = ['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role));
+    if (!isAdministrator) {
+      if (String(decoded.sub) !== String(id)) {
+        return NextResponse.json({ error: 'Anda hanya dapat mengubah profil sendiri.' }, { status: 403 });
+      }
+      const editableProfileFields = new Set([
+        'fullName', 'email', 'phone', 'photoUrl', 'gender', 'birthDate', 'joinDate',
+        'address', 'country', 'province', 'city', 'district', 'village',
+        'postalCode', 'password',
+      ]);
+      if (Object.keys(body).some((field) => !editableProfileFields.has(field))) {
+        return NextResponse.json({ error: 'User ID dan data administratif tidak dapat diubah oleh petugas.' }, { status: 403 });
+      }
+    }
+
+    if (body.fullName !== undefined && !String(body.fullName).trim()) {
+      return NextResponse.json({ error: 'Nama lengkap wajib diisi.' }, { status: 400 });
+    }
+    if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email))) {
+      return NextResponse.json({ error: 'Format email tidak valid.' }, { status: 400 });
     }
 
     // Ensure photoUrl column can hold large base64 images
@@ -252,6 +278,9 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     const { id } = await context.params;
     const decoded = getUserFromToken(req);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!['ADMIN', 'STAFF', 'PIMPINAN'].includes(String(decoded.role))) {
+      return NextResponse.json({ error: 'Petugas tidak dapat menghapus akun.' }, { status: 403 });
+    }
     const url = new URL(req.url);
     const type = url.searchParams.get('type');
     if (type === 'admin') {

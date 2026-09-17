@@ -365,7 +365,7 @@ export default function PjlpTaskDetailPage() {
 
         const tsLine = `Tanggal - Waktu: ${formatTimestamp(new Date())}`;
         const addressLine = addressForPhoto ? `Alamat: ${addressForPhoto}` : 'Alamat: (tidak tersedia)';
-        const headerLine = 'Sistem Monitoring PJLP Kelurahan Petukangan Utara';
+        const headerLine = systemName || 'PPSU System';
 
         context.save();
         context.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
@@ -571,7 +571,7 @@ export default function PjlpTaskDetailPage() {
             <h2 className="text-2xl font-black text-zinc-800 dark:text-white leading-tight">{task.title}</h2>
             <div className="flex items-center gap-1.5 text-zinc-450 dark:text-zinc-550 text-xs">
               <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              <span className="truncate font-semibold">{task.address || 'Petukangan Utara'}</span>
+              <span className="truncate font-semibold">{task.address || 'Alamat tidak tersedia'}</span>
             </div>
           </div>
           <Badge className={`${getStatusBadgeColor(task.status)} border-none text-[10px] font-black uppercase flex-shrink-0 px-2.5 py-1`}>
@@ -640,7 +640,7 @@ export default function PjlpTaskDetailPage() {
                   {task.address ? (
                     <p className="text-sm font-bold text-zinc-900 dark:text-white leading-relaxed">{task.address}</p>
                   ) : (
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Petukangan Utara</p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Alamat tidak tersedia</p>
                   )}
                   {task.lat && task.lng && (
                     <p className="text-xs text-zinc-500 font-mono mt-1">
@@ -967,7 +967,7 @@ export default function PjlpTaskDetailPage() {
                 <MapPin className="w-3 h-3" /> Lokasi Tugas
               </div>
               <p className="text-[10px] text-white/80 leading-normal truncate w-60">
-                {task.address || 'Petukangan Utara'}
+                {task.address || 'Alamat tidak tersedia'}
               </p>
             </div>
 
