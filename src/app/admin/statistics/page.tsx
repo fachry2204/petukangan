@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { apiUrl } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
+import { bundledIcons } from '@/lib/bundled-icons';
 
 type Trend = { date: string; hadir: number; izin: number; tidakHadir: number; scheduled: number };
 type Ranking = { id: number; username: string; fullName: string; photoUrl?: string | null; value: number; secondary: number };
@@ -124,10 +125,10 @@ export default function StatisticsPage() {
   const absentPct = Math.max(0, 100 - presentPct - permitPct);
 
   const cards = [
-    { label: 'Tingkat Kehadiran', value: `${data.summary.attendanceRate}%`, note: `${data.summary.presentTotal} dari ${data.summary.scheduledTotal} jadwal`, icon: '/icons/dashboard/sudah-absen.png', color: 'from-emerald-50 to-white', badge: 'text-emerald-700 bg-emerald-100' },
-    { label: 'Total Tugas Selesai', value: data.summary.completedTasks, note: `${data.summary.totalTasks} tugas pada periode ini`, icon: '/icons/pjlp/hari-masuk.png', color: 'from-blue-50 to-white', badge: 'text-blue-700 bg-blue-100' },
-    { label: 'Rata-rata Tugas/Petugas', value: data.summary.averageTasks, note: 'Distribusi tugas petugas', icon: '/icons/pjlp/performa.png', color: 'from-orange-50 to-white', badge: 'text-orange-700 bg-orange-100' },
-    { label: 'Petugas Perlu Perhatian', value: data.summary.attentionOfficers, note: 'Memiliki ketidakhadiran', icon: '/icons/dashboard/belum-absen.png', color: 'from-rose-50 to-white', badge: 'text-rose-700 bg-rose-100' },
+    { label: 'Tingkat Kehadiran', value: `${data.summary.attendanceRate}%`, note: `${data.summary.presentTotal} dari ${data.summary.scheduledTotal} jadwal`, icon: bundledIcons.sudahAbsen, color: 'from-emerald-50 to-white', badge: 'text-emerald-700 bg-emerald-100' },
+    { label: 'Total Tugas Selesai', value: data.summary.completedTasks, note: `${data.summary.totalTasks} tugas pada periode ini`, icon: bundledIcons.hariMasuk, color: 'from-blue-50 to-white', badge: 'text-blue-700 bg-blue-100' },
+    { label: 'Rata-rata Tugas/Petugas', value: data.summary.averageTasks, note: 'Distribusi tugas petugas', icon: bundledIcons.performa, color: 'from-orange-50 to-white', badge: 'text-orange-700 bg-orange-100' },
+    { label: 'Petugas Perlu Perhatian', value: data.summary.attentionOfficers, note: 'Memiliki ketidakhadiran', icon: bundledIcons.belumAbsen, color: 'from-rose-50 to-white', badge: 'text-rose-700 bg-rose-100' },
   ];
 
   return (

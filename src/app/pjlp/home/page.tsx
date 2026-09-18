@@ -26,6 +26,7 @@ import axios from 'axios';
 import { useRealtime } from '@/hooks/use-realtime';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api-config';
+import { bundledIcons } from '@/lib/bundled-icons';
 
 export default function PjlpHomePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -615,10 +616,10 @@ export default function PjlpHomePage() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'Hari Masuk', value: stats.absenMasuk, icon: '/icons/pjlp/hari-masuk.png', tone: 'text-emerald-600', sub: `Dari ${stats.hariKerja} hari kerja` },
-            { label: 'Izin', value: stats.izinCount, icon: '/icons/pjlp/izin.png', tone: 'text-orange-600', sub: `Dari ${stats.hariKerja} hari kerja` },
-            { label: 'Tidak Hadir', value: stats.tidakHadir, icon: '/icons/pjlp/tidak-hadir.png', tone: 'text-red-600', sub: `Dari ${stats.hariKerja} hari kerja` },
-            { label: 'Performa', value: `${stats.poinPerforma}%`, icon: '/icons/pjlp/performa.png', tone: 'text-emerald-600', sub: 'Kerja baik, pertahankan!' },
+            { label: 'Hari Masuk', value: stats.absenMasuk, icon: bundledIcons.hariMasuk, tone: 'text-emerald-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Izin', value: stats.izinCount, icon: bundledIcons.izin, tone: 'text-orange-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Tidak Hadir', value: stats.tidakHadir, icon: bundledIcons.tidakHadir, tone: 'text-red-600', sub: `Dari ${stats.hariKerja} hari kerja` },
+            { label: 'Performa', value: `${stats.poinPerforma}%`, icon: bundledIcons.performa, tone: 'text-emerald-600', sub: 'Kerja baik, pertahankan!' },
           ].map((stat) => (
             <Card key={stat.label} className="rounded-2xl border border-zinc-200/70 bg-white shadow-[0_7px_20px_rgba(24,24,27,0.07)] dark:border-zinc-800 dark:bg-zinc-900">
               <CardContent className="flex min-h-[112px] items-center gap-2 p-3 min-[390px]:gap-3 min-[390px]:p-4">

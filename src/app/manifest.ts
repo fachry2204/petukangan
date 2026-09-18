@@ -53,7 +53,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         purpose: 'any',
       },
       {
-        src: '/pwa-icon-512.png',
+        src: '/pwa-icon-maskable-512.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

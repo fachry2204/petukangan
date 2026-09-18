@@ -8,13 +8,14 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import { socketUrl } from '@/lib/socket-config';
+import { bundledIcons } from '@/lib/bundled-icons';
 
 const navItems = [
   { label: 'Home', iconUrl: '/gambar/icon/home.png', href: '/pjlp/home' },
   { label: 'Tugas', iconUrl: '/gambar/icon/camera.png', href: '/pjlp/tasks' },
   { label: 'SOS', iconUrl: '/icon/sos.png', href: '#' }, // Prevents accidental navigation
   { label: 'Lapor', iconUrl: '/gambar/icon/lapor.png', href: '/pjlp/reports' },
-  { label: 'Profil', iconUrl: '/icons/dashboard/petugas-aktif-orange.png', href: '/pjlp/profile' },
+  { label: 'Profil', iconUrl: bundledIcons.profilPetugas, href: '/pjlp/profile' },
 ];
 
 export function BottomNav() {

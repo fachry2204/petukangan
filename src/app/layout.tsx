@@ -48,8 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
     manifest: "/manifest.webmanifest",
     icons: {
-      icon: logoUrl,
-      apple: logoUrl,
+      icon: [
+        { url: '/favicon.ico', sizes: 'any' },
+        { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      ],
+      apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
     },
     appleWebApp: {
       title: systemName,

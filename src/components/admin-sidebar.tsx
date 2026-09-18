@@ -8,6 +8,7 @@ import { useSidebarStore } from '@/store/sidebar-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useAuthStore } from '@/store/auth-store';
 import { canRoleAccessAdminPath, normalizeRoleName } from '@/lib/role-access';
+import { bundledIcons } from '@/lib/bundled-icons';
 
 const generalMenuItems = [
   { label: 'Dashboard', iconSrc: '/icon/home.png', href: '/admin/dashboard' },
@@ -18,12 +19,12 @@ const generalMenuItems = [
 ];
 
 const pjlpMenuItems = [
-  { label: 'Petugas', iconSrc: '/icons/dashboard/total-petugas-orange.png', href: '/admin/users' },
+  { label: 'Petugas', iconSrc: bundledIcons.totalPetugas, href: '/admin/users' },
   { label: 'Absensi Petugas', iconSrc: '/icon/absen.png', href: '/admin/attendance' },
   { label: 'Jadwal Petugas', iconSrc: '/icon/calender.png', href: '/admin/schedules' },
   { label: 'Tugas Lapangan', iconSrc: '/icon/camera.png', href: '/admin/tasks' },
   { label: 'Laporan Kejadian', iconSrc: '/icon/lapor.png', href: '/admin/reports' },
-  { label: 'Statistik', iconSrc: '/icons/pjlp/performa.png', href: '/admin/statistics' },
+  { label: 'Statistik', iconSrc: bundledIcons.performa, href: '/admin/statistics' },
   { label: 'Settings', iconSrc: '/gambar/icon/key.png', href: '/admin/settings' },
 ];
 

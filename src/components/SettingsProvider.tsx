@@ -63,38 +63,12 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     fetchSettings();
   }, [setSettings]);
 
-  // Handle Favicon Dynamic Injection — safely update ONLY our custom favicon link
-  // Never remove React-managed head nodes (causes null.removeChild crash in React 19)
+  // Nama aplikasi tetap dinamis, tetapi favicon memakai ikon PPSU yang tetap.
   useEffect(() => {
-    if (!logoUrl) return;
-
-    // Find or create our OWN custom favicon link, identified by a unique ID.
-    // We NEVER touch any other link elements in the head.
-    let customFavicon = document.getElementById('app-custom-favicon') as HTMLLinkElement | null;
-
-    if (!customFavicon) {
-      customFavicon = document.createElement('link');
-      customFavicon.id = 'app-custom-favicon';
-      customFavicon.rel = 'icon';
-      document.head.appendChild(customFavicon);
-    }
-
-    customFavicon.href = logoUrl;
-    if (logoUrl.endsWith('.png')) {
-      customFavicon.type = 'image/png';
-    } else if (logoUrl.endsWith('.jpg') || logoUrl.endsWith('.jpeg')) {
-      customFavicon.type = 'image/jpeg';
-    } else if (logoUrl.endsWith('.svg')) {
-      customFavicon.type = 'image/svg+xml';
-    } else {
-      customFavicon.type = 'image/x-icon';
-    }
-
-    // Update document title (safe — React 19 doesn't manage this imperatively)
     if (systemName) {
       document.title = systemName;
     }
-  }, [logoUrl, systemName]);
+  }, [systemName]);
 
   // Role bisa berupa object { name: 'ADMIN' } atau string 'ADMIN'
   const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name || user?.roleName;

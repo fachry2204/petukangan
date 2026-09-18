@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useRealtime } from '@/hooks/use-realtime';
 import { apiUrl } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
+import { bundledIcons } from '@/lib/bundled-icons';
 
 type Stats = { totalPetugas: number; petugasPiket: number; sudahAbsen: number; belumAbsen: number; izinTidakMasuk: number; lakiLaki: number; perempuan: number; tidakAktif: number; dikeluarkan: number };
 type Trend = { key: string; date: string; day: string; hadir: number; izin: number; tidakHadir: number };
@@ -114,14 +115,14 @@ export default function AdminDashboardPage() {
   const absentPct = Math.max(0, 100 - hadirPct - izinPct);
   const maxChart = Math.max(1, ...trend.flatMap((row) => [row.hadir, row.izin, row.tidakHadir]));
   const cards = useMemo(() => [
-    ['Total Petugas', loading ? '—' : stats.totalPetugas, '/icons/dashboard/total-petugas-orange.png', loading ? 'Memuat data' : `${stats.totalPetugas} terdata`, 'from-orange-50 to-white', 'bg-emerald-100 text-emerald-700'],
-    ['Piket Hari Ini', loading ? '—' : stats.petugasPiket, '/icons/dashboard/petugas-piket.png', loading ? 'Memuat data' : stats.totalPetugas ? `${Math.round(stats.petugasPiket / stats.totalPetugas * 100)}%` : '0%', 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
-    ['Sudah Absen', loading ? '—' : stats.sudahAbsen, '/icons/dashboard/sudah-absen.png', loading ? 'Memuat data' : `${hadirPct}% hadir`, 'from-emerald-50 to-white', 'bg-emerald-100 text-emerald-700'],
-    ['Belum Absen', loading ? '—' : stats.belumAbsen, '/icons/dashboard/belum-absen.png', loading ? 'Memuat data' : `${absentPct}%`, 'from-rose-50 to-white', 'bg-rose-100 text-rose-600'],
-    ['Petugas Laki-Laki', loading ? '—' : stats.lakiLaki, '/icons/dashboard/laki-laki-orange.png', loading ? 'Memuat data' : `${stats.lakiLaki} orang`, 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
-    ['Petugas Perempuan', loading ? '—' : stats.perempuan, '/icons/dashboard/perempuan-orange.png', loading ? 'Memuat data' : `${stats.perempuan} orang`, 'from-pink-50 to-white', 'bg-pink-100 text-pink-700'],
-    ['Petugas Tidak Aktif', loading ? '—' : stats.tidakAktif, '/icons/dashboard/tidak-aktif-orange.png', loading ? 'Memuat data' : `${stats.tidakAktif} orang`, 'from-zinc-100 to-white', 'bg-zinc-200 text-zinc-700'],
-    ['Petugas Dikeluarkan', loading ? '—' : stats.dikeluarkan, '/icons/dashboard/dikeluarkan-orange.png', loading ? 'Memuat data' : `${stats.dikeluarkan} orang`, 'from-red-50 to-white', 'bg-red-100 text-red-700'],
+    ['Total Petugas', loading ? '—' : stats.totalPetugas, bundledIcons.totalPetugas, loading ? 'Memuat data' : `${stats.totalPetugas} terdata`, 'from-orange-50 to-white', 'bg-emerald-100 text-emerald-700'],
+    ['Piket Hari Ini', loading ? '—' : stats.petugasPiket, bundledIcons.petugasPiket, loading ? 'Memuat data' : stats.totalPetugas ? `${Math.round(stats.petugasPiket / stats.totalPetugas * 100)}%` : '0%', 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
+    ['Sudah Absen', loading ? '—' : stats.sudahAbsen, bundledIcons.sudahAbsen, loading ? 'Memuat data' : `${hadirPct}% hadir`, 'from-emerald-50 to-white', 'bg-emerald-100 text-emerald-700'],
+    ['Belum Absen', loading ? '—' : stats.belumAbsen, bundledIcons.belumAbsen, loading ? 'Memuat data' : `${absentPct}%`, 'from-rose-50 to-white', 'bg-rose-100 text-rose-600'],
+    ['Petugas Laki-Laki', loading ? '—' : stats.lakiLaki, bundledIcons.lakiLaki, loading ? 'Memuat data' : `${stats.lakiLaki} orang`, 'from-blue-50 to-white', 'bg-blue-100 text-blue-700'],
+    ['Petugas Perempuan', loading ? '—' : stats.perempuan, bundledIcons.perempuan, loading ? 'Memuat data' : `${stats.perempuan} orang`, 'from-pink-50 to-white', 'bg-pink-100 text-pink-700'],
+    ['Petugas Tidak Aktif', loading ? '—' : stats.tidakAktif, bundledIcons.tidakAktif, loading ? 'Memuat data' : `${stats.tidakAktif} orang`, 'from-zinc-100 to-white', 'bg-zinc-200 text-zinc-700'],
+    ['Petugas Dikeluarkan', loading ? '—' : stats.dikeluarkan, bundledIcons.dikeluarkan, loading ? 'Memuat data' : `${stats.dikeluarkan} orang`, 'from-red-50 to-white', 'bg-red-100 text-red-700'],
   ], [absentPct, hadirPct, loading, stats]);
 
   return <div className="space-y-4 pb-3">
@@ -153,7 +154,7 @@ export default function AdminDashboardPage() {
         { label: 'GPS Tidak Valid', sub: 'Terdeteksi menggunakan GPS palsu', value: followUps.fakeGps, Icon: MapPin, href: '/admin/gps-history', color: 'bg-blue-500' },
         { label: 'Laporan SOS', sub: 'Permintaan bantuan aktif', value: followUps.sos, Icon: Siren, href: '/admin/sos', color: 'bg-red-500' },
       ].map(({ label, sub, value, Icon, href, color }) => <button key={label} onClick={() => router.push(href)} className="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-2 text-left hover:bg-zinc-50"><span className={cn('flex h-8 w-8 items-center justify-center rounded-full text-white', color)}><Icon className="h-4 w-4" /></span><span><strong className="block text-xs text-zinc-800">{label}</strong><small className="block text-[9px] text-zinc-400">{sub}</small></span><span className="min-w-9 rounded-full bg-zinc-100 px-2 py-1 text-center text-[10px] font-black">{value}</span><ChevronRight className="h-4 w-4 text-zinc-300" /></button>)}</div></Panel>
-      <Panel title="Aktivitas Terbaru" subtitle="Log aktivitas terkini dalam sistem" icon={Clock3} action="Lihat Semua" onAction={() => router.push('/admin/attendance')}><div className="relative ml-1 before:absolute before:bottom-2 before:left-[3px] before:top-2 before:w-px before:bg-zinc-200">{activities.length ? activities.map((item) => <div key={item.id} className="relative grid grid-cols-[10px_38px_1fr] items-center gap-2 border-b border-zinc-100 py-1.5 last:border-0"><i className={cn('relative z-10 h-2 w-2 rounded-full', item.color)} /><span className="text-[9px] font-semibold text-zinc-400">{item.time}</span><div className="flex min-w-0 items-center gap-2"><div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-orange-50"><Image src={item.photo || '/icons/dashboard/petugas-aktif-orange.png'} alt="" fill sizes="28px" className="object-cover" /></div><div className="min-w-0"><p className="truncate text-[10px] font-black text-zinc-800">{item.name}</p><p className="truncate text-[9px] text-zinc-400">{item.detail}</p></div></div></div>) : <div className="py-10 text-center text-xs text-zinc-400">Belum ada aktivitas hari ini.</div>}</div></Panel>
+      <Panel title="Aktivitas Terbaru" subtitle="Log aktivitas terkini dalam sistem" icon={Clock3} action="Lihat Semua" onAction={() => router.push('/admin/attendance')}><div className="relative ml-1 before:absolute before:bottom-2 before:left-[3px] before:top-2 before:w-px before:bg-zinc-200">{activities.length ? activities.map((item) => <div key={item.id} className="relative grid grid-cols-[10px_38px_1fr] items-center gap-2 border-b border-zinc-100 py-1.5 last:border-0"><i className={cn('relative z-10 h-2 w-2 rounded-full', item.color)} /><span className="text-[9px] font-semibold text-zinc-400">{item.time}</span><div className="flex min-w-0 items-center gap-2"><div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-orange-50"><Image src={item.photo || bundledIcons.profilPetugas} alt="" fill sizes="28px" className="object-cover" /></div><div className="min-w-0"><p className="truncate text-[10px] font-black text-zinc-800">{item.name}</p><p className="truncate text-[9px] text-zinc-400">{item.detail}</p></div></div></div>) : <div className="py-10 text-center text-xs text-zinc-400">Belum ada aktivitas hari ini.</div>}</div></Panel>
     </section>
   </div>;
 }
